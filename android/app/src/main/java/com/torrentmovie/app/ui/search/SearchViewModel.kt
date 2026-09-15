@@ -28,9 +28,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
+    private var searchGeneration = 0
+    private var lastSearchedQuery: String? = null
 
     fun setQuery(q: String) {
-        _state.value = _state.value.copy(query = q)
+        val trimmed = q.trim()
+        val stale = lastSearchedQuery != null && trimmed != lastSearchedQuery
+        _state.value = _state.value.copy(
+            query = q,
+            results = if (stale) emptyList() else _state.value.results,
+            error = if (stale) null else _state.value.error,
+            errorCode = if (stale) null else _state.value.errorCode,
+            info = if (stale) null else _state.value.info,
+            hasSearched = if (stale) false else _state.value.hasSearched,
+        )
     }
 
     fun setMinSeeds(value: Int?) {
@@ -45,6 +56,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val q = _state.value.query.trim()
         searchJob?.cancel()
         if (q.isEmpty()) {
+            searchGeneration += 1
+            lastSearchedQuery = null
             _state.value = _state.value.copy(
                 loading = false,
                 results = emptyList(),
@@ -55,10 +68,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             )
             return
         }
+        val generation = ++searchGeneration
         searchJob = viewModelScope.launch {
             _state.value = _state.value.copy(
                 loading = true,
-                results = emptyList(),
                 error = null,
                 errorCode = null,
                 info = null,
@@ -69,6 +82,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     minSeeds = _state.value.minSeeds,
                     maxSize = _state.value.maxSize,
                 )
+                if (generation != searchGeneration) return@launch
                 val infoMessages = mutableListOf<String>()
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
@@ -81,6 +95,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     "No results found. Try a broader query."
                 } else null
 
+                lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     results = outcome.results,
@@ -92,6 +107,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SearchException) {
+                if (generation != searchGeneration) return@launch
+                lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Search failed",
@@ -100,6 +117,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     hasSearched = true,
                 )
             } catch (e: Exception) {
+                if (generation != searchGeneration) return@launch
+                lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Search failed",
