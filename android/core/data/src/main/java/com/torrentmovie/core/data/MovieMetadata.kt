@@ -9,8 +9,8 @@ data class MovieMetadata(
 )
 
 class MovieMetadataStore {
-    private val byResultId = LinkedHashMap<String, MovieMetadata>()
-    private val maxEntries = 200
+    private val byResultId = object : LinkedHashMap<String, MovieMetadata>(16, 0.75f, true) {}
+    private val maxEntries = 500
 
     fun put(resultId: String, metadata: MovieMetadata) {
         synchronized(this) {
@@ -22,7 +22,11 @@ class MovieMetadataStore {
         }
     }
 
-    fun get(resultId: String): MovieMetadata? = synchronized(this) { byResultId[resultId] }
+    fun get(resultId: String): MovieMetadata? = synchronized(this) {
+        val meta = byResultId.remove(resultId) ?: return null
+        byResultId[resultId] = meta
+        meta
+    }
 
     fun clear() {
         synchronized(this) { byResultId.clear() }
