@@ -29,7 +29,7 @@ class RuTorrentClient(
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .get()
                 .build()
-            executeWithAuth(request).isSuccessful
+            executeWithAuth(request).use { it.isSuccessful }
         } catch (_: Exception) {
             false
         }
