@@ -51,6 +51,18 @@ fun SearchScreen(
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(state.loading) {
+        if (state.loading) expandedGroupKey = null
+    }
+    LaunchedEffect(selectedResultId, state.groups) {
+        val id = selectedResultId
+        if (id != null) {
+            state.groups.find { group -> group.releases.any { it.id == id } }
+                ?.groupKey
+                ?.let { expandedGroupKey = it }
+        }
+    }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
 
     val pullState = rememberPullRefreshState(
@@ -59,10 +71,11 @@ fun SearchScreen(
     )
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(state.error, state.info, state.errorCode, state.results.size) {
+    LaunchedEffect(state.error, state.info, state.errorCode, state.results.size, state.groups.size) {
         val inlineErrorCode = state.errorCode == 503 || state.errorCode == 400
+        val hasVisibleResults = state.results.isNotEmpty() || state.groups.isNotEmpty()
         state.error
-            ?.takeIf { !inlineErrorCode && state.results.isNotEmpty() }
+            ?.takeIf { !inlineErrorCode && hasVisibleResults }
             ?.let { msg ->
                 val key = "err:$msg:${state.errorCode}"
                 if (key != lastSnackbarKey) {

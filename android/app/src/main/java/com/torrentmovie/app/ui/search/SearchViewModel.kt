@@ -45,6 +45,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             trimmed == lastSearchedQuery &&
             trimmed.isNotEmpty() &&
             _state.value.results.isEmpty() &&
+            _state.value.groups.isEmpty() &&
             !_state.value.loading
         _state.value = _state.value.copy(
             query = q,

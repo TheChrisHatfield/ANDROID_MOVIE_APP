@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
+import com.torrentmovie.core.network.TorrentResultDto
 import com.torrentmovie.core.data.seedbox.SeedboxResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,6 +79,18 @@ fun TorrentDetailScreen(
                 container.searchRepository.resolveMagnet(resultId)
             }
             magnet = resolved.magnet.takeIf { it.isNotBlank() }
+            if (!magnet.isNullOrBlank()) {
+                val cached = container.searchResultStore.get(resultId)
+                container.searchResultStore.put(
+                    cached?.copy(magnet = magnet)
+                        ?: TorrentResultDto(
+                            id = resultId,
+                            name = name,
+                            site = site,
+                            magnet = magnet,
+                        ),
+                )
+            }
             if (magnet.isNullOrBlank()) {
                 magnetError = "Magnet unavailable — tap retry"
             }

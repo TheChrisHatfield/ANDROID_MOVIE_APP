@@ -69,7 +69,7 @@ fun MovieGroupCard(
                     ),
                 ) {
                     Text(
-                        text = group.title.take(1).uppercase(),
+                        text = group.title.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                         modifier = Modifier.padding(8.dp),
                         style = MaterialTheme.typography.headlineMedium,
                     )
