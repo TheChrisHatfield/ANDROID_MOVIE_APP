@@ -84,14 +84,10 @@ def search(
         max_size=max_size,
         limit=limit,
     )
+    if outcome.indexers_unavailable:
+        raise HTTPException(status_code=503, detail="Requested indexers unavailable")
     if outcome.all_sources_failed:
         raise HTTPException(status_code=503, detail="No sources available")
-
-    if outcome.failed_sites:
-        failed = set(outcome.failed_sites)
-        _searcher.working_sites = [
-            site for site in _searcher.working_sites if site.name not in failed
-        ]
 
     stored = _result_cache.put_many(outcome.results)
     return SearchResponse(

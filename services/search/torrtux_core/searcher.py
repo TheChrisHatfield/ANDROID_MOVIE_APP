@@ -18,6 +18,7 @@ class SearchOutcome:
     results: list[dict]
     failed_sites: list[str]
     all_sources_failed: bool = False
+    indexers_unavailable: bool = False
 
 
 class TorrentSearcher:
@@ -86,17 +87,19 @@ class TorrentSearcher:
         query: str,
         page_limit: int = 1,
         parallel: bool = True,
+        sites: list | None = None,
     ) -> tuple[list[dict], list[str]]:
-        if not self.working_sites:
+        active_sites = sites if sites is not None else self.working_sites
+        if not active_sites:
             return [], []
 
         failed_sites: list[str] = []
         if parallel:
             all_results: list[dict] = []
-            with ThreadPoolExecutor(max_workers=min(8, len(self.working_sites))) as pool:
+            with ThreadPoolExecutor(max_workers=min(8, len(active_sites))) as pool:
                 futures = {
                     pool.submit(self._search_site, site, query, page_limit): site
-                    for site in self.working_sites
+                    for site in active_sites
                 }
                 for future in as_completed(futures):
                     site = futures[future]
@@ -111,7 +114,7 @@ class TorrentSearcher:
             return all_results, failed_sites
 
         all_results = []
-        for site in self.working_sites:
+        for site in active_sites:
             site_results, errored = self._search_site(site, query, page_limit)
             if errored:
                 failed_sites.append(site.name)
@@ -152,12 +155,17 @@ class TorrentSearcher:
         max_size: str | None = None,
         limit: int | None = None,
     ) -> SearchOutcome:
-        original = self.working_sites
+        pool = list(self.working_sites)
         selected = self._select_working_sites(sites, movie_profile)
-        self.working_sites = selected
+        if sites and not selected and pool:
+            return SearchOutcome([], [], indexers_unavailable=True)
         queried_names = {site.name for site in selected}
-        raw, failed_sites = self.search_all_sites(query, page_limit=page_limit, parallel=parallel)
-        self.working_sites = original
+        raw, failed_sites = self.search_all_sites(
+            query,
+            page_limit=page_limit,
+            parallel=parallel,
+            sites=selected,
+        )
         filtered = apply_filters(
             raw,
             min_seeds=min_seeds,
