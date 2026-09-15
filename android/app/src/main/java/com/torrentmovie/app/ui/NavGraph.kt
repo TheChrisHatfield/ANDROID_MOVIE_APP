@@ -16,15 +16,12 @@ import com.torrentmovie.core.data.AppContainer
 
 object Routes {
     const val SEARCH = "search"
-    const val DETAIL = "detail/{resultId}/{name}/{site}"
+    const val DETAIL = "detail/{resultId}"
     const val UPLOADED = "uploaded"
     const val SETTINGS = "settings"
     const val HELP = "help"
 
-    fun detail(resultId: String, name: String, site: String) =
-        "detail/$resultId/${name.encode()}/${site.encode()}"
-
-    private fun String.encode(): String = java.net.URLEncoder.encode(this, "UTF-8")
+    fun detail(resultId: String) = "detail/$resultId"
 }
 
 @Composable
@@ -36,23 +33,24 @@ fun AppNavGraph(
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
             SearchScreen(container, onOpenDetail = { r ->
-                navController.navigate(Routes.detail(r.id, r.name, r.site))
+                container.searchResultStore.put(r)
+                navController.navigate(Routes.detail(r.id))
             })
         }
         composable(
             route = Routes.DETAIL,
             arguments = listOf(
                 navArgument("resultId") { type = NavType.StringType },
-                navArgument("name") { type = NavType.StringType },
-                navArgument("site") { type = NavType.StringType },
             ),
         ) { entry ->
+            val resultId = entry.arguments?.getString("resultId") ?: ""
+            val cached = container.searchResultStore.get(resultId)
             TorrentDetailScreen(
                 container = container,
-                resultId = entry.arguments?.getString("resultId") ?: "",
-                name = entry.arguments?.getString("name")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: "",
-                site = entry.arguments?.getString("site")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: "",
-                initialMagnet = null,
+                resultId = resultId,
+                name = cached?.name ?: "",
+                site = cached?.site ?: "",
+                initialMagnet = cached?.magnet,
             )
         }
         composable(Routes.UPLOADED) { UploadedScreen(container) }
