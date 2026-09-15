@@ -19,4 +19,12 @@ class SeedboxUrlTest {
             normalizeSeedboxUrl("http://10.0.0.1/rutorrent"),
         )
     }
+
+    @Test
+    fun searchApiAddsHttpWhenSchemeMissing() {
+        assertEquals(
+            "http://192.168.1.5:8765",
+            normalizeSearchApiUrl("192.168.1.5:8765"),
+        )
+    }
 }
