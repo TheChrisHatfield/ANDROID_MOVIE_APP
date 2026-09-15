@@ -13,7 +13,7 @@ $adb = Join-Path $sdk "platform-tools\adb.exe"
 Set-AndroidEnv -SdkRoot $sdk -AvdHome $avdHome -Jdk $jdk
 
 if (-not (Test-Path $apk)) {
-    Write-Error "APK missing — run: cd android; .\gradlew.bat assembleDebug"
+    Write-Error "APK missing - run: cd android; .\gradlew.bat assembleDebug"
 }
 
 Push-Location $searchDir
@@ -44,9 +44,9 @@ try {
 
 $serial = (& $adb devices | Select-String "emulator-\d+\s+device" | ForEach-Object { ($_ -split "\s+")[0] } | Select-Object -First 1)
 if (-not $serial) {
-    Write-Host "No emulator — starting torrent_movie_e2e AVD..."
+    Write-Host "No emulator - starting torrent_movie_e2e AVD..."
     $emu = Join-Path $sdk "emulator\emulator.exe"
-    if (-not (Test-Path $emu)) { Write-Error "Emulator missing — run setup-android-sdk.ps1" }
+    if (-not (Test-Path $emu)) { Write-Error "Emulator missing - run setup-android-sdk.ps1" }
     Start-Process $emu -ArgumentList "-avd","torrent_movie_e2e","-no-snapshot-save","-gpu","swiftshader_indirect" -WindowStyle Minimized
     for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Seconds 5
@@ -71,5 +71,6 @@ Write-Host "2. Settings -> Search API: http://10.0.2.2:8765 (default)"
 Write-Host "3. Settings -> Seedbox URL, username, password, magnet folder"
 Write-Host "4. Search -> pick result -> Send to seedbox"
 Write-Host ""
-py -3.11 (Join-Path $PSScriptRoot "smoke_search_api.py")
+$smoke = Join-Path $PSScriptRoot "smoke_search_api.py"
+py -3.11 $smoke
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
