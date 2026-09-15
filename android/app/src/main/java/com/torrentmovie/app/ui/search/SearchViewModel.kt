@@ -56,7 +56,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (_state.value.minSeeds != null && _state.value.minSeeds!! > 0) {
                     infoMessages += "Releases with unknown seeds (e.g. YTS) are hidden when min seeds is set"
                 }
-                val emptyMessage = if (outcome.results.isEmpty()) {
+                val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
+                val emptyMessage = if (outcome.results.isEmpty() && info == null) {
                     "No results found. Try a broader query."
                 } else null
 
@@ -64,7 +65,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     loading = false,
                     results = outcome.results,
                     hasSearched = true,
-                    info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n"),
+                    info = info,
                     error = emptyMessage,
                     errorCode = null,
                 )

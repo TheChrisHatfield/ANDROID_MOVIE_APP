@@ -56,7 +56,9 @@ fun SearchScreen(
 
     LaunchedEffect(state.error, state.info, state.errorCode) {
         if (state.errorCode != 503) {
-            state.error?.let { snackbar.showSnackbar(it) }
+            state.error
+                ?.takeIf { state.results.isNotEmpty() || state.errorCode != null }
+                ?.let { snackbar.showSnackbar(it) }
         }
         state.info?.let { snackbar.showSnackbar(it) }
     }
