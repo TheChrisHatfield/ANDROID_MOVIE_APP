@@ -74,6 +74,7 @@ class RuTorrentClient(
             return first
         }
         val challenge = first.header("WWW-Authenticate") ?: return first
+        first.body?.close()
         first.close()
         val uri = URI(request.url.toString())
         val path = uri.rawPath + (uri.rawQuery?.let { "?$it" } ?: "")
