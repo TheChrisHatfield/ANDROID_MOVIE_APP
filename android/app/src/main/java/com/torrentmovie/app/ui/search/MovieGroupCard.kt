@@ -1,7 +1,6 @@
 package com.torrentmovie.app.ui.search
 
-import android.content.Intent
-import android.net.Uri
+import com.torrentmovie.app.ui.util.openYoutubeTrailer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -111,13 +110,7 @@ fun MovieGroupCard(
                     }
                     group.trailerYoutubeKey?.let { key ->
                         IconButton(
-                            onClick = {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.youtube.com/watch?v=$key"),
-                                )
-                                context.startActivity(intent)
-                            },
+                            onClick = { openYoutubeTrailer(context, key) },
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = "Watch trailer")
                         }

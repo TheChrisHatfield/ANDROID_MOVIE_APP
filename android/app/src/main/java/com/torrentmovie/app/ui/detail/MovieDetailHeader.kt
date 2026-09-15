@@ -1,7 +1,6 @@
 package com.torrentmovie.app.ui.detail
 
-import android.content.Intent
-import android.net.Uri
+import com.torrentmovie.app.ui.util.openYoutubeTrailer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -76,14 +75,7 @@ fun MovieDetailHeader(
             }
             metadata.trailerYoutubeKey?.let { key ->
                 TextButton(
-                    onClick = {
-                        context.startActivity(
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://www.youtube.com/watch?v=$key"),
-                            ),
-                        )
-                    },
+                    onClick = { openYoutubeTrailer(context, key) },
                     modifier = Modifier.padding(top = 4.dp),
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
