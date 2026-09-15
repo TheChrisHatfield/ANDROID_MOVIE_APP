@@ -45,13 +45,12 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
         maxSize: String? = null,
-        pages: Int = 2,
     ): SearchResult {
         val settings = settingsRepository.load()
         return try {
             val response = api().search(
                 query = query,
-                pages = pages,
+                pages = settings.searchPages,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,

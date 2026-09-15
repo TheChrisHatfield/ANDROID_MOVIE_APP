@@ -57,7 +57,8 @@ fun SearchScreen(
     )
 
     LaunchedEffect(state.error, state.info, state.errorCode) {
-        if (state.errorCode != 503) {
+        val inlineErrorCode = state.errorCode == 503 || state.errorCode == 400
+        if (!inlineErrorCode) {
             state.error
                 ?.takeIf { state.results.isNotEmpty() || state.errorCode != null }
                 ?.let { snackbar.showSnackbar(it) }
@@ -119,6 +120,7 @@ fun SearchScreen(
                 state.hasSearched && state.results.isEmpty() && !state.loading -> {
                     val message = when (state.errorCode) {
                         503 -> "No sources available. Check the search API and try again."
+                        400 -> state.error ?: "Invalid search request. Check filters and try again."
                         else -> state.error ?: "No results found. Try another title or adjust filters."
                     }
                     Column(
@@ -128,7 +130,7 @@ fun SearchScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(message, style = MaterialTheme.typography.bodyLarge)
-                        if (state.errorCode == 503) {
+                        if (state.errorCode == 503 || state.errorCode == 400) {
                             Button(
                                 onClick = { vm.search() },
                                 modifier = Modifier.padding(top = 12.dp),

@@ -8,12 +8,14 @@ class SearchResultStore {
     private val maxEntries = 200
 
     fun put(result: TorrentResultDto) {
-        byId[result.id] = result
-        while (byId.size > maxEntries) {
-            val oldest = byId.keys.firstOrNull() ?: break
-            byId.remove(oldest)
+        synchronized(this) {
+            byId[result.id] = result
+            while (byId.size > maxEntries) {
+                val oldest = byId.keys.firstOrNull() ?: break
+                byId.remove(oldest)
+            }
         }
     }
 
-    fun get(resultId: String): TorrentResultDto? = byId[resultId]
+    fun get(resultId: String): TorrentResultDto? = synchronized(this) { byId[resultId] }
 }

@@ -21,8 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.AppSettings
 
 @Composable
 fun SettingsScreen(container: AppContainer) {
@@ -56,6 +58,16 @@ fun SettingsScreen(container: AppContainer) {
         RowSwitch("Movie sites only", settings.movieSitesOnly) {
             settings = settings.copy(movieSitesOnly = it)
         }
+        OutlinedTextField(
+            value = settings.searchPages.toString(),
+            onValueChange = { raw ->
+                val digits = raw.filter { it.isDigit() }
+                val pages = digits.toIntOrNull() ?: AppSettings.DEFAULT_SEARCH_PAGES
+                settings = settings.copy(searchPages = pages.coerceIn(1, 10))
+            },
+            label = { Text("Indexer pages per search (1–10)") },
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Text("Seedbox", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         OutlinedTextField(
@@ -74,6 +86,7 @@ fun SettingsScreen(container: AppContainer) {
             value = settings.password,
             onValueChange = { settings = settings.copy(password = it) },
             label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(

@@ -20,10 +20,12 @@ data class AppSettings(
     val downloadDirectory: String = DEFAULT_DOWNLOAD_DIR,
     val movieSitesOnly: Boolean = true,
     val disclaimerAccepted: Boolean = false,
+    val searchPages: Int = DEFAULT_SEARCH_PAGES,
 ) {
     companion object {
         const val DEFAULT_SEARCH_API = "http://10.0.2.2:8765"
         const val DEFAULT_DOWNLOAD_DIR = "/home5/chris82/downloads/MOVIES/"
+        const val DEFAULT_SEARCH_PAGES = 2
     }
 }
 
@@ -39,17 +41,24 @@ class SettingsRepository(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    fun load(): AppSettings = AppSettings(
-        searchApiBaseUrl = prefs.getString(KEY_SEARCH_API, AppSettings.DEFAULT_SEARCH_API) ?: AppSettings.DEFAULT_SEARCH_API,
-        rutorrentBaseUrl = prefs.getString(KEY_RUTORRENT_URL, "") ?: "",
-        username = prefs.getString(KEY_USERNAME, "") ?: "",
-        password = prefs.getString(KEY_PASSWORD, "") ?: "",
-        authScheme = prefs.getString(KEY_AUTH_SCHEME, "basic") ?: "basic",
-        downloadDirectory = prefs.getString(KEY_DOWNLOAD_DIR, AppSettings.DEFAULT_DOWNLOAD_DIR)
-            ?: AppSettings.DEFAULT_DOWNLOAD_DIR,
-        movieSitesOnly = prefs.getBoolean(KEY_MOVIE_SITES, true),
-        disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
-    )
+    fun load(): AppSettings {
+        val rawSearchApi = prefs.getString(KEY_SEARCH_API, AppSettings.DEFAULT_SEARCH_API)
+            ?: AppSettings.DEFAULT_SEARCH_API
+        val rawRutorrent = prefs.getString(KEY_RUTORRENT_URL, "") ?: ""
+        return AppSettings(
+            searchApiBaseUrl = normalizeSearchApiUrl(rawSearchApi),
+            rutorrentBaseUrl = if (rawRutorrent.isBlank()) "" else normalizeSeedboxUrl(rawRutorrent),
+            username = (prefs.getString(KEY_USERNAME, "") ?: "").trim(),
+            password = (prefs.getString(KEY_PASSWORD, "") ?: "").trim(),
+            authScheme = normalizeAuthScheme(prefs.getString(KEY_AUTH_SCHEME, "basic") ?: "basic"),
+            downloadDirectory = (prefs.getString(KEY_DOWNLOAD_DIR, AppSettings.DEFAULT_DOWNLOAD_DIR)
+                ?: AppSettings.DEFAULT_DOWNLOAD_DIR).trim(),
+            movieSitesOnly = prefs.getBoolean(KEY_MOVIE_SITES, true),
+            disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
+            searchPages = prefs.getInt(KEY_SEARCH_PAGES, AppSettings.DEFAULT_SEARCH_PAGES)
+                .coerceIn(1, MAX_SEARCH_PAGES),
+        )
+    }
 
     fun saveError(settings: AppSettings): String? = validateAppSettings(settings)
 
@@ -68,6 +77,7 @@ class SettingsRepository(context: Context) {
             .putString(KEY_DOWNLOAD_DIR, downloadDir)
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
+            .putInt(KEY_SEARCH_PAGES, settings.searchPages.coerceIn(1, MAX_SEARCH_PAGES))
             .commit()
         if (ok) {
             _revision.value += 1
@@ -91,6 +101,8 @@ class SettingsRepository(context: Context) {
         const val KEY_DOWNLOAD_DIR = "download_directory"
         const val KEY_MOVIE_SITES = "movie_sites_only"
         const val KEY_DISCLAIMER = "disclaimer_accepted"
+        private const val KEY_SEARCH_PAGES = "search_pages"
+        private const val MAX_SEARCH_PAGES = 10
     }
 }
 
@@ -113,6 +125,9 @@ internal fun validateAppSettings(settings: AppSettings): String? {
     val authScheme = SettingsRepository.normalizeAuthScheme(settings.authScheme)
     if (authScheme !in setOf("basic", "digest")) {
         return "Auth scheme must be basic or digest"
+    }
+    if (settings.searchPages !in 1..10) {
+        return "Search pages must be between 1 and 10"
     }
     return null
 }

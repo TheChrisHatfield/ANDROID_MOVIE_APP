@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.data.seedbox.SeedboxResult
 import kotlinx.coroutines.Dispatchers
@@ -50,16 +51,26 @@ fun TorrentDetailScreen(
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
 
+    fun isAlreadyUploaded(magnetValue: String?): Boolean {
+        val key = MagnetHashUtil.storageKey(magnetValue ?: "", name, site)
+        if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+        if (!magnetValue.isNullOrBlank()) return false
+        return uploaded.any { it.displayName == name && it.site == site }
+    }
+
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
         if (magnetLoading) {
             duplicate = false
             return@LaunchedEffect
         }
-        duplicate = container.uploadedRepository.isUploaded(magnet, name, site)
+        duplicate = isAlreadyUploaded(magnet)
     }
 
     LaunchedEffect(resultId, resolveRequest) {
         if (resolveRequest == 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
+        if (resolveRequest > 0) {
+            magnet = null
+        }
         magnetLoading = true
         magnetError = null
         try {
@@ -127,7 +138,7 @@ fun TorrentDetailScreen(
                             is SeedboxResult.Failure ->
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
                         }
-                        duplicate = container.uploadedRepository.isUploaded(m, name, site)
+                        duplicate = isAlreadyUploaded(m)
                     } catch (e: Exception) {
                         Toast.makeText(
                             context,

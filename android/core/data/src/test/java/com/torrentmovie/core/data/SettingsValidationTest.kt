@@ -26,4 +26,16 @@ class SettingsValidationTest {
     fun acceptsValidSettings() {
         assertNull(validateAppSettings(validSettings()))
     }
+
+    @Test
+    fun rejectsInvalidSearchPages() {
+        assertEquals(
+            "Search pages must be between 1 and 10",
+            validateAppSettings(validSettings().copy(searchPages = 0)),
+        )
+        assertEquals(
+            "Search pages must be between 1 and 10",
+            validateAppSettings(validSettings().copy(searchPages = 11)),
+        )
+    }
 }
