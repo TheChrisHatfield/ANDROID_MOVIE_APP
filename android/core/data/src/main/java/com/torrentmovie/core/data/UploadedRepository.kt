@@ -13,15 +13,14 @@ class UploadedRepository(private val database: AppDatabase) {
     suspend fun contains(infoHash: String): Boolean =
         database.uploadedMagnetDao().countByHash(infoHash) > 0
 
-    suspend fun containsMagnet(magnet: String?): Boolean {
-        val hash = MagnetHashUtil.extractInfoHash(magnet) ?: return false
-        return contains(hash)
+    suspend fun containsMagnet(magnet: String?, displayName: String, site: String): Boolean {
+        if (magnet.isNullOrBlank()) return false
+        return contains(MagnetHashUtil.storageKey(magnet, displayName, site))
     }
 
     suspend fun isUploaded(magnet: String?, displayName: String, site: String): Boolean {
         if (!magnet.isNullOrBlank()) {
-            val key = MagnetHashUtil.storageKey(magnet, displayName, site)
-            if (contains(key)) return true
+            return contains(MagnetHashUtil.storageKey(magnet, displayName, site))
         }
         return list().any { it.displayName == displayName && it.site == site }
     }
