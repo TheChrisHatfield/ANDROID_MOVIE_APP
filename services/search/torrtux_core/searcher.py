@@ -83,8 +83,6 @@ class TorrentSearcher:
                 break
             page_results = site.parse_results(response.content, query)
             if not page_results:
-                if page == 0 and not results:
-                    errored = True
                 break
             results.extend(page_results)
         return results, errored
