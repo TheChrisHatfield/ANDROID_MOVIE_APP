@@ -75,10 +75,12 @@ class PirateBay(TorrentSite):
                 continue
         try:
             response = http_get(f"{APIBAY_SEARCH_URL}?q=test&cat=0", timeout=12)
-            if response.status_code == 200 and response.json():
-                self.working_url = "https://tpb.party"
-                self._apibay_mode = True
-                return True
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    self.working_url = "https://tpb.party"
+                    self._apibay_mode = True
+                    return True
         except Exception:
             pass
         return False
@@ -99,9 +101,15 @@ class PirateBay(TorrentSite):
         mirror = self.working_url or "https://tpb.party"
         for row in rows:
             try:
-                name = row.get("name", "-")
-                info_hash = row.get("info_hash", "")
                 torrent_id = row.get("id")
+                if torrent_id in (0, "0", None):
+                    continue
+                name = row.get("name", "-")
+                if name == "No results returned":
+                    continue
+                info_hash = row.get("info_hash", "")
+                if not info_hash or info_hash == "0000000000000000000000000000000000000000":
+                    continue
                 results.append(
                     {
                         "name": name,
@@ -518,11 +526,16 @@ class LimeTorrents(TorrentSite):
                     cols[0].find("a", href=True),
                 )
                 name = name_link.get_text(strip=True) if name_link else cols[0].get_text(strip=True)
-                detail_url = (
-                    urljoin(self.working_url, name_link["href"])
-                    if name_link and name_link["href"].startswith("/")
-                    else None
-                )
+                detail_url = None
+                if name_link:
+                    href = name_link["href"]
+                    detail_url = (
+                        urljoin(self.working_url, href)
+                        if href.startswith("/")
+                        else href
+                        if href.startswith("http")
+                        else None
+                    )
                 date = cols[1].text.strip()
                 size = cols[2].text.strip()
                 seeds = cols[3].text.strip().replace(",", "")

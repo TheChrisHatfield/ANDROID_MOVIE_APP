@@ -19,6 +19,24 @@ def test_yts_parses_next_data_fixture():
     assert "inception-2010" in rows[0]["detail_url"]
 
 
+def test_tpb_skips_apibay_no_results_placeholder():
+    site = PirateBay()
+    site.working_url = "https://tpb.party"
+    site._apibay_mode = True
+    payload = [
+        {
+            "id": "0",
+            "name": "No results returned",
+            "info_hash": "0000000000000000000000000000000000000000",
+            "seeders": "0",
+            "leechers": "0",
+            "size": "0",
+        }
+    ]
+    rows = site.parse_results(json.dumps(payload).encode(), "zzznomatchzzz")
+    assert rows == []
+
+
 def test_tpb_parses_apibay_json():
     site = PirateBay()
     site.working_url = "https://tpb.party"
