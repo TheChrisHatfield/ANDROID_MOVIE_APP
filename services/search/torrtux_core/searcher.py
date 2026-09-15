@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
@@ -26,17 +27,19 @@ class TorrentSearcher:
         classes = site_classes or ALL_SITE_CLASSES
         self.sites = [cls() for cls in classes]
         self.working_sites: list = []
+        self._lock = threading.Lock()
 
     def test_sites(self, quiet: bool = True) -> bool:
-        self.working_sites = []
-        for site in self.sites:
-            if site.test_connection():
-                self.working_sites.append(site)
-                if not quiet:
-                    logger.info("indexer ok: %s", site.name)
-            elif not quiet:
-                logger.warning("indexer down: %s", site.name)
-        return bool(self.working_sites)
+        with self._lock:
+            self.working_sites = []
+            for site in self.sites:
+                if site.test_connection():
+                    self.working_sites.append(site)
+                    if not quiet:
+                        logger.info("indexer ok: %s", site.name)
+                elif not quiet:
+                    logger.warning("indexer down: %s", site.name)
+            return bool(self.working_sites)
 
     def filter_working_by_names(self, names: list[str]) -> None:
         wanted = {n.strip().lower() for n in names}

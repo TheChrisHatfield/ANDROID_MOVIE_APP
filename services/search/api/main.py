@@ -24,7 +24,9 @@ _SITES_HEALTH_TTL = 300
 def _refresh_sites_health(force: bool = False) -> list[str]:
     now = time.time()
     if not force and now - float(_sites_health_cache["checked_at"]) < _SITES_HEALTH_TTL:
-        return list(_sites_health_cache["working"])
+        if _searcher.working_sites:
+            return list(_sites_health_cache["working"])
+        force = True
     _searcher.test_sites(quiet=True)
     working = [site.name for site in _searcher.working_sites]
     _sites_health_cache["checked_at"] = now
