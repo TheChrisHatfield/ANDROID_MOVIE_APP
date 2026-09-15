@@ -42,4 +42,15 @@ class RuTorrentClientTest {
         server.shutdown()
         assertTrue(result is SeedboxResult.Failure)
     }
+
+    @Test
+    fun pingDoesNotCrashWithoutUrlScheme() = runBlocking {
+        val client = RuTorrentClient(
+            baseUrl = "seedbox.example.com/rutorrent",
+            username = "u",
+            password = "p",
+        )
+        val online = client.ping()
+        assertTrue(!online)
+    }
 }

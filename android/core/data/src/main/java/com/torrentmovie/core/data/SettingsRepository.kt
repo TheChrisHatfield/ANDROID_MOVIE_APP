@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.torrentmovie.core.data.seedbox.normalizeSeedboxUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,7 +52,7 @@ class SettingsRepository(context: Context) {
     fun save(settings: AppSettings): Boolean {
         val ok = prefs.edit()
             .putString(KEY_SEARCH_API, settings.searchApiBaseUrl.trimEnd('/'))
-            .putString(KEY_RUTORRENT_URL, settings.rutorrentBaseUrl.trimEnd('/') + "/")
+            .putString(KEY_RUTORRENT_URL, normalizeSeedboxUrl(settings.rutorrentBaseUrl))
             .putString(KEY_USERNAME, settings.username)
             .putString(KEY_PASSWORD, settings.password)
             .putString(KEY_AUTH_SCHEME, settings.authScheme)

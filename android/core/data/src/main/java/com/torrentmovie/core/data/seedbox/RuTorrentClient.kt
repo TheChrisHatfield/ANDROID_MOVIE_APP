@@ -20,19 +20,15 @@ class RuTorrentClient(
 
     private val useDigest = authScheme.equals("digest", ignoreCase = true)
 
-    private fun normalizedBase(): String {
-        var url = baseUrl.trim()
-        if (!url.endsWith("/")) url += "/"
-        return url
-    }
+    private fun normalizedBase(): String = normalizeSeedboxUrl(baseUrl)
 
     override suspend fun ping(): Boolean {
-        val request = Request.Builder()
-            .url(normalizedBase())
-            .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
-            .get()
-            .build()
         return try {
+            val request = Request.Builder()
+                .url(normalizedBase())
+                .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
+                .get()
+                .build()
             executeWithAuth(request).isSuccessful
         } catch (_: Exception) {
             false
@@ -40,16 +36,16 @@ class RuTorrentClient(
     }
 
     override suspend fun addMagnet(magnet: String, downloadDirectory: String): SeedboxResult {
-        val body = FormBody.Builder()
-            .add("url", magnet)
-            .add("dir_edit", downloadDirectory)
-            .build()
-        val request = Request.Builder()
-            .url("${normalizedBase()}php/addtorrent.php")
-            .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
-            .post(body)
-            .build()
         return try {
+            val body = FormBody.Builder()
+                .add("url", magnet)
+                .add("dir_edit", downloadDirectory)
+                .build()
+            val request = Request.Builder()
+                .url("${normalizedBase()}php/addtorrent.php")
+                .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
+                .post(body)
+                .build()
             val response = executeWithAuth(request)
             val text = response.body?.string() ?: ""
             if (!response.isSuccessful) {
