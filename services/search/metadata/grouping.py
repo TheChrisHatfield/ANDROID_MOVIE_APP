@@ -1,8 +1,11 @@
 """Group torrent rows by parsed movie title (Kodi-style compact search results)."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
+
+_MAX_TMDB_WORKERS = 4
 
 
 def _apply_tmdb(bucket: dict, tmdb: TmdbClient) -> None:
@@ -15,16 +18,14 @@ def _apply_tmdb(bucket: dict, tmdb: TmdbClient) -> None:
         bucket["trailer_youtube_key"] = info.trailer_youtube_key
 
 
-def _append_group(
-    bucket: dict,
-    releases: list[dict],
-    groups: list[dict],
-    tmdb: TmdbClient | None,
-    enrich_metadata: bool,
-) -> None:
-    if enrich_metadata and tmdb and tmdb.configured:
-        _apply_tmdb(bucket, tmdb)
-    bucket["release_count"] = len(releases)
+def _enrich_buckets_parallel(buckets: list[dict], tmdb: TmdbClient) -> None:
+    if not buckets:
+        return
+    with ThreadPoolExecutor(max_workers=_MAX_TMDB_WORKERS) as pool:
+        list(pool.map(lambda bucket: _apply_tmdb(bucket, tmdb), buckets))
+
+
+def _append_group(bucket: dict, releases: list[dict], groups: list[dict]) -> None:
     groups.append(
         {
             "group_key": bucket["group_key"],
@@ -33,7 +34,7 @@ def _append_group(
             "overview": bucket["overview"],
             "poster_url": bucket["poster_url"],
             "trailer_youtube_key": bucket["trailer_youtube_key"],
-            "release_count": bucket["release_count"],
+            "release_count": len(releases),
             "releases": releases,
         }
     )
@@ -71,6 +72,7 @@ def build_movie_groups(
 
     groups: list[dict] = []
     ungrouped: list[dict] = []
+    staged: list[tuple[dict, list[dict]]] = []
 
     def process_key(key: str) -> None:
         bucket = buckets[key]
@@ -81,12 +83,18 @@ def build_movie_groups(
         if bucket["year"] is None:
             ungrouped.extend(releases)
             return
-        _append_group(bucket, releases, groups, tmdb, enrich_metadata)
+        staged.append((bucket, releases))
 
     for key in order[:max_groups]:
         process_key(key)
 
     for key in order[max_groups:]:
         process_key(key)
+
+    if enrich_metadata and tmdb and tmdb.configured:
+        _enrich_buckets_parallel([bucket for bucket, _ in staged], tmdb)
+
+    for bucket, releases in staged:
+        _append_group(bucket, releases, groups)
 
     return groups, ungrouped
