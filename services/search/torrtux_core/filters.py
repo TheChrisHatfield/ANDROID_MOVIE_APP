@@ -59,7 +59,7 @@ def apply_filters(
     limit: int | None = None,
 ) -> list[dict]:
     filtered = list(results)
-    if min_seeds is not None:
+    if min_seeds is not None and min_seeds > 0:
         filtered = [
             r
             for r in filtered
