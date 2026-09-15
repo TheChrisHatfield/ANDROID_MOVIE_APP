@@ -68,7 +68,7 @@ class TorrentSite:
             "site": self.name,
         }
 
-    def get_magnet_link(self, detail_url: str | None) -> str | None:
+    def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
         detail_url = self.absolute_detail_url(detail_url)
         if not detail_url:
             return None
@@ -76,6 +76,9 @@ class TorrentSite:
             response = http_get(detail_url, timeout=15)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, "lxml")
+                for selector in (".download", "#download", ".download-link", ".torrent-download"):
+                    for anchor in soup.select(f"{selector} a[href^='magnet:']"):
+                        return anchor["href"]
                 for anchor in soup.find_all("a", href=True):
                     if anchor["href"].startswith("magnet:"):
                         return anchor["href"]
