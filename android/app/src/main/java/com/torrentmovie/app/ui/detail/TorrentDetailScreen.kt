@@ -53,7 +53,10 @@ fun TorrentDetailScreen(
         magnetError = null
         try {
             val resolved = container.searchRepository.resolveMagnet(resultId)
-            magnet = resolved.magnet
+            magnet = resolved.magnet.takeIf { it.isNotBlank() }
+            if (magnet.isNullOrBlank()) {
+                magnetError = "Magnet unavailable — tap retry"
+            }
         } catch (e: SearchException) {
             magnetError = when {
                 e.httpCode == 404 && e.message?.contains("expired", ignoreCase = true) == true ->
