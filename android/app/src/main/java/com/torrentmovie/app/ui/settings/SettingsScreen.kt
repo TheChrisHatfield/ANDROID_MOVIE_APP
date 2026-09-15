@@ -1,7 +1,9 @@
 package com.torrentmovie.app.ui.settings
 
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -134,6 +136,14 @@ fun SettingsScreen(container: AppContainer) {
 
 @Composable
 private fun RowSwitch(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Switch(checked = checked, onCheckedChange = onChecked)
-    Text(label)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(label, modifier = Modifier.weight(1f).padding(end = 8.dp))
+        Switch(checked = checked, onCheckedChange = onChecked)
+    }
 }
