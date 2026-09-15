@@ -5,29 +5,43 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
+import com.torrentmovie.app.ui.search.SearchViewModel
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.network.TorrentResultDto
 
 @Composable
 fun FoldSearchDetailLayout(container: AppContainer) {
     var selected by remember { mutableStateOf<TorrentResultDto?>(null) }
+    val vm: SearchViewModel = viewModel { SearchViewModel(container) }
+    val state by vm.state.collectAsState()
+
+    LaunchedEffect(state.results.map { it.id }) {
+        if (selected != null && state.results.none { it.id == selected!!.id }) {
+            selected = null
+        }
+    }
 
     Row(Modifier.fillMaxSize()) {
         SearchScreen(
             container = container,
+            sharedViewModel = vm,
             onOpenDetail = { result ->
                 container.searchResultStore.put(result)
                 selected = result
@@ -52,13 +66,15 @@ fun FoldSearchDetailLayout(container: AppContainer) {
                         .padding(24.dp),
                 )
             } else {
-                TorrentDetailScreen(
-                    container = container,
-                    resultId = result.id,
-                    name = result.name,
-                    site = result.site,
-                    initialMagnet = result.magnet,
-                )
+                key(result.id) {
+                    TorrentDetailScreen(
+                        container = container,
+                        resultId = result.id,
+                        name = result.name,
+                        site = result.site,
+                        initialMagnet = result.magnet,
+                    )
+                }
             }
         }
     }

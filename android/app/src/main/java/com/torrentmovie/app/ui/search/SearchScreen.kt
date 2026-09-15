@@ -43,8 +43,9 @@ fun SearchScreen(
     container: AppContainer,
     onOpenDetail: (TorrentResultDto) -> Unit,
     modifier: Modifier = Modifier,
+    sharedViewModel: SearchViewModel? = null,
 ) {
-    val vm: SearchViewModel = viewModel { SearchViewModel(container) }
+    val vm: SearchViewModel = sharedViewModel ?: viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
