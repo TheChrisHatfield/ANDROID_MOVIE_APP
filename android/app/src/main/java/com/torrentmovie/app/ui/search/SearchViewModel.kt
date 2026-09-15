@@ -267,7 +267,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 title = result.name,
                 year = null,
                 overview = null,
-                poster_url = null,
+                poster_url = result.posterUrl,
                 trailer_youtube_key = null,
                 release_count = 1,
                 releases = listOf(result),

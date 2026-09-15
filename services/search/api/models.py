@@ -24,6 +24,7 @@ class TorrentResult(BaseModel):
     date: str | None = None
     magnet: str | None = None
     detail_url: str | None = None
+    poster_url: str | None = None
 
 
 class MovieGroup(BaseModel):

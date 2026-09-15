@@ -44,6 +44,28 @@ def test_health():
 
 @patch.object(_searcher, "test_sites", return_value=True)
 @patch.object(_searcher, "search")
+def test_search_preserves_release_poster_url(mock_search, _mock_test):
+    mock_search.return_value = SearchOutcome(
+        results=[
+            {
+                "name": "Superman 2025 1080p",
+                "site": "YTS",
+                "seeds": "10",
+                "poster_url": "https://yts.rs/images/superman.jpg",
+            }
+        ],
+        failed_sites=[],
+    )
+    _searcher.working_sites = [MagicMock(name="YTS")]
+
+    response = client.get("/v1/search", params={"q": "superman", "enrich": False})
+    assert response.status_code == 200
+    release = response.json()["groups"][0]["releases"][0]
+    assert release["poster_url"] == "https://yts.rs/images/superman.jpg"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
+@patch.object(_searcher, "search")
 def test_search_all_sources_failed_returns_503(mock_search, mock_test):
     mock_search.return_value = SearchOutcome(results=[], failed_sites=["YTS"], all_sources_failed=True)
     _searcher.working_sites = [MagicMock(name="YTS")]
@@ -92,10 +114,15 @@ def test_search_passes_tmdb_api_key_override(mock_search, _mock_test, mock_group
     _searcher.working_sites = [MagicMock(name="YTS")]
     mock_group.return_value = ([], [])
 
-    client.get(
-        "/v1/search",
-        params={"q": "inception", "tmdb_api_key": "test-key-123", "group": True},
-    )
+    with patch.object(
+        __import__("metadata.tmdb_client", fromlist=["TmdbClient"]).TmdbClient,
+        "validate_key",
+        return_value=True,
+    ):
+        client.get(
+            "/v1/search",
+            params={"q": "inception", "tmdb_api_key": "test-key-123", "group": True},
+        )
 
     assert mock_group.called
     _, kwargs = mock_group.call_args

@@ -37,7 +37,10 @@ data class TorrentResultDto(
     val date: String? = null,
     val magnet: String? = null,
     val detail_url: String? = null,
-)
+    val poster_url: String? = null,
+) {
+    val posterUrl: String? get() = poster_url
+}
 
 data class MovieGroupDto(
     val group_key: String,
