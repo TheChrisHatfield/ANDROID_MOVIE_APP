@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Test / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Hive / agent artifacts (optional local)
+cartridge/
+
+# Android / E2E tooling (local)
+.tools/
+android/local.properties
+android/.gradle/
+android/**/build/
+
+# IDE / agent local
+.cursor/
+.hive/
+
+# E2E artifacts
+scripts/e2e/emulator-screenshot.png

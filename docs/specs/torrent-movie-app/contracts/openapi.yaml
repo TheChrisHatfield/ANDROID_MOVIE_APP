@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: Torrent Movie Search API
+  description: REST wrapper around refactored torrtux-c search logic for the Android client.
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8765
+    description: Local development
+
+paths:
+  /v1/health:
+    get:
+      summary: Service liveness
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /v1/sites/health:
+    get:
+      summary: Indexer connectivity check (torrtux test_sites)
+      operationId: sitesHealth
+      description: |
+        Probes each indexer's mirror list (GET homepage, 10s timeout, first HTTP 200 wins).
+        Results cached 300s unless refresh=true. Homepage liveness only — not searchability.
+      parameters:
+        - name: refresh
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Bypass 300s health cache and re-probe all indexers
+      responses:
+        '200':
+          description: Working indexers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  working:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+
+  /v1/search:
+    get:
+      summary: Search torrent indexers
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Movie or release search query
+        - name: sites
+          in: query
+          schema:
+            type: string
+          description: Comma-separated site names (default movie profile)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: pages
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: min_seeds
+          in: query
+          schema:
+            type: integer
+        - name: max_size
+          in: query
+          schema:
+            type: string
+          description: e.g. 4GB, 1500MB
+        - name: parallel
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: movie_profile
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: When true and sites omitted, restrict to movie profile indexers (YTS, 1337x, TPB, TorrentGalaxy, MagnetDL, EZTV)
+      responses:
+        '200':
+          description: Aggregated results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TorrentResult'
+                  failed_sites:
+                    type: array
+                    items:
+                      type: string
+                    description: Indexers that errored during this search (partial success)
+        '400':
+          description: Invalid query
+        '503':
+          description: No working indexers (detail No working indexers — Android maps to No sources available)
+
+  /v1/results/{resultId}/magnet:
+    get:
+      summary: Resolve magnet link for a cached result
+      operationId: getMagnet
+      parameters:
+        - name: resultId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Magnet URI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  magnet:
+                    type: string
+        '404':
+          description: |
+            Result not found or expired (cache miss/TTL) OR Magnet unavailable (detail fetch failed).
+            Distinct detail strings per FR-028.
+
+components:
+  schemas:
+    TorrentResult:
+      type: object
+      required:
+        - id
+        - name
+        - site
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          type: string
+        size:
+          type: string
+        seeds:
+          type: string
+        leeches:
+          type: string
+        date:
+          type: string
+        magnet:
+          type: string
+          nullable: true
+        detail_url:
+          type: string
+          nullable: true

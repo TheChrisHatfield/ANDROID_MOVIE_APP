@@ -1,0 +1,3 @@
+# Copy to local.properties and set your Android SDK path.
+# Default after scripts/e2e/setup-android-sdk.ps1 (on F: or your repo drive):
+sdk.dir=F\:/DRIVE_DOWNLOADS/ANDROID_MOVIE_APP/.tools/android-sdk

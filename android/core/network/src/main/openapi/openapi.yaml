@@ -1,0 +1,163 @@
+openapi: 3.0.3
+info:
+  title: Torrent Movie Search API
+  description: REST wrapper around refactored torrtux-c search logic for the Android client.
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8765
+    description: Local development
+
+paths:
+  /v1/health:
+    get:
+      summary: Service liveness
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /v1/sites/health:
+    get:
+      summary: Indexer connectivity check (torrtux test_sites)
+      operationId: sitesHealth
+      responses:
+        '200':
+          description: Working indexers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  working:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+
+  /v1/search:
+    get:
+      summary: Search torrent indexers
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Movie or release search query
+        - name: sites
+          in: query
+          schema:
+            type: string
+          description: Comma-separated site names (default movie profile)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: pages
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: min_seeds
+          in: query
+          schema:
+            type: integer
+        - name: max_size
+          in: query
+          schema:
+            type: string
+          description: e.g. 4GB, 1500MB
+        - name: parallel
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Aggregated results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TorrentResult'
+        '400':
+          description: Invalid query
+        '503':
+          description: No working indexers
+
+  /v1/results/{resultId}/magnet:
+    get:
+      summary: Resolve magnet link for a cached result
+      operationId: getMagnet
+      parameters:
+        - name: resultId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Magnet URI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  magnet:
+                    type: string
+        '404':
+          description: Result not found or magnet unavailable
+
+components:
+  schemas:
+    TorrentResult:
+      type: object
+      required:
+        - id
+        - name
+        - site
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          type: string
+        size:
+          type: string
+        seeds:
+          type: string
+        leeches:
+          type: string
+        date:
+          type: string
+        magnet:
+          type: string
+          nullable: true
+        detail_url:
+          type: string
+          nullable: true

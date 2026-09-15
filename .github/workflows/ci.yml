@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  hive-handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Hive CLI
+        env:
+          HIVE_PLANNER_PATH: ${{ vars.HIVE_PLANNER_PATH }}
+        run: |
+          if [ -z "$HIVE_PLANNER_PATH" ]; then
+            echo "Set repository variable HIVE_PLANNER_PATH to your Hive Code Planner checkout"
+            exit 1
+          fi
+          pip install -e "$HIVE_PLANNER_PATH[dev]"
+
+      - name: Sync impact maps
+        run: python -m hive_planner impact-sync-maps
+
+      - name: Hive handoff check
+        run: python -m hive_planner ci-check
+
+  project-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest -q
