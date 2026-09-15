@@ -68,6 +68,10 @@ class ResultCache:
                 return None
             return dict(entry.payload)
 
+    def clear(self) -> None:
+        with self._lock:
+            self._store.clear()
+
     def resolve_magnet(self, result_id: UUID, magnet: str) -> dict[str, Any] | None:
         with self._lock:
             self._evict_expired()

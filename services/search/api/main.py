@@ -47,9 +47,12 @@ def _refresh_sites_health(force: bool = False) -> list[str]:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    logging.basicConfig(level=logging.INFO)
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=logging.INFO)
     # FR-008: probe on first /v1/sites/health or /v1/search (not blocking startup)
     yield
+    _result_cache.clear()
+    logger.info("Search API shutdown: result cache cleared")
 
 
 app = FastAPI(title="Torrent Movie Search API", version="1.0.0", lifespan=lifespan)

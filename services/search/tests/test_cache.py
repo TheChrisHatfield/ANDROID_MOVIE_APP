@@ -4,6 +4,17 @@ from uuid import UUID
 from api.cache import ResultCache
 
 
+def test_cache_clear():
+    from uuid import UUID
+
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    stored = cache.put_many([{"name": "a", "site": "s"}])
+    result_id = UUID(stored[0]["id"])
+    assert cache.get(result_id) is not None
+    cache.clear()
+    assert cache.get(result_id) is None
+
+
 def test_cache_put_get_and_ttl():
     cache = ResultCache(max_entries=10, ttl_seconds=1)
     stored = cache.put_many([{"name": "Inception", "site": "YTS", "seeds": "10"}])
