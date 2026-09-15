@@ -54,5 +54,12 @@ class SeedboxRepository(
         result
     }
 
-    suspend fun pingSeedbox(): Boolean = client().ping()
+    suspend fun pingSeedbox(): Boolean {
+        if (!settingsRepository.isSeedboxConfigured()) return false
+        return try {
+            client().ping()
+        } catch (_: Exception) {
+            false
+        }
+    }
 }
