@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -47,8 +48,18 @@ fun TorrentDetailScreen(
         container.settingsRepository.isSeedboxConfigured()
     }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
+    var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
 
-    suspend fun resolveMagnet() {
+    LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
+        if (magnetLoading) {
+            duplicate = false
+            return@LaunchedEffect
+        }
+        duplicate = container.uploadedRepository.isUploaded(magnet, name, site)
+    }
+
+    LaunchedEffect(resultId, resolveRequest) {
+        if (resolveRequest == 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
         magnetLoading = true
         magnetError = null
         try {
@@ -74,16 +85,6 @@ fun TorrentDetailScreen(
         }
     }
 
-    LaunchedEffect(magnet, name, site, uploaded) {
-        duplicate = container.uploadedRepository.isUploaded(magnet, name, site)
-    }
-
-    LaunchedEffect(resultId) {
-        if (magnet.isNullOrBlank()) {
-            resolveMagnet()
-        }
-    }
-
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text(name, style = MaterialTheme.typography.headlineSmall)
         Text(site, modifier = Modifier.padding(vertical = 8.dp))
@@ -95,7 +96,7 @@ fun TorrentDetailScreen(
         }
         magnetError?.let { msg ->
             Text(msg, color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { scope.launch { resolveMagnet() } }) {
+            TextButton(onClick = { resolveRequest++ }) {
                 Text("Retry magnet")
             }
         }
