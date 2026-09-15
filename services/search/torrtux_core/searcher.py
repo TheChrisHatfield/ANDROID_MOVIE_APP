@@ -20,6 +20,7 @@ class SearchOutcome:
     failed_sites: list[str]
     all_sources_failed: bool = False
     indexers_unavailable: bool = False
+    movie_indexers_unavailable: bool = False
 
 
 class TorrentSearcher:
@@ -130,8 +131,9 @@ class TorrentSearcher:
         self,
         sites: list[str] | None,
         movie_profile: bool,
+        pool: list | None = None,
     ) -> list:
-        pool = list(self.working_sites)
+        pool = list(pool if pool is not None else self.working_sites)
         if sites:
             wanted = {n.strip().lower() for n in sites if n.strip()}
             if not wanted:
@@ -160,12 +162,13 @@ class TorrentSearcher:
         max_size: str | None = None,
         limit: int | None = None,
     ) -> SearchOutcome:
-        pool = list(self.working_sites)
-        selected = self._select_working_sites(sites, movie_profile)
+        with self._lock:
+            pool = list(self.working_sites)
+        selected = self._select_working_sites(sites, movie_profile, pool)
         if sites and not selected and pool:
             return SearchOutcome([], [], indexers_unavailable=True)
         if movie_profile and not sites and not selected and pool:
-            return SearchOutcome([], [], indexers_unavailable=True)
+            return SearchOutcome([], [], movie_indexers_unavailable=True)
         queried_names = {site.name for site in selected}
         raw, failed_sites = self.search_all_sites(
             query,
