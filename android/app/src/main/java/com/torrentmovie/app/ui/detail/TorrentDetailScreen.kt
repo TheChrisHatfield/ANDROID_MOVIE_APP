@@ -54,7 +54,7 @@ fun TorrentDetailScreen(
     }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
-    val metadata = remember(resultId) { container.movieMetadataStore.get(resultId) }
+    val metadata = container.movieMetadataStore.get(resultId)
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
         val key = MagnetHashUtil.storageKey(magnetValue ?: "", name, site)
