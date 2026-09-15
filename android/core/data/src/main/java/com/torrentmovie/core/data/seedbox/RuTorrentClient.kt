@@ -25,11 +25,13 @@ class RuTorrentClient(
     override suspend fun ping(): Boolean {
         return try {
             val request = Request.Builder()
-                .url(normalizedBase())
+                .url("${normalizedBase()}php/addtorrent.php")
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .get()
                 .build()
-            executeWithAuth(request).use { it.isSuccessful }
+            executeWithAuth(request).use { response ->
+                response.isSuccessful || response.code == 405
+            }
         } catch (_: Exception) {
             false
         }
