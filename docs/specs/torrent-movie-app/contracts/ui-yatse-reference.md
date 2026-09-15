@@ -87,7 +87,7 @@ Drawer (Yatse-style left menu):
 - **Material Design 3** — dynamic color, elevated cards, consistent 16dp padding.
 - **Typography:** title large for detail hero; label small for site badges.
 - **Color semantics:** green = sent/success, amber = duplicate warning, red = error, muted = offline seedbox.
-- **Tablet:** optional two-pane (list + detail) like Yatse landscape — post-MVP.
+- **Z Fold (inner screen ≥600dp):** two-pane search + detail (Yatse landscape pattern) via `FoldSearchDetailLayout`; phone and folded narrow use single-pane detail navigation.
 
 ## Out of scope (Yatse features not ported)
 

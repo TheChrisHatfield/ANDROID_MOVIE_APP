@@ -125,6 +125,26 @@ As a user, I filter by minimum seeds and maximum size so I quickly find a health
 
 ---
 
+### User Story 7 - Phone and Z Fold layouts (Priority: P1)
+
+As a user on **any** supported Android device (traditional phone or Samsung Galaxy Z Fold), I get the same search, detail, and seedbox-send behavior — with a two-pane search+detail layout on Z Fold inner screen when unfolded, and standard single-pane navigation otherwise.
+
+**Why this priority**: One APK ships to both form factors; fold-only or phone-only bugs block release for half the audience.
+
+**Independent Test**:
+
+- **Phone lane:** Pixel-class device or emulator → search → tap result → detail screen → send to seedbox.
+- **Fold lane:** Samsung Z Fold unfolded (inner width ≥600dp) → search in left pane → select result → detail + send in right pane; cover→unfold restores detail when applicable.
+
+**Acceptance Scenarios**:
+
+1. **Given** a non-Fold phone, **When** the user taps a search result, **Then** the app navigates to a full-screen detail route with the same magnet/send behavior as fold.
+2. **Given** a Samsung Z Fold on first launch, **When** the inner screen is wide enough, **Then** search and detail appear side by side using shared `SearchScreen` and `TorrentDetailScreen` (not duplicate business logic).
+3. **Given** a Z Fold folded or narrow (&lt;600dp width), **When** the user taps a result, **Then** behavior matches the phone lane (single-pane navigation).
+4. **Given** a release candidate build, **When** QA completes a bug hunt cycle, **Then** both phone and fold lanes were exercised for any change touching navigation, selection, or `android/.../fold/`.
+
+---
+
 ### Edge Cases
 
 - No indexers reachable → show "No sources available" with retry, not empty success.
@@ -186,6 +206,12 @@ As a user, I filter by minimum seeds and maximum size so I quickly find a health
 - **FR-029**: `max_size` / `min_size` parameters MUST accept torrtux-style units (`GB`, `MB`, `KB`, `B` suffix); README-style `M`/`G`/`T` shorthands are out of scope unless parser extended.
 - **FR-030**: Site name filters (`sites` query param, Settings movie-profile toggle) MUST match indexers **case-insensitively** on canonical site names.
 - **FR-031**: Search API SHOULD return `failed_sites[]` when individual indexers error during a parallel search; Android SHOULD surface a non-blocking info message (partial success per US1 scenario 3).
+- **FR-032**: Android MUST ship as **one APK** with shared search/detail/send logic; Z Fold MUST NOT use a separate app module or forked repositories.
+- **FR-032a**: On Samsung Galaxy Z Fold (detected once on first launch; Z Flip excluded), the app MUST enable two-pane search+detail when `screenWidthDp >= 600`; otherwise MUST use phone-style single-pane navigation.
+- **FR-032b**: Two-pane mode MUST compose shared `SearchScreen` and `TorrentDetailScreen` inside `FoldSearchDetailLayout`; magnet resolution and seedbox send MUST behave identically to the phone detail route.
+- **FR-032c**: Transition from cover/single-pane detail to unfolded two-pane MUST restore the selected result when possible (`pendingFoldDetailId` or equivalent).
+- **FR-033**: Bug-hunt and release validation MUST follow **dual-lane** coverage: universal fixes in shared layers plus explicit phone and fold smoke for navigation/selection changes (see `.cursor/rules/bug-hunt-dual-lane.mdc`).
+- **FR-034**: Fixes SHOULD land in shared code first; fold-only wiring changes MUST include fold-lane validation evidence in the cycle summary.
 
 ### Key Entities
 
@@ -205,6 +231,7 @@ As a user, I filter by minimum seeds and maximum size so I quickly find a health
 - **SC-004**: 100% of "success" toasts correspond to HTTP 2xx from seedbox API (no false success).
 - **SC-005**: ≥80% of torrtux movie-profile site adapters compile and pass unit smoke tests without modification beyond import paths.
 - **SC-006**: 100% of duplicate magnet send attempts (same info-hash in uploaded list) are blocked before ruTorrent API call.
+- **SC-007**: Every release-candidate bug hunt documents **phone lane** and **fold lane** smoke results; cycles that touch `NavGraph` or `android/.../fold/` MUST NOT complete with only one lane tested.
 
 ## Assumptions
 

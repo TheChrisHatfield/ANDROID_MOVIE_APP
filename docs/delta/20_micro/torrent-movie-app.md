@@ -57,3 +57,13 @@ curl "http://127.0.0.1:8765/v1/search?q=inception&limit=5"
 py -3.11 -m hive_planner spec-drift-check
 py -3.11 -m hive_planner ci-check
 ```
+
+### Dual-lane bug hunt (phone + Z Fold)
+
+| Lane | Target | Minimum smoke |
+|------|--------|----------------|
+| **Universal** | API + `core:data` + shared UI | pytest + `android` unit tests + `ci-check` |
+| **Phone** | `NavGraph` single-pane | `scripts/e2e/device-e2e.ps1` → disclaimer → search → detail nav → send |
+| **Fold** | `FoldSearchDetailLayout`, unfold ≥600dp | Z Fold physical: two-pane select → detail/send; cover→unfold; folded = phone nav |
+
+Classify fixes: `universal` \| `phone-wiring` \| `fold-wiring`. Spec: FR-032–FR-034, US7. Rule: `.cursor/rules/bug-hunt-dual-lane.mdc`.

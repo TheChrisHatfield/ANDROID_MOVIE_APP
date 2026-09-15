@@ -197,4 +197,13 @@ T001 → T012 → T013–T019 → T020–T024 (dev settings hardcoded until T026
 - [x] Integration-level validation evidence attached
 - [x] See `.cursor/rules/integration-wiring-audit.mdc`
 
+## Bug hunt cycles — dual-lane coverage (required)
+
+Per spec **US7**, **FR-032–FR-034**, **SC-007**, and `.cursor/rules/bug-hunt-dual-lane.mdc`:
+
+- [ ] **Universal pass** — API + `core:data` + shared UI; pytest + Android unit tests
+- [ ] **Phone lane** — `scripts/e2e/device-e2e.ps1` smoke (single-pane nav)
+- [ ] **Fold lane** — Z Fold manual smoke (two-pane + cover→unfold + narrow fallback)
+- [ ] Classify each fix: `universal` | `phone-wiring` | `fold-wiring`
+
 Before Continual Learning promotion, run `py -3.11 -m hive_planner spec-drift-check`.

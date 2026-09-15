@@ -46,3 +46,6 @@ See [`START_HERE.md`](START_HERE.md).
 - Search tests: `cd services/search && py -3.11 -m pytest -q` # operational
 - Android app: `android/` — requires Android SDK; see `android/README.md`. # operational
 - Repo wiring tests: `py -3.11 -m pytest -q` from repo root (4 tests). # operational
+- Bug hunt dual-lane rule: `.cursor/rules/bug-hunt-dual-lane.mdc` (universal fixes + phone/fold smoke). Spec FR-032–FR-034, US7. # operational
+- Phone lane smoke: `.\scripts\e2e\device-e2e.ps1` (Pixel 6 emulator; API `http://10.0.2.2:8765`). # operational
+- Fold lane smoke (manual, Z Fold e.g. SM-F946U1): Settings API `http://<LAN-IP>:8765` → unfold inner screen → search → select left pane → detail/send right pane → fold narrow verifies phone nav. # operational
