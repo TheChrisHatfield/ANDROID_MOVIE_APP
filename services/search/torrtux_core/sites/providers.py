@@ -200,7 +200,16 @@ class X1337(TorrentSite):
 
         for row in table.find_all("tr")[1:]:
             try:
-                name_cell = row.find("td", class_="name").find_all("a")[1]
+                name_td = row.find("td", class_="name")
+                if not name_td:
+                    continue
+                links = name_td.find_all("a", href=True)
+                name_cell = next(
+                    (a for a in links if "/torrent/" in a["href"]),
+                    links[-1] if links else None,
+                )
+                if not name_cell:
+                    continue
                 name = name_cell.text
                 detail_url = urljoin(self.working_url, name_cell["href"])
                 seeds = row.find("td", class_="seeds").text
@@ -1073,7 +1082,7 @@ class MagnetDL(TorrentSite):
         )
     def build_search_url(self, query, page=0):
         # MagnetDL uses the first letter of the query in the URL path
-        first_letter = query[0].lower() if query else 'a'
+        first_letter = next((c for c in query.lower() if c.isalnum()), "a")
         return f"{self.working_url}/{first_letter}/{quote(query)}/?page={page+1}"
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
