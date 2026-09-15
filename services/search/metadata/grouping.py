@@ -77,10 +77,7 @@ def build_movie_groups(
     def process_key(key: str) -> None:
         bucket = buckets[key]
         releases = bucket["releases"]
-        if len(releases) == 1:
-            ungrouped.extend(releases)
-            return
-        if bucket["year"] is None:
+        if not str(bucket.get("title") or "").strip():
             ungrouped.extend(releases)
             return
         staged.append((bucket, releases))
