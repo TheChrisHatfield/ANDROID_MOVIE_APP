@@ -1,6 +1,7 @@
 package com.torrentmovie.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -44,7 +45,7 @@ fun AppNavGraph(
             ),
         ) { entry ->
             val resultId = entry.arguments?.getString("resultId") ?: ""
-            val cached = container.searchResultStore.get(resultId)
+            val cached = remember(resultId) { container.searchResultStore.get(resultId) }
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
