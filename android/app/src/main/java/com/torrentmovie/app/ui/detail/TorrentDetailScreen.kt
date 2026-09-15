@@ -42,7 +42,7 @@ fun TorrentDetailScreen(
     var duplicate by remember { mutableStateOf(false) }
     var magnetError by remember { mutableStateOf<String?>(null) }
     var magnetLoading by remember { mutableStateOf(false) }
-    val seedboxConfigured = remember { container.settingsRepository.isSeedboxConfigured() }
+    val seedboxConfigured = container.settingsRepository.isSeedboxConfigured()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
 
     suspend fun resolveMagnet() {

@@ -54,8 +54,10 @@ fun SearchScreen(
         onRefresh = { vm.search() },
     )
 
-    LaunchedEffect(state.error, state.info) {
-        state.error?.let { snackbar.showSnackbar(it) }
+    LaunchedEffect(state.error, state.info, state.errorCode) {
+        if (state.errorCode != 503) {
+            state.error?.let { snackbar.showSnackbar(it) }
+        }
         state.info?.let { snackbar.showSnackbar(it) }
     }
 
