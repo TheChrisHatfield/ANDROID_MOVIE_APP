@@ -11,13 +11,14 @@ def test_yts_parses_next_data_fixture():
     site.working_url = "https://yts.rs"
     html = (FIXTURES / "yts_search.html").read_bytes()
     rows = site.parse_results(html, "inception")
-    assert len(rows) == 1
-    assert rows[0]["name"] == "Inception (2010)"
-    assert rows[0]["site"] == "YTS"
-    assert rows[0]["seeds"] == "100"
-    assert rows[0]["leeches"] == "0"
-    assert rows[0]["magnet"].startswith("magnet:?xt=urn:btih:")
-    assert "inception-2010" in rows[0]["detail_url"]
+    assert len(rows) == 3
+    assert any("Inception" in row["name"] for row in rows)
+    assert all(row["site"] == "YTS" for row in rows)
+    qualities = {row["name"] for row in rows}
+    assert any("[720p]" in name for name in qualities)
+    assert any("[1080p]" in name for name in qualities)
+    assert all(row["magnet"].startswith("magnet:?xt=urn:btih:") for row in rows)
+    assert all("inception-2010" in row["detail_url"] for row in rows)
 
 
 def test_tpb_skips_apibay_no_results_placeholder():

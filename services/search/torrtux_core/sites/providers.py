@@ -252,28 +252,30 @@ class YTS(TorrentSite):
             torrents = movie.get("torrents") or []
             if not torrents:
                 continue
-            best = max(torrents, key=lambda row: int(row.get("seeds") or 0))
             title = movie.get("title_long") or movie.get("title") or "-"
             slug = movie.get("slug")
             detail_url = movie.get("url") or (
                 urljoin(self.working_url, f"/movie/{slug}") if slug else None
             )
-            info_hash = best.get("hash")
-            seeds_val = int(best.get("seeds") or 0)
-            peers_val = int(best.get("peers") or 0)
-            leeches_val = max(peers_val - seeds_val, 0) if peers_val else None
-            results.append(
-                {
-                    "name": title,
-                    "size": best.get("size", "-"),
-                    "seeds": str(best.get("seeds", "-")),
-                    "leeches": str(leeches_val) if leeches_val is not None else "-",
-                    "date": str(movie.get("year", "-")),
-                    "magnet": _magnet_from_hash(info_hash, title) if info_hash else None,
-                    "detail_url": detail_url,
-                    "site": self.name,
-                }
-            )
+            for torrent in torrents:
+                info_hash = torrent.get("hash")
+                seeds_val = int(torrent.get("seeds") or 0)
+                peers_val = int(torrent.get("peers") or 0)
+                leeches_val = max(peers_val - seeds_val, 0) if peers_val else None
+                quality = torrent.get("quality")
+                label = f"{title} [{quality}]" if quality else title
+                results.append(
+                    {
+                        "name": label,
+                        "size": torrent.get("size", "-"),
+                        "seeds": str(torrent.get("seeds", "-")),
+                        "leeches": str(leeches_val) if leeches_val is not None else "-",
+                        "date": str(movie.get("year", "-")),
+                        "magnet": _magnet_from_hash(info_hash, label) if info_hash else None,
+                        "detail_url": detail_url,
+                        "site": self.name,
+                    }
+                )
         return results
 
     def _movie_row_from_card(self, card) -> dict | None:
@@ -1129,6 +1131,10 @@ class GoodTorrent(TorrentSite):
             "Good-Torrent",
             ["https://good-torrent.com"]
         )
+
+    def test_connection(self) -> bool:
+        return False
+
     def build_search_url(self, query, page=0):
         return f"{self.working_url}/search/{quote(query)}"
     def parse_results(self, content, query):

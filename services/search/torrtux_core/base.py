@@ -39,9 +39,12 @@ class TorrentSite:
     def absolute_detail_url(self, detail_url: str | None) -> str | None:
         if not detail_url:
             return None
-        if self.working_url and not detail_url.startswith(("http://", "https://")):
-            return urljoin(self.working_url, detail_url)
-        return detail_url
+        if detail_url.startswith(("http://", "https://")):
+            return detail_url
+        base = self.working_url or (self.base_urls[0] if self.base_urls else None)
+        if base:
+            return urljoin(base.rstrip("/") + "/", detail_url.lstrip("/"))
+        return None
 
     def make_result(
         self,
