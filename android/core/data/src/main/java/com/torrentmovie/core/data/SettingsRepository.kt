@@ -6,6 +6,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
 import com.torrentmovie.core.data.seedbox.normalizeSeedboxUrl
+import java.net.URI
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,7 +53,11 @@ class SettingsRepository(context: Context) {
 
     fun save(settings: AppSettings): Boolean {
         val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
-        if (searchApiUrl.isBlank()) {
+        if (searchApiUrl.isBlank() || !isValidHttpUrl(searchApiUrl)) {
+            return false
+        }
+        val downloadDir = settings.downloadDirectory.trim()
+        if (downloadDir.isBlank()) {
             return false
         }
         val ok = prefs.edit()
@@ -61,7 +66,7 @@ class SettingsRepository(context: Context) {
             .putString(KEY_USERNAME, settings.username)
             .putString(KEY_PASSWORD, settings.password)
             .putString(KEY_AUTH_SCHEME, settings.authScheme)
-            .putString(KEY_DOWNLOAD_DIR, settings.downloadDirectory)
+            .putString(KEY_DOWNLOAD_DIR, downloadDir)
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
             .commit()
@@ -74,6 +79,15 @@ class SettingsRepository(context: Context) {
     fun isSeedboxConfigured(): Boolean {
         val s = load()
         return s.rutorrentBaseUrl.isNotBlank() && s.username.isNotBlank() && s.password.isNotBlank()
+    }
+
+    private fun isValidHttpUrl(url: String): Boolean {
+        return try {
+            val host = URI(url).host
+            !host.isNullOrBlank()
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private companion object {
