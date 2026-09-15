@@ -46,21 +46,21 @@ class RuTorrentClient(
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .post(body)
                 .build()
-            val response = executeWithAuth(request)
-            val text = response.body?.string() ?: ""
-            if (!response.isSuccessful) {
-                return SeedboxResult.Failure("HTTP ${response.code}", response.code)
+            return executeWithAuth(request).use { response ->
+                val text = response.body?.string() ?: ""
+                when {
+                    !response.isSuccessful ->
+                        SeedboxResult.Failure("HTTP ${response.code}", response.code)
+                    text.contains("FailedDirectory", ignoreCase = true) ->
+                        SeedboxResult.Failure("Invalid download directory")
+                    text.contains("Failed", ignoreCase = true) &&
+                        !text.contains("Success", ignoreCase = true) ->
+                        SeedboxResult.Failure("ruTorrent rejected magnet")
+                    !text.contains("Success", ignoreCase = true) ->
+                        SeedboxResult.Failure("Unexpected ruTorrent response")
+                    else -> SeedboxResult.Success()
+                }
             }
-            if (text.contains("FailedDirectory", ignoreCase = true)) {
-                return SeedboxResult.Failure("Invalid download directory")
-            }
-            if (text.contains("Failed", ignoreCase = true) && !text.contains("Success", ignoreCase = true)) {
-                return SeedboxResult.Failure("ruTorrent rejected magnet")
-            }
-            if (!text.contains("Success", ignoreCase = true)) {
-                return SeedboxResult.Failure("Unexpected ruTorrent response")
-            }
-            SeedboxResult.Success()
         } catch (e: Exception) {
             SeedboxResult.Failure(e.message ?: "Connection failed")
         }
