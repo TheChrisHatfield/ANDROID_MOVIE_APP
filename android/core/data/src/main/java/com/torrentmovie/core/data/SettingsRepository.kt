@@ -64,12 +64,16 @@ class SettingsRepository(context: Context) {
         if (settings.rutorrentBaseUrl.isNotBlank() && !isValidHttpUrl(rutorrentUrl)) {
             return false
         }
+        val authScheme = normalizeAuthScheme(settings.authScheme)
+        if (authScheme !in setOf("basic", "digest")) {
+            return false
+        }
         val ok = prefs.edit()
             .putString(KEY_SEARCH_API, searchApiUrl)
             .putString(KEY_RUTORRENT_URL, rutorrentUrl)
-            .putString(KEY_USERNAME, settings.username)
-            .putString(KEY_PASSWORD, settings.password)
-            .putString(KEY_AUTH_SCHEME, normalizeAuthScheme(settings.authScheme))
+            .putString(KEY_USERNAME, settings.username.trim())
+            .putString(KEY_PASSWORD, settings.password.trim())
+            .putString(KEY_AUTH_SCHEME, authScheme)
             .putString(KEY_DOWNLOAD_DIR, downloadDir)
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
