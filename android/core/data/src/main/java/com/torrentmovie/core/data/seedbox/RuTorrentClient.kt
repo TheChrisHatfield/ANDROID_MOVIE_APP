@@ -30,7 +30,16 @@ class RuTorrentClient(
                 .get()
                 .build()
             executeWithAuth(request).use { response ->
-                response.isSuccessful || response.code == 405
+                when {
+                    response.code == 401 || response.code == 403 -> false
+                    response.code == 405 -> true
+                    !response.isSuccessful -> false
+                    else -> {
+                        val text = response.body?.string()?.trim() ?: ""
+                        !(text.contains("<html", ignoreCase = true) &&
+                            text.contains("login", ignoreCase = true))
+                    }
+                }
             }
         } catch (_: Exception) {
             false
