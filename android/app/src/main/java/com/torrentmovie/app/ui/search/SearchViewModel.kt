@@ -50,7 +50,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun setMinSeeds(value: Int?) {
-        _state.value = _state.value.copy(minSeeds = value)
+        _state.value = _state.value.copy(minSeeds = value?.takeIf { it > 0 })
     }
 
     fun setMaxSize(value: String?) {
