@@ -55,6 +55,12 @@ def test_min_seeds_zero_keeps_unknown_seed_rows():
     assert len(out) == 1
 
 
+def test_max_seeds_keeps_unknown_seed_rows():
+    rows = [{"name": "a", "site": "1337x", "seeds": "-", "size": "1 GB"}]
+    out = apply_filters(rows, max_seeds=10)
+    assert len(out) == 1
+
+
 def test_apply_min_seeds():
     rows = [
         {"name": "a", "seeds": "5", "size": "1 GB"},
