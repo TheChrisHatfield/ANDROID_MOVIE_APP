@@ -317,11 +317,13 @@ class YTS(TorrentSite):
                 )
             except Exception:
                 continue
+        seen_urls: set[str] = {row["detail_url"] for row in results if row.get("detail_url")}
         for movie in soup.select(".card"):
             try:
                 row = self._movie_row_from_card(movie)
-                if row:
+                if row and row.get("detail_url") not in seen_urls:
                     results.append(row)
+                    seen_urls.add(row["detail_url"])
             except Exception:
                 continue
         return results
@@ -361,7 +363,7 @@ class YTS(TorrentSite):
                     return href
         except Exception:
             pass
-        return super().get_magnet_link(detail_url)
+        return None
 
 class Nyaa(TorrentSite):
     def __init__(self):

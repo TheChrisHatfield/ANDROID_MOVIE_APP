@@ -53,6 +53,7 @@ class TorrentSearcher:
     def _search_site(self, site, query: str, page_limit: int) -> tuple[list[dict], bool]:
         results: list[dict] = []
         errored = False
+        prev_url: str | None = None
         for page in range(page_limit):
             try:
                 search_url = site.build_search_url(query, page)
@@ -63,6 +64,9 @@ class TorrentSearcher:
             if not search_url or not isinstance(search_url, str) or not search_url.startswith("http"):
                 errored = page == 0 and not results
                 break
+            if page > 0 and search_url == prev_url:
+                break
+            prev_url = search_url
             try:
                 response = http_get(search_url, timeout=15)
             except Exception as exc:
@@ -158,6 +162,8 @@ class TorrentSearcher:
         pool = list(self.working_sites)
         selected = self._select_working_sites(sites, movie_profile)
         if sites and not selected and pool:
+            return SearchOutcome([], [], indexers_unavailable=True)
+        if movie_profile and not sites and not selected and pool:
             return SearchOutcome([], [], indexers_unavailable=True)
         queried_names = {site.name for site in selected}
         raw, failed_sites = self.search_all_sites(

@@ -14,7 +14,7 @@ def test_search_sorts_before_limit():
     ]
 
     with patch.object(searcher, "search_all_sites", return_value=(raw_rows, [])):
-        out = searcher.search("test", limit=2)
+        out = searcher.search("test", limit=2, movie_profile=False)
 
     assert [row["name"] for row in out.results] == ["high", "mid"]
 
