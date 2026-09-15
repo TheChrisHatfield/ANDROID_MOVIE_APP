@@ -27,7 +27,11 @@ internal object DigestAuth {
         if (algorithm != "MD5") return null
 
         val ha1 = md5("$username:$realm:$password")
-        val ha2 = md5("$method:$requestUri")
+        val ha2 = if (qop == "auth-int") {
+            md5("$method:$requestUri:${md5("")}")
+        } else {
+            md5("$method:$requestUri")
+        }
         val nc = "%08x".format(nonceCounter.incrementAndGet())
         val cnonce = md5(System.nanoTime().toString()).take(16)
         val response = if (qop == "auth" || qop == "auth-int") {

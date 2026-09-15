@@ -16,6 +16,8 @@ import androidx.navigation.navArgument
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.help.HelpScreen
 import com.torrentmovie.app.ui.search.SearchScreen
+import com.torrentmovie.app.ui.search.SearchViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.core.data.AppContainer
@@ -48,16 +50,21 @@ fun AppNavGraph(
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
+            val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
             if (useFoldTwoPane) {
-                FoldSearchDetailLayout(container)
+                FoldSearchDetailLayout(container, searchViewModel)
             } else {
-                SearchScreen(container, onOpenDetail = { r ->
+                SearchScreen(
+                    container = container,
+                    sharedViewModel = searchViewModel,
+                    onOpenDetail = { r ->
                     container.searchResultStore.put(r)
                     navController.navigate(Routes.detail(r.id, r.name, r.site)) {
                         launchSingleTop = true
                         popUpTo(Routes.SEARCH) { inclusive = false }
                     }
-                })
+                },
+                )
             }
         }
         composable(

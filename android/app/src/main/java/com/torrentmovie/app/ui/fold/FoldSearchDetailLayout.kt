@@ -14,12 +14,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
@@ -27,24 +26,32 @@ import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.network.TorrentResultDto
 
 @Composable
-fun FoldSearchDetailLayout(container: AppContainer) {
-    var selected by remember { mutableStateOf<TorrentResultDto?>(null) }
-    val vm: SearchViewModel = viewModel { SearchViewModel(container) }
-    val state by vm.state.collectAsState()
+fun FoldSearchDetailLayout(
+    container: AppContainer,
+    searchViewModel: SearchViewModel,
+) {
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val state by searchViewModel.state.collectAsState()
+
+    val selected: TorrentResultDto? = selectedId?.let { id ->
+        state.results.find { it.id == id } ?: container.searchResultStore.get(id)
+    }
 
     LaunchedEffect(state.results.map { it.id }) {
-        if (selected != null && state.results.none { it.id == selected!!.id }) {
-            selected = null
+        if (selectedId != null && state.results.isNotEmpty() &&
+            state.results.none { it.id == selectedId }
+        ) {
+            selectedId = null
         }
     }
 
     Row(Modifier.fillMaxSize()) {
         SearchScreen(
             container = container,
-            sharedViewModel = vm,
+            sharedViewModel = searchViewModel,
             onOpenDetail = { result ->
                 container.searchResultStore.put(result)
-                selected = result
+                selectedId = result.id
             },
             modifier = Modifier
                 .weight(0.42f)
