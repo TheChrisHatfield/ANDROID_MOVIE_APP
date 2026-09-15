@@ -66,6 +66,7 @@ class ResultCache:
             if time.time() - entry.created_at > self.ttl_seconds:
                 del self._store[result_id]
                 return None
+            entry.created_at = time.time()
             return dict(entry.payload)
 
     def clear(self) -> None:

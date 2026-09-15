@@ -24,6 +24,18 @@ def test_cache_put_get_and_ttl():
     assert cache.get(result_id) is None
 
 
+def test_get_refreshes_ttl():
+    cache = ResultCache(max_entries=10, ttl_seconds=2)
+    stored = cache.put_many([{"name": "Inception", "site": "YTS"}])
+    result_id = UUID(stored[0]["id"])
+    original_created = cache._store[result_id].created_at
+    time.sleep(1.0)
+    assert cache.get(result_id) is not None
+    assert cache._store[result_id].created_at > original_created
+    time.sleep(1.1)
+    assert cache.get(result_id) is not None
+
+
 def test_resolve_magnet_extends_ttl():
     cache = ResultCache(max_entries=10, ttl_seconds=2)
     stored = cache.put_many([{"name": "Inception", "site": "YTS", "magnet": None}])
