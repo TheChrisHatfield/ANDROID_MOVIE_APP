@@ -78,6 +78,12 @@ def search(
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
 ) -> SearchResponse:
+    q = q.strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
+        raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
+
     if not _searcher.working_sites:
         _refresh_sites_health(force=True)
     if not _searcher.working_sites:

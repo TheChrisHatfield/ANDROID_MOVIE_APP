@@ -80,3 +80,22 @@ def test_empty_sites_param_returns_400(_mock_test):
 def test_quality_from_result_name_bracketed_and_loose():
     assert _quality_from_result_name("Movie [1080p] BluRay") == "1080p"
     assert _quality_from_result_name("Movie 720p WEB") == "720p"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
+def test_whitespace_only_query_returns_400(_mock_test):
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    response = client.get("/v1/search", params={"q": "   "})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Query cannot be empty"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
+def test_min_seeds_greater_than_max_seeds_returns_400(_mock_test):
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    response = client.get(
+        "/v1/search",
+        params={"q": "inception", "min_seeds": 50, "max_seeds": 10},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "min_seeds cannot exceed max_seeds"
