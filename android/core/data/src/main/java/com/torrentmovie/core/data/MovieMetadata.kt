@@ -23,4 +23,8 @@ class MovieMetadataStore {
     }
 
     fun get(resultId: String): MovieMetadata? = synchronized(this) { byResultId[resultId] }
+
+    fun clear() {
+        synchronized(this) { byResultId.clear() }
+    }
 }
