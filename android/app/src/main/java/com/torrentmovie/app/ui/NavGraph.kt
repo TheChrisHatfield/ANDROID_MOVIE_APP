@@ -51,8 +51,10 @@ fun AppNavGraph(
 
     LaunchedEffect(useFoldTwoPane) {
         if (useFoldTwoPane) {
-            val route = navController.currentBackStackEntry?.destination?.route
+            val entry = navController.currentBackStackEntry
+            val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
+                container.pendingFoldDetailId = entry.arguments?.getString("resultId")
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
         }

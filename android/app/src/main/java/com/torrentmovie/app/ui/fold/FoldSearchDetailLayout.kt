@@ -37,9 +37,18 @@ fun FoldSearchDetailLayout(
         state.results.find { it.id == id } ?: container.searchResultStore.get(id)
     }
 
+    LaunchedEffect(Unit) {
+        container.pendingFoldDetailId?.let { id ->
+            selectedId = id
+            container.pendingFoldDetailId = null
+        }
+    }
+
     LaunchedEffect(state.results.map { it.id }) {
-        if (selectedId != null && state.results.isNotEmpty() &&
-            state.results.none { it.id == selectedId }
+        val id = selectedId
+        if (id != null && state.results.isNotEmpty() &&
+            state.results.none { it.id == id } &&
+            container.searchResultStore.get(id) == null
         ) {
             selectedId = null
         }
