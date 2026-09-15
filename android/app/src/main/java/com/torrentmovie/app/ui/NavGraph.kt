@@ -68,12 +68,13 @@ fun AppNavGraph(
         } else {
             val pending = container.foldActiveSelection
             if (pending != null) {
-                container.foldActiveSelection = null
-                val cached = container.searchResultStore.get(pending.resultId)
-                val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
-                val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
                 val currentRoute = navController.currentBackStackEntry?.destination?.route
-                if (currentRoute?.startsWith("detail/") != true) {
+                val onSearch = currentRoute == Routes.SEARCH
+                if (onSearch && currentRoute?.startsWith("detail/") != true) {
+                    container.foldActiveSelection = null
+                    val cached = container.searchResultStore.get(pending.resultId)
+                    val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
+                    val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
                     navController.navigate(Routes.detail(pending.resultId, name, site)) {
                         launchSingleTop = true
                         popUpTo(Routes.SEARCH) { inclusive = false }
@@ -119,7 +120,7 @@ fun AppNavGraph(
             val resultId = entry.arguments?.getString("resultId") ?: ""
             val navName = entry.arguments?.getString("name") ?: ""
             val navSite = entry.arguments?.getString("site") ?: ""
-            val cached = remember(resultId) { container.searchResultStore.get(resultId) }
+            val cached = container.searchResultStore.get(resultId)
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
