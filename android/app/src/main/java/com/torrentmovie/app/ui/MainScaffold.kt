@@ -58,6 +58,7 @@ fun MainScaffold(container: AppContainer) {
                 }
             },
         )
+        return
     }
 
     ModalNavigationDrawer(

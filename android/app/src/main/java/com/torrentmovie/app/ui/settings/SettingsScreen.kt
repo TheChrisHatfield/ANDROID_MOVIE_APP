@@ -41,9 +41,10 @@ fun SettingsScreen(container: AppContainer) {
             .padding(16.dp),
     ) {
         Text("General", style = MaterialTheme.typography.titleMedium)
-        RowSwitch("Legal disclaimer accepted", settings.disclaimerAccepted) {
-            settings = settings.copy(disclaimerAccepted = it)
-        }
+        Text(
+            if (settings.disclaimerAccepted) "Legal disclaimer accepted" else "Legal disclaimer not yet accepted",
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
 
         Text("Search", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         OutlinedTextField(
