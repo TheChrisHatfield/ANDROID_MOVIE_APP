@@ -41,15 +41,17 @@ def main() -> int:
         return 0
     assert status == 200, search
     assert isinstance(search.get("failed_sites"), list), search
-    results = search.get("results", [])
-    print(f"search: {search.get('count', 0)} results")
-    for row in results:
+    flat = list(search.get("results", []))
+    for group in search.get("groups", []):
+        flat.extend(group.get("releases", []))
+    print(f"search: {search.get('count', 0)} visible ({len(flat)} releases)")
+    for row in flat:
         assert row.get("site") != "EZTV", "EZTV must not appear in movie profile results"
-    if not results:
+    if not flat:
         print("WARN: zero results — indexers may be blocked")
         return 0
 
-    result_id = results[0]["id"]
+    result_id = flat[0]["id"]
     status, magnet = get(f"/v1/results/{result_id}/magnet", timeout=30)
     if status == 404:
         print("WARN: magnet unavailable for first result (lazy-fetch or cache)")
