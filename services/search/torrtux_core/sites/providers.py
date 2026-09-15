@@ -258,6 +258,15 @@ class YTS(TorrentSite):
                 movie.get("url")
                 or (urljoin(self.working_url, f"/movie/{slug}") if slug else None)
             )
+            poster_url = (
+                movie.get("medium_cover_image")
+                or movie.get("large_cover_image")
+                or movie.get("small_cover_image")
+            )
+            overview = (movie.get("description_intro") or movie.get("description_full") or "").strip()
+            if overview and len(overview) > 400:
+                overview = overview[:397].rstrip() + "..."
+            trailer_key = movie.get("yt_trailer_code")
             for torrent in torrents:
                 info_hash = torrent.get("hash")
                 seeds_val = int(torrent.get("seeds") or 0)
@@ -275,6 +284,9 @@ class YTS(TorrentSite):
                         "magnet": _magnet_from_hash(info_hash, label) if info_hash else None,
                         "detail_url": detail_url,
                         "site": self.name,
+                        "poster_url": poster_url,
+                        "overview": overview or None,
+                        "trailer_youtube_key": trailer_key,
                     }
                 )
         return results

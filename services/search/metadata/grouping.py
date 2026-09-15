@@ -25,6 +25,19 @@ def _enrich_buckets_parallel(buckets: list[dict], tmdb: TmdbClient) -> None:
         list(pool.map(lambda bucket: _apply_tmdb(bucket, tmdb), buckets))
 
 
+def _apply_indexer_metadata(bucket: dict, releases: list[dict]) -> None:
+    """Use poster/overview/trailer from indexer rows (e.g. YTS) without TMDB."""
+    for row in releases:
+        if not bucket.get("poster_url") and row.get("poster_url"):
+            bucket["poster_url"] = row["poster_url"]
+        if not bucket.get("overview") and row.get("overview"):
+            bucket["overview"] = row["overview"]
+        if not bucket.get("trailer_youtube_key") and row.get("trailer_youtube_key"):
+            bucket["trailer_youtube_key"] = row["trailer_youtube_key"]
+        if bucket.get("poster_url"):
+            break
+
+
 def _append_group(bucket: dict, releases: list[dict], groups: list[dict]) -> None:
     groups.append(
         {
@@ -87,6 +100,9 @@ def build_movie_groups(
 
     for key in order[max_groups:]:
         process_key(key)
+
+    for bucket, releases in staged:
+        _apply_indexer_metadata(bucket, releases)
 
     if enrich_metadata and tmdb and tmdb.configured:
         _enrich_buckets_parallel([bucket for bucket, _ in staged], tmdb)

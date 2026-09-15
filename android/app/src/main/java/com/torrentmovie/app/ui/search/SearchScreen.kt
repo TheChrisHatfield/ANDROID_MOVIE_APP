@@ -162,11 +162,11 @@ fun SearchScreen(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = "Posters and descriptions need a free TMDB API key.",
+                        text = "No posters for these results.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = "Sign up at themoviedb.org → Settings → API → paste the key below, Save, then search again.",
+                        text = "YTS releases include posters automatically. For all indexers, add a free TMDB key in Settings (themoviedb.org).",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )

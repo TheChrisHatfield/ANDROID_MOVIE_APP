@@ -19,6 +19,9 @@ def test_yts_parses_next_data_fixture():
     assert any("[1080p]" in name for name in qualities)
     assert all(row["magnet"].startswith("magnet:?xt=urn:btih:") for row in rows)
     assert all("inception-2010" in row["detail_url"] for row in rows)
+    assert all(row.get("poster_url") for row in rows)
+    assert all("medium_cover_image" in row["poster_url"] for row in rows)
+    assert any(row.get("trailer_youtube_key") for row in rows)
 
 
 def test_tpb_skips_apibay_no_results_placeholder():
