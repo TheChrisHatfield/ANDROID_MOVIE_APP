@@ -15,6 +15,7 @@ def test_yts_parses_next_data_fixture():
     assert rows[0]["name"] == "Inception (2010)"
     assert rows[0]["site"] == "YTS"
     assert rows[0]["seeds"] == "100"
+    assert rows[0]["leeches"] == "0"
     assert rows[0]["magnet"].startswith("magnet:?xt=urn:btih:")
     assert "inception-2010" in rows[0]["detail_url"]
 

@@ -259,12 +259,15 @@ class YTS(TorrentSite):
                 urljoin(self.working_url, f"/movie/{slug}") if slug else None
             )
             info_hash = best.get("hash")
+            seeds_val = int(best.get("seeds") or 0)
+            peers_val = int(best.get("peers") or 0)
+            leeches_val = max(peers_val - seeds_val, 0) if peers_val else None
             results.append(
                 {
                     "name": title,
                     "size": best.get("size", "-"),
                     "seeds": str(best.get("seeds", "-")),
-                    "leeches": str(best.get("peers", "-")),
+                    "leeches": str(leeches_val) if leeches_val is not None else "-",
                     "date": str(movie.get("year", "-")),
                     "magnet": _magnet_from_hash(info_hash, title) if info_hash else None,
                     "detail_url": detail_url,
@@ -302,6 +305,7 @@ class YTS(TorrentSite):
 
         soup = BeautifulSoup(content, "lxml")
         results = []
+        seen_urls: set[str] = set()
         for movie in soup.select(".browse-movie-wrap"):
             try:
                 title_el = movie.select_one(".browse-movie-title")
@@ -312,6 +316,9 @@ class YTS(TorrentSite):
                 name = title_el.get_text(strip=True)
                 year = year_el.get_text(strip=True) if year_el else "-"
                 detail_url = urljoin(self.working_url, link_el["href"])
+                if detail_url in seen_urls:
+                    continue
+                seen_urls.add(detail_url)
                 results.append(
                     {
                         "name": f"{name} ({year})" if year != "-" else name,
