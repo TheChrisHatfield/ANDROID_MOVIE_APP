@@ -18,7 +18,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
@@ -36,14 +35,19 @@ fun FoldSearchDetailLayout(
     var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val isWide = screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
-    var wasWide by rememberSaveable { mutableStateOf(isWide) }
 
     fun findRelease(id: String): TorrentResultDto? {
         return state.results.find { it.id == id }
             ?: state.groups.asSequence().flatMap { it.releases }.find { it.id == id }
             ?: container.searchResultStore.get(id)
+    }
+
+    fun syncFoldSelection(id: String?, name: String, site: String) {
+        container.foldActiveSelection = if (id != null) {
+            PendingFoldDetail(resultId = id, name = name, site = site)
+        } else {
+            null
+        }
     }
 
     val selected: TorrentResultDto? = selectedId?.let { id ->
@@ -58,28 +62,27 @@ fun FoldSearchDetailLayout(
     }
 
     LaunchedEffect(Unit) {
-        container.pendingFoldNarrowDetail = null
         container.pendingFoldDetail?.let { pending ->
             selectedId = pending.resultId
             restoredName = pending.name.takeIf { it.isNotBlank() }
             restoredSite = pending.site.takeIf { it.isNotBlank() }
+            syncFoldSelection(pending.resultId, pending.name, pending.site)
             container.pendingFoldDetail = null
         }
     }
 
-    LaunchedEffect(isWide) {
-        if (wasWide && !isWide) {
-            val id = selectedId
-            if (id != null) {
-                val result = findRelease(id)
-                container.pendingFoldNarrowDetail = PendingFoldDetail(
-                    resultId = id,
-                    name = result?.name ?: restoredName ?: "",
-                    site = result?.site ?: restoredSite ?: "",
-                )
-            }
+    LaunchedEffect(selectedId, restoredName, restoredSite) {
+        val id = selectedId
+        if (id != null) {
+            val result = findRelease(id)
+            syncFoldSelection(
+                id,
+                result?.name ?: restoredName ?: "",
+                result?.site ?: restoredSite ?: "",
+            )
+        } else {
+            syncFoldSelection(null, "", "")
         }
-        wasWide = isWide
     }
 
     LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
@@ -100,11 +103,11 @@ fun FoldSearchDetailLayout(
             sharedViewModel = searchViewModel,
             selectedResultId = selectedId,
             onOpenDetail = { result ->
-                container.pendingFoldNarrowDetail = null
                 container.searchResultStore.put(result)
                 selectedId = result.id
                 restoredName = result.name
                 restoredSite = result.site
+                syncFoldSelection(result.id, result.name, result.site)
             },
             modifier = Modifier
                 .weight(0.42f)

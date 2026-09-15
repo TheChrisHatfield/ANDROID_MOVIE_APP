@@ -10,6 +10,9 @@ class AppContainer(context: Context) {
     /** Two-pane → narrow phone nav: push detail route when width drops. */
     var pendingFoldNarrowDetail: PendingFoldDetail? = null
 
+    /** Latest fold two-pane selection (survives layout disposal on width change). */
+    var foldActiveSelection: PendingFoldDetail? = null
+
     val settingsRepository = SettingsRepository(context)
     val searchResultStore = SearchResultStore()
     val movieMetadataStore = MovieMetadataStore()

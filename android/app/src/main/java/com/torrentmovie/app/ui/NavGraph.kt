@@ -55,17 +55,22 @@ fun AppNavGraph(
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
-                container.pendingFoldDetail = PendingFoldDetail(
-                    resultId = entry.arguments?.getString("resultId") ?: return@LaunchedEffect,
-                    name = entry.arguments?.getString("name") ?: "",
-                    site = entry.arguments?.getString("site") ?: "",
-                )
+                val resultId = entry.arguments?.getString("resultId")
+                if (!resultId.isNullOrBlank()) {
+                    container.pendingFoldDetail = PendingFoldDetail(
+                        resultId = resultId,
+                        name = entry.arguments?.getString("name") ?: "",
+                        site = entry.arguments?.getString("site") ?: "",
+                    )
+                }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
         } else {
             val pending = container.pendingFoldNarrowDetail
+                ?: container.foldActiveSelection
             if (pending != null) {
                 container.pendingFoldNarrowDetail = null
+                container.foldActiveSelection = null
                 val cached = container.searchResultStore.get(pending.resultId)
                 val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
                 val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
