@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _TMDB_BASE = "https://api.themoviedb.org/3"
 _CACHE_TTL_SECONDS = 3600
+_FAILED_TTL_SECONDS = 300
 
 
 @dataclass
@@ -42,13 +43,14 @@ class TmdbClient:
         cache_key = f"{title.lower()}|{year or ''}"
         with self._lock:
             cached = self._cache.get(cache_key)
-            if cached and time.time() - cached[0] < _CACHE_TTL_SECONDS:
-                return cached[1]
+            if cached:
+                ttl = _CACHE_TTL_SECONDS if cached[1] is not None else _FAILED_TTL_SECONDS
+                if time.time() - cached[0] < ttl:
+                    return cached[1]
 
         info = self._fetch(title, year)
-        if info is not None:
-            with self._lock:
-                self._cache[cache_key] = (time.time(), info)
+        with self._lock:
+            self._cache[cache_key] = (time.time(), info)
         return info
 
     def _fetch(self, title: str, year: int | None) -> TmdbMovieInfo | None:

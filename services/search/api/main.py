@@ -21,8 +21,20 @@ logger = logging.getLogger(__name__)
 _searcher = TorrentSearcher()
 _result_cache = ResultCache()
 _tmdb = TmdbClient()
+_tmdb_clients: dict[str, TmdbClient] = {}
 _sites_health_cache: dict[str, object] = {"checked_at": 0.0, "working": []}
 _SITES_HEALTH_TTL = 300
+
+
+def _tmdb_for_request(api_key: str | None) -> TmdbClient:
+    if not api_key or not api_key.strip():
+        return _tmdb
+    key = api_key.strip()
+    client = _tmdb_clients.get(key)
+    if client is None:
+        client = TmdbClient(api_key=key)
+        _tmdb_clients[key] = client
+    return client
 
 
 def _quality_from_result_name(name: str | None) -> str | None:
@@ -135,12 +147,9 @@ def search(
     display_results = flat_results
 
     if group and stored:
-        tmdb_client = _tmdb
-        if tmdb_api_key and tmdb_api_key.strip():
-            tmdb_client = TmdbClient(api_key=tmdb_api_key.strip())
         group_rows, ungrouped_rows = build_movie_groups(
             stored,
-            tmdb=tmdb_client,
+            tmdb=_tmdb_for_request(tmdb_api_key),
             enrich_metadata=enrich,
         )
         groups = [MovieGroup(**g) for g in group_rows]
