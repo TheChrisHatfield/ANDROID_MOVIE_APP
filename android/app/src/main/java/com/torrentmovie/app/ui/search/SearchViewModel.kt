@@ -38,11 +38,29 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private var lastSearchMinSeeds: Int? = null
     private var lastSearchMaxSeeds: Int? = null
     private var lastSearchMaxSize: String? = null
+    private var lastSearchSettingsKey: String? = null
+
+    private fun searchSettingsKey(): String {
+        val settings = container.settingsRepository.load()
+        return listOf(
+            settings.searchApiBaseUrl,
+            settings.tmdbApiKey,
+            settings.searchPages.toString(),
+            settings.movieSitesOnly.toString(),
+            settings.fetchMovieMetadata.toString(),
+        ).joinToString("|")
+    }
 
     init {
+        lastSearchSettingsKey = searchSettingsKey()
         viewModelScope.launch {
             container.settingsRepository.revision.drop(1).collect {
-                if (_state.value.hasSearched && !_state.value.loading) {
+                val key = searchSettingsKey()
+                if (key != lastSearchSettingsKey &&
+                    _state.value.hasSearched &&
+                    !_state.value.loading
+                ) {
+                    lastSearchSettingsKey = key
                     search()
                 }
             }
@@ -178,6 +196,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 lastSearchMinSeeds = minSeeds
                 lastSearchMaxSeeds = maxSeeds
                 lastSearchMaxSize = maxSize
+                lastSearchSettingsKey = searchSettingsKey()
                 _state.value = _state.value.copy(
                     loading = false,
                     results = outcome.results,
