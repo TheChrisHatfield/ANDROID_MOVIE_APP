@@ -4,6 +4,16 @@ from __future__ import annotations
 import re
 
 _THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3})")
+_TV_SHOW_RE = re.compile(
+    r"\b(?:s\d{1,2}e\d{1,2}|season\s+\d+|complete\s+series|"
+    r"tv\s+series|episodes?\s+\d+|mini\s*series)\b",
+    re.IGNORECASE,
+)
+_SOFTWARE_RE = re.compile(
+    r"\b(?:windows\s+\d+|macos|linux\s+distro|adobe|photoshop|"
+    r"microsoft\s+office|keygen|crackonly|audiobook|epub|ebook)\b",
+    re.IGNORECASE,
+)
 
 
 def _normalize_size_label(size_str: str) -> str:
@@ -109,6 +119,22 @@ def apply_filters(
     if limit is not None:
         filtered = filtered[:limit]
     return filtered
+
+
+def is_likely_movie_release(name: str) -> bool:
+    """Drop obvious TV packs and software when movie profile is enabled."""
+    label = (name or "").strip()
+    if not label:
+        return False
+    if _TV_SHOW_RE.search(label):
+        return False
+    if _SOFTWARE_RE.search(label):
+        return False
+    return True
+
+
+def filter_movie_profile(results: list[dict]) -> list[dict]:
+    return [row for row in results if is_likely_movie_release(str(row.get("name") or ""))]
 
 
 def sort_by_seeds_desc(results: list[dict]) -> list[dict]:

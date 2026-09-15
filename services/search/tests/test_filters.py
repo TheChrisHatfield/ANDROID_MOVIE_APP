@@ -1,4 +1,11 @@
-from torrtux_core.filters import apply_filters, parse_size, seed_count, sort_by_seeds_desc
+from torrtux_core.filters import (
+    apply_filters,
+    filter_movie_profile,
+    is_likely_movie_release,
+    parse_size,
+    seed_count,
+    sort_by_seeds_desc,
+)
 
 
 def test_parse_size_gb():
@@ -83,3 +90,15 @@ def test_sort_by_seeds_desc():
     rows = [{"seeds": "3"}, {"seeds": "99"}, {"seeds": "-"}]
     out = sort_by_seeds_desc(rows)
     assert out[0]["seeds"] == "99"
+
+
+def test_movie_profile_filters_tv_and_software():
+    rows = [
+        {"name": "Inception 2010 1080p BluRay"},
+        {"name": "Breaking Bad S01E01 1080p"},
+        {"name": "Windows 11 Pro x64 ISO"},
+    ]
+    out = filter_movie_profile(rows)
+    assert [row["name"] for row in out] == ["Inception 2010 1080p BluRay"]
+    assert is_likely_movie_release("Avatar 2022 2160p")
+    assert not is_likely_movie_release("Show Name Season 2 Complete")

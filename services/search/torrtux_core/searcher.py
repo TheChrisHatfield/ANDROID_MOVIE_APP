@@ -6,7 +6,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
-from torrtux_core.filters import apply_filters, sort_by_seeds_desc
+from torrtux_core.filters import apply_filters, filter_movie_profile, sort_by_seeds_desc
 from torrtux_core.http_client import http_get
 from torrtux_core.profiles import EXCLUDED_FROM_MOVIE_PROFILE, MOVIE_SITE_NAMES
 from torrtux_core.sites import ALL_SITE_CLASSES
@@ -200,6 +200,8 @@ class TorrentSearcher:
             min_size=min_size,
             max_size=max_size,
         )
+        if movie_profile:
+            filtered = filter_movie_profile(filtered)
         sorted_results = sort_by_seeds_desc(filtered)
         if limit is not None:
             sorted_results = sorted_results[:limit]
