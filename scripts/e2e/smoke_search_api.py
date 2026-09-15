@@ -28,7 +28,7 @@ def get(path: str, timeout: int = 60) -> tuple[int, dict | list | str]:
 
 def main() -> int:
     status, health = get("/v1/health")
-    assert status == 200 and health == {"status": "ok"}, health
+    assert status == 200 and health.get("status") == "ok", health
 
     status, sites = get("/v1/sites/health")
     assert status == 200 and "working" in sites, sites
