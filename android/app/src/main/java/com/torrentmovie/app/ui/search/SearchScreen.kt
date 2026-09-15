@@ -67,9 +67,10 @@ fun SearchScreen(
 
     fun isAlreadyUploaded(result: TorrentResultDto): Boolean {
         val hash = MagnetHashUtil.extractInfoHash(result.magnet)
-        if (hash != null && uploaded.any { it.infoHash.equals(hash, ignoreCase = true) }) {
-            return true
+        if (hash != null) {
+            return uploaded.any { it.infoHash.equals(hash, ignoreCase = true) }
         }
+        if (!result.magnet.isNullOrBlank()) return false
         return uploaded.any { it.displayName == result.name && it.site == result.site }
     }
 

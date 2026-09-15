@@ -19,7 +19,9 @@ class UploadedRepository(private val database: AppDatabase) {
     }
 
     suspend fun isUploaded(magnet: String?, displayName: String, site: String): Boolean {
-        if (containsMagnet(magnet)) return true
+        if (!magnet.isNullOrBlank()) {
+            return containsMagnet(magnet)
+        }
         return list().any { it.displayName == displayName && it.site == site }
     }
 }
