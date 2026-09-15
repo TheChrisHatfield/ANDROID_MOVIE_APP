@@ -103,14 +103,20 @@ fun FoldSearchDetailLayout(
         val matchSite = anchor?.site ?: restoredSite
         if (!matchName.isNullOrBlank()) {
             val rematched = allReleases.find { release ->
-                release.name == matchName &&
+                release.name.equals(matchName, ignoreCase = true) &&
                     (matchSite.isNullOrBlank() || release.site == matchSite)
             }
             if (rematched != null) {
+                val oldId = selectedId
                 selectedId = rematched.id
                 restoredName = rematched.name
                 restoredSite = rematched.site
                 container.searchResultStore.put(rematched)
+                if (oldId != null && oldId != rematched.id) {
+                    container.movieMetadataStore.get(oldId)?.let { meta ->
+                        container.movieMetadataStore.put(rematched.id, meta)
+                    }
+                }
                 return@LaunchedEffect
             }
         }
