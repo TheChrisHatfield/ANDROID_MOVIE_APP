@@ -50,9 +50,10 @@ internal object DigestAuth {
     private fun parseChallenge(header: String): Map<String, String>? {
         if (!header.startsWith("Digest ", ignoreCase = true)) return null
         val out = mutableMapOf<String, String>()
-        val regex = Regex("""(\w+)="([^"]*)"""")
+        val regex = Regex("""(\w+)=(?:"([^"]*)"|([^,\s]+))""")
         for (match in regex.findAll(header)) {
-            out[match.groupValues[1].lowercase()] = match.groupValues[2]
+            val value = match.groupValues[2].ifEmpty { match.groupValues[3] }
+            out[match.groupValues[1].lowercase()] = value
         }
         return out.takeIf { it.isNotEmpty() }
     }

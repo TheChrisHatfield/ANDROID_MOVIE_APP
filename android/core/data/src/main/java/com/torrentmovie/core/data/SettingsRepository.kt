@@ -51,8 +51,12 @@ class SettingsRepository(context: Context) {
     )
 
     fun save(settings: AppSettings): Boolean {
+        val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
+        if (searchApiUrl.isBlank()) {
+            return false
+        }
         val ok = prefs.edit()
-            .putString(KEY_SEARCH_API, normalizeSearchApiUrl(settings.searchApiBaseUrl))
+            .putString(KEY_SEARCH_API, searchApiUrl)
             .putString(KEY_RUTORRENT_URL, normalizeSeedboxUrl(settings.rutorrentBaseUrl))
             .putString(KEY_USERNAME, settings.username)
             .putString(KEY_PASSWORD, settings.password)
