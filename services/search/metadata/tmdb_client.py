@@ -32,10 +32,30 @@ class TmdbClient:
         self.timeout = timeout
         self._cache: dict[str, tuple[float, TmdbMovieInfo | None]] = {}
         self._lock = threading.Lock()
+        self._key_valid: bool | None = None
 
     @property
     def configured(self) -> bool:
         return bool(self.api_key)
+
+    def validate_key(self) -> bool:
+        """Probe TMDB once; cache whether this API key is accepted."""
+        if not self.configured:
+            self._key_valid = False
+            return False
+        if self._key_valid is not None:
+            return self._key_valid
+        try:
+            resp = requests.get(
+                f"{_TMDB_BASE}/configuration",
+                params={"api_key": self.api_key},
+                timeout=self.timeout,
+            )
+            self._key_valid = resp.status_code == 200
+        except Exception as exc:
+            logger.warning("TMDB key validation failed: %s", exc)
+            self._key_valid = False
+        return self._key_valid
 
     def lookup(self, title: str, year: int | None = None) -> TmdbMovieInfo | None:
         if not self.configured or not title.strip():

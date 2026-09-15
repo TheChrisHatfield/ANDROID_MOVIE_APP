@@ -44,13 +44,17 @@ _SITES_HEALTH_TTL = 300
 
 
 def _tmdb_for_request(api_key: str | None) -> TmdbClient:
-    if not api_key or not api_key.strip():
+    user_key = (api_key or "").strip()
+    if not user_key:
         return _tmdb
-    key = api_key.strip()
-    client = _tmdb_clients.get(key)
+    if _tmdb.configured and user_key == _tmdb.api_key:
+        return _tmdb
+    client = _tmdb_clients.get(user_key)
     if client is None:
-        client = TmdbClient(api_key=key)
-        _tmdb_clients[key] = client
+        client = TmdbClient(api_key=user_key)
+        _tmdb_clients[user_key] = client
+    if _tmdb.configured and not client.validate_key():
+        return _tmdb
     return client
 
 
