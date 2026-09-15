@@ -97,7 +97,7 @@ class SeedboxRepository(
                 ),
             )
             sentWithoutPersist.remove(key)
-            SeedboxResult.Success
+            SeedboxResult.Success()
         } catch (_: Exception) {
             SeedboxResult.Failure(
                 "Sent to seedbox but failed to save locally — tap send again",
