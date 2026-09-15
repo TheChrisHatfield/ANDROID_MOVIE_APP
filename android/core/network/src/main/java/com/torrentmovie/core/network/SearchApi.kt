@@ -20,6 +20,7 @@ interface SearchApi {
         @Query("movie_profile") movieProfile: Boolean = true,
         @Query("group") group: Boolean = true,
         @Query("enrich") enrich: Boolean = true,
+        @Query("tmdb_api_key") tmdbApiKey: String? = null,
     ): SearchResponseDto
 
     @GET("/v1/results/{id}/magnet")

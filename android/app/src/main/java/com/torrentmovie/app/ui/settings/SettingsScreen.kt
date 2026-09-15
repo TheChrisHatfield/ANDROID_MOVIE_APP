@@ -68,6 +68,18 @@ fun SettingsScreen(container: AppContainer) {
             label = { Text("Indexer pages per search (1–10)") },
             modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedTextField(
+            value = settings.tmdbApiKey,
+            onValueChange = { settings = settings.copy(tmdbApiKey = it) },
+            label = { Text("TMDB API key (posters & trailers)") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "Optional. Get a free key at themoviedb.org. Sent to your search API for metadata only.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
 
         Text("Seedbox", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         OutlinedTextField(

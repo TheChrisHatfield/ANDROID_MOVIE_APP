@@ -57,6 +57,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
                 movieProfile = settings.movieSitesOnly,
+                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
             )
             SearchResult(
                 results = response.results,

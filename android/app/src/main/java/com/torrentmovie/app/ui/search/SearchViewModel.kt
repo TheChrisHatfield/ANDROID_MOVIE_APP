@@ -3,6 +3,7 @@ package com.torrentmovie.app.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.MovieMetadata
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
@@ -126,6 +127,18 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
                 val allReleases = outcome.groups.flatMap { it.releases } + outcome.results
                 allReleases.forEach { container.searchResultStore.put(it) }
+                outcome.groups.forEach { group ->
+                    val metadata = MovieMetadata(
+                        title = group.title,
+                        year = group.year,
+                        overview = group.overview,
+                        posterUrl = group.posterUrl,
+                        trailerYoutubeKey = group.trailerYoutubeKey,
+                    )
+                    group.releases.forEach { release ->
+                        container.movieMetadataStore.put(release.id, metadata)
+                    }
+                }
 
                 val hasAnyResults = outcome.groups.isNotEmpty() || outcome.results.isNotEmpty()
                 val emptyMessage = if (!hasAnyResults && info == null) {

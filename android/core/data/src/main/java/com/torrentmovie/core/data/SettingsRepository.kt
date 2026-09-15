@@ -21,6 +21,7 @@ data class AppSettings(
     val movieSitesOnly: Boolean = true,
     val disclaimerAccepted: Boolean = false,
     val searchPages: Int = DEFAULT_SEARCH_PAGES,
+    val tmdbApiKey: String = "",
 ) {
     companion object {
         const val DEFAULT_SEARCH_API = "http://10.0.2.2:8765"
@@ -57,6 +58,7 @@ class SettingsRepository(context: Context) {
             disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
             searchPages = prefs.getInt(KEY_SEARCH_PAGES, AppSettings.DEFAULT_SEARCH_PAGES)
                 .coerceIn(1, MAX_SEARCH_PAGES),
+            tmdbApiKey = (prefs.getString(KEY_TMDB_API_KEY, "") ?: "").trim(),
         )
     }
 
@@ -78,6 +80,7 @@ class SettingsRepository(context: Context) {
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
             .putInt(KEY_SEARCH_PAGES, settings.searchPages.coerceIn(1, MAX_SEARCH_PAGES))
+            .putString(KEY_TMDB_API_KEY, settings.tmdbApiKey.trim())
             .commit()
         if (ok) {
             _revision.value += 1
@@ -107,6 +110,7 @@ class SettingsRepository(context: Context) {
         const val KEY_MOVIE_SITES = "movie_sites_only"
         const val KEY_DISCLAIMER = "disclaimer_accepted"
         private const val KEY_SEARCH_PAGES = "search_pages"
+        private const val KEY_TMDB_API_KEY = "tmdb_api_key"
         private const val MAX_SEARCH_PAGES = 10
     }
 }

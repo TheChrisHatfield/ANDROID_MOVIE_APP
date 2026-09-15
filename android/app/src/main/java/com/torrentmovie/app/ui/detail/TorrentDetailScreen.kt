@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -13,19 +16,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
-import com.torrentmovie.core.network.TorrentResultDto
 import com.torrentmovie.core.data.seedbox.SeedboxResult
+import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,6 +54,7 @@ fun TorrentDetailScreen(
     }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
+    val metadata = remember(resultId) { container.movieMetadataStore.get(resultId) }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
         val key = MagnetHashUtil.storageKey(magnetValue ?: "", name, site)
@@ -109,9 +113,22 @@ fun TorrentDetailScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text(name, style = MaterialTheme.typography.headlineSmall)
-        Text(site, modifier = Modifier.padding(vertical = 8.dp))
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        if (metadata != null) {
+            MovieDetailHeader(
+                metadata = metadata,
+                releaseLabel = "$site · ${name.take(80)}",
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+        } else {
+            Text(name, style = MaterialTheme.typography.headlineSmall)
+            Text(site, modifier = Modifier.padding(vertical = 8.dp))
+        }
         if (duplicate) {
             Text("Already uploaded", color = MaterialTheme.colorScheme.error)
         }
