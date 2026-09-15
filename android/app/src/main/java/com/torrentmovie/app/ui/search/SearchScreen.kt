@@ -80,7 +80,7 @@ fun SearchScreen(
             onApply = { min, max ->
                 vm.setMinSeeds(min)
                 vm.setMaxSize(max)
-                if (state.hasSearched && state.query.isNotBlank()) {
+                if (state.query.isNotBlank()) {
                     vm.search()
                 }
             },
