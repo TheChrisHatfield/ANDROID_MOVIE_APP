@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from api.main import app, _searcher
+from api.main import _quality_from_result_name, app, _searcher
 from torrtux_core.searcher import SearchOutcome
 
 
@@ -75,3 +75,8 @@ def test_empty_sites_param_returns_400(_mock_test):
     _searcher.working_sites = [MagicMock(name="YTS")]
     response = client.get("/v1/search", params={"q": "inception", "sites": ""})
     assert response.status_code == 400
+
+
+def test_quality_from_result_name_bracketed_and_loose():
+    assert _quality_from_result_name("Movie [1080p] BluRay") == "1080p"
+    assert _quality_from_result_name("Movie 720p WEB") == "720p"

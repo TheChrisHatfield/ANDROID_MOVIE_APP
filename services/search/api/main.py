@@ -25,8 +25,11 @@ _SITES_HEALTH_TTL = 300
 def _quality_from_result_name(name: str | None) -> str | None:
     if not name:
         return None
-    match = re.search(r"\[(\d+p)\]", name, re.IGNORECASE)
-    return match.group(1) if match else None
+    bracketed = re.search(r"\[(\d+p)\]", name, re.IGNORECASE)
+    if bracketed:
+        return bracketed.group(1)
+    loose = re.search(r"\b(\d{3,4}p)\b", name, re.IGNORECASE)
+    return loose.group(1).lower() if loose else None
 
 
 def _refresh_sites_health(force: bool = False) -> list[str]:
