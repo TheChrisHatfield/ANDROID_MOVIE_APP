@@ -1037,6 +1037,10 @@ class RARBG(TorrentSite):
                 "https://rarbgprx.org"
             ]
         )
+
+    def test_connection(self) -> bool:
+        return False
+
     def build_search_url(self, query, page=0):
         # Archive only, no real search, so return None
         return None
