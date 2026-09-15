@@ -12,6 +12,7 @@ class SeedboxRepository(
     private val database: AppDatabase,
 ) {
     private val addMutex = Mutex()
+    private val sentWithoutPersist = mutableSetOf<String>()
 
     private fun client(): RuTorrentClient {
         val s = settingsRepository.load()
@@ -20,6 +21,7 @@ class SeedboxRepository(
 
     private suspend fun isDuplicate(magnet: String, displayName: String, site: String): Boolean {
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
+        if (key in sentWithoutPersist) return true
         if (database.uploadedMagnetDao().countByHash(key) > 0) return true
         return database.uploadedMagnetDao().listAll().any {
             it.displayName == displayName && it.site == site
@@ -40,10 +42,11 @@ class SeedboxRepository(
         }
         val result = client().addMagnet(magnet, settings.downloadDirectory)
         if (result is SeedboxResult.Success) {
+            val key = MagnetHashUtil.storageKey(magnet, displayName, site)
             try {
                 database.uploadedMagnetDao().insert(
                     UploadedMagnet(
-                        infoHash = MagnetHashUtil.storageKey(magnet, displayName, site),
+                        infoHash = key,
                         displayName = displayName,
                         site = site,
                         magnetUri = magnet,
@@ -51,7 +54,9 @@ class SeedboxRepository(
                         downloadDirectory = settings.downloadDirectory,
                     ),
                 )
+                sentWithoutPersist.remove(key)
             } catch (_: Exception) {
+                sentWithoutPersist.add(key)
                 return SeedboxResult.Failure(
                     "Sent to seedbox but failed to save locally — check Uploaded list",
                 )
