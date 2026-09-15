@@ -46,8 +46,9 @@ class TmdbClient:
                 return cached[1]
 
         info = self._fetch(title, year)
-        with self._lock:
-            self._cache[cache_key] = (time.time(), info)
+        if info is not None:
+            with self._lock:
+                self._cache[cache_key] = (time.time(), info)
         return info
 
     def _fetch(self, title: str, year: int | None) -> TmdbMovieInfo | None:
@@ -64,7 +65,7 @@ class TmdbClient:
             results = search_resp.json().get("results") or []
             if not results:
                 return None
-            movie = results[0]
+            movie = self._pick_best_movie(results, year)
             movie_id = movie.get("id")
             if not movie_id:
                 return None
@@ -91,6 +92,27 @@ class TmdbClient:
         except Exception as exc:
             logger.warning("TMDB lookup failed for %s: %s", title, exc)
             return None
+
+    def _pick_best_movie(self, results: list[dict], year: int | None) -> dict:
+        if not year:
+            return results[0]
+        best = results[0]
+        best_delta = 9999
+        for candidate in results:
+            release_date = str(candidate.get("release_date") or "")
+            candidate_year = None
+            if len(release_date) >= 4:
+                try:
+                    candidate_year = int(release_date[:4])
+                except ValueError:
+                    candidate_year = None
+            if candidate_year is None:
+                continue
+            delta = abs(candidate_year - year)
+            if delta < best_delta:
+                best = candidate
+                best_delta = delta
+        return best
 
     def _fetch_trailer_key(self, movie_id: int) -> str | None:
         try:

@@ -39,6 +39,7 @@ class MovieGroup(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     count: int
+    total_count: int
     results: list[TorrentResult]
     failed_sites: list[str] = Field(default_factory=list)
     groups: list[MovieGroup] = Field(default_factory=list)

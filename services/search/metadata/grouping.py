@@ -44,6 +44,9 @@ def build_movie_groups(
         if len(releases) == 1:
             ungrouped.extend(releases)
             continue
+        if bucket["year"] is None:
+            ungrouped.extend(releases)
+            continue
 
         if enrich_metadata and tmdb and tmdb.configured:
             info: TmdbMovieInfo | None = tmdb.lookup(bucket["title"], bucket["year"])
@@ -68,8 +71,24 @@ def build_movie_groups(
             }
         )
 
-    # Singles beyond max_groups and overflow buckets
     for key in order[max_groups:]:
-        ungrouped.extend(buckets[key]["releases"])
+        bucket = buckets[key]
+        releases = bucket["releases"]
+        if len(releases) > 1 and bucket["year"] is not None:
+            bucket["release_count"] = len(releases)
+            groups.append(
+                {
+                    "group_key": bucket["group_key"],
+                    "title": bucket["title"],
+                    "year": bucket["year"],
+                    "overview": bucket["overview"],
+                    "poster_url": bucket["poster_url"],
+                    "trailer_youtube_key": bucket["trailer_youtube_key"],
+                    "release_count": bucket["release_count"],
+                    "releases": releases,
+                }
+            )
+        else:
+            ungrouped.extend(releases)
 
     return groups, ungrouped

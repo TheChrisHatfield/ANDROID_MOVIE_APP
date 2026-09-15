@@ -143,9 +143,11 @@ def search(
         if groups:
             display_results = [TorrentResult(**row) for row in ungrouped_rows]
 
+    visible_count = sum(len(g.releases) for g in groups) + len(display_results)
     return SearchResponse(
         query=q,
-        count=len(stored),
+        count=visible_count,
+        total_count=len(stored),
         results=display_results,
         failed_sites=outcome.failed_sites,
         groups=groups,
@@ -169,13 +171,17 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
             site = next((s for s in _searcher.sites if s.name == site_name), None)
         if site and detail_url:
             quality = _quality_from_result_name(row.get("name"))
-            if hasattr(site, "get_magnet_link"):
-                try:
-                    magnet = site.get_magnet_link(detail_url, quality=quality)
-                except TypeError:
+            try:
+                if hasattr(site, "get_magnet_link"):
+                    try:
+                        magnet = site.get_magnet_link(detail_url, quality=quality)
+                    except TypeError:
+                        magnet = site.get_magnet_link(detail_url)
+                else:
                     magnet = site.get_magnet_link(detail_url)
-            else:
-                magnet = site.get_magnet_link(detail_url)
+            except Exception as exc:
+                logger.warning("Magnet fetch failed for %s: %s", result_id, exc)
+                magnet = None
         if magnet:
             _result_cache.resolve_magnet(result_id, magnet)
 
