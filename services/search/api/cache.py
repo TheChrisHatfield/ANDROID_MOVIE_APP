@@ -59,7 +59,7 @@ class ResultCache:
             if time.time() - entry.created_at > self.ttl_seconds:
                 del self._store[result_id]
                 return None
-            return entry.payload
+            return dict(entry.payload)
 
     def resolve_magnet(self, result_id: UUID, magnet: str) -> dict[str, Any] | None:
         with self._lock:
