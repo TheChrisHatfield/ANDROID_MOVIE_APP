@@ -1,6 +1,8 @@
 package com.torrentmovie.app.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerValue
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(container: AppContainer) {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -45,8 +48,12 @@ fun MainScaffold(container: AppContainer) {
     if (!settings.disclaimerAccepted) {
         DisclaimerDialog(
             onAccept = {
-                settings = settings.copy(disclaimerAccepted = true)
-                container.settingsRepository.save(settings)
+                val updated = settings.copy(disclaimerAccepted = true)
+                if (container.settingsRepository.save(updated)) {
+                    settings = updated
+                } else {
+                    Toast.makeText(context, "Failed to save — try again", Toast.LENGTH_SHORT).show()
+                }
             },
         )
     }
@@ -60,7 +67,10 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Search") },
                     selected = route.startsWith("search"),
                     onClick = {
-                        navController.navigate(Routes.SEARCH) { popUpTo(0) }
+                        navController.navigate(Routes.SEARCH) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                        }
                         scope.launch { drawerState.close() }
                     },
                 )
