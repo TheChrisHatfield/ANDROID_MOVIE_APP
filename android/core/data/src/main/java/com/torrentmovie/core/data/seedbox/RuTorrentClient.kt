@@ -49,8 +49,14 @@ class RuTorrentClient(
             return executeWithAuth(request).use { response ->
                 val text = response.body?.string() ?: ""
                 when {
-                    !response.isSuccessful ->
-                        SeedboxResult.Failure("HTTP ${response.code}", response.code)
+                    !response.isSuccessful -> {
+                        val msg = when (response.code) {
+                            401 -> "Authentication failed — check username, password, and auth scheme"
+                            403 -> "Forbidden — ruTorrent rejected the request"
+                            else -> "HTTP ${response.code}"
+                        }
+                        SeedboxResult.Failure(msg, response.code)
+                    }
                     text.contains("FailedDirectory", ignoreCase = true) ->
                         SeedboxResult.Failure("Invalid download directory")
                     text.contains("Failed", ignoreCase = true) &&
