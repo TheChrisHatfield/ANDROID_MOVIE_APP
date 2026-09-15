@@ -41,11 +41,6 @@ class SeedboxRepository(
         site: String,
     ): SeedboxResult = addMutex.withLock {
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
-        if (key in sentWithoutPersist) {
-            return SeedboxResult.Failure(
-                "Magnet may already be on seedbox (local save failed earlier). Check ruTorrent before resending.",
-            )
-        }
         if (isDuplicate(magnet, displayName, site)) {
             return SeedboxResult.Failure("Already uploaded — remove from Uploaded list to re-send")
         }
@@ -69,9 +64,8 @@ class SeedboxRepository(
                 )
                 sentWithoutPersist.remove(key)
             } catch (_: Exception) {
-                sentWithoutPersist.add(key)
                 return SeedboxResult.Failure(
-                    "Sent to seedbox but failed to save locally — check Uploaded list",
+                    "Sent to seedbox but failed to save locally — you can retry send",
                 )
             }
         }
