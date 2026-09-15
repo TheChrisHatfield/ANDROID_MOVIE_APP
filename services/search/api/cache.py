@@ -81,4 +81,4 @@ class ResultCache:
             payload["magnet"] = magnet
             cached.payload = payload
             cached.created_at = time.time()
-            return payload
+            return dict(payload)

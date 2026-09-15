@@ -47,6 +47,15 @@ def test_put_many_batch_returns_only_surviving_ids():
         assert cache.get(UUID(row["id"])) is not None
 
 
+def test_resolve_magnet_returns_defensive_copy():
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    stored = cache.put_many([{"name": "Inception", "site": "YTS", "magnet": None}])
+    result_id = UUID(stored[0]["id"])
+    resolved = cache.resolve_magnet(result_id, "magnet:?xt=urn:btih:abc")
+    resolved["magnet"] = "mutated"
+    assert cache.get(result_id)["magnet"] == "magnet:?xt=urn:btih:abc"
+
+
 def test_put_many_returns_defensive_copies():
     cache = ResultCache(max_entries=10, ttl_seconds=60)
     stored = cache.put_many([{"name": "Inception", "site": "YTS"}])
