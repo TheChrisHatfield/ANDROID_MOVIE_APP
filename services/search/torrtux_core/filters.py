@@ -93,9 +93,12 @@ def apply_filters(
         filtered = [
             r
             for r in filtered
-            if r.get("size") not in (None, "-")
-            and (size_bytes := parse_size(r["size"])) >= 0
-            and size_bytes <= max_bytes
+            if (r.get("site") == "YTS" and r.get("size") in (None, "-"))
+            or (
+                r.get("size") not in (None, "-")
+                and (size_bytes := parse_size(r["size"])) >= 0
+                and size_bytes <= max_bytes
+            )
         ]
     if limit is not None:
         filtered = filtered[:limit]

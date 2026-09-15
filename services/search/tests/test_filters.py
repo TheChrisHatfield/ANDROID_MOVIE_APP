@@ -27,6 +27,12 @@ def test_unitless_max_size_raises():
         filter_size_bytes("500")
 
 
+def test_yts_unknown_size_kept_with_max_size_filter():
+    rows = [{"name": "movie", "site": "YTS", "seeds": "10", "size": "-"}]
+    out = apply_filters(rows, max_size="4 GB")
+    assert len(out) == 1
+
+
 def test_yts_unknown_seeds_kept_with_min_seeds_filter():
     rows = [{"name": "movie", "site": "YTS", "seeds": "-", "size": "1 GB"}]
     out = apply_filters(rows, min_seeds=10)
