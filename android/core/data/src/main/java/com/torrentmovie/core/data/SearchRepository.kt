@@ -84,22 +84,24 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return SearchException(message, cause = e)
     }
 
-    private fun mapHttpError(e: HttpException): SearchException {
-        val detail = parseErrorDetail(e)
-        return when (e.code()) {
-            503 -> SearchException("No sources available", 503, e)
-            404 -> SearchException(detail ?: "Not found", 404, e)
-            else -> SearchException(detail ?: "Request failed (${e.code()})", e.code(), e)
-        }
-    }
+    private fun mapHttpError(e: HttpException): SearchException = mapSearchHttpError(e, gson)
+}
 
-    private fun parseErrorDetail(e: HttpException): String? {
-        val body = e.response()?.errorBody()?.string() ?: return null
-        return try {
-            val json = gson.fromJson(body, JsonObject::class.java)
-            json.get("detail")?.asString
-        } catch (_: Exception) {
-            null
-        }
+internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
+    val detail = parseSearchErrorDetail(e, gson)
+    return when (e.code()) {
+        503 -> SearchException(detail ?: "No sources available", 503, e)
+        404 -> SearchException(detail ?: "Not found", 404, e)
+        else -> SearchException(detail ?: "Request failed (${e.code()})", e.code(), e)
+    }
+}
+
+internal fun parseSearchErrorDetail(e: HttpException, gson: Gson): String? {
+    val body = e.response()?.errorBody()?.string() ?: return null
+    return try {
+        val json = gson.fromJson(body, JsonObject::class.java)
+        json.get("detail")?.asString
+    } catch (_: Exception) {
+        null
     }
 }
