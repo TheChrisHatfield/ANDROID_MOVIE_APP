@@ -40,16 +40,22 @@ class SeedboxRepository(
         }
         val result = client().addMagnet(magnet, settings.downloadDirectory)
         if (result is SeedboxResult.Success) {
-            database.uploadedMagnetDao().insert(
-                UploadedMagnet(
-                    infoHash = MagnetHashUtil.storageKey(magnet, displayName, site),
-                    displayName = displayName,
-                    site = site,
-                    magnetUri = magnet,
-                    sentAt = System.currentTimeMillis(),
-                    downloadDirectory = settings.downloadDirectory,
-                ),
-            )
+            try {
+                database.uploadedMagnetDao().insert(
+                    UploadedMagnet(
+                        infoHash = MagnetHashUtil.storageKey(magnet, displayName, site),
+                        displayName = displayName,
+                        site = site,
+                        magnetUri = magnet,
+                        sentAt = System.currentTimeMillis(),
+                        downloadDirectory = settings.downloadDirectory,
+                    ),
+                )
+            } catch (_: Exception) {
+                return SeedboxResult.Failure(
+                    "Sent to seedbox but failed to save locally — check Uploaded list",
+                )
+            }
         }
         result
     }
