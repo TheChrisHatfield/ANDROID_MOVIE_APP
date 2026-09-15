@@ -254,8 +254,9 @@ class YTS(TorrentSite):
                 continue
             title = movie.get("title_long") or movie.get("title") or "-"
             slug = movie.get("slug")
-            detail_url = movie.get("url") or (
-                urljoin(self.working_url, f"/movie/{slug}") if slug else None
+            detail_url = self.absolute_detail_url(
+                movie.get("url")
+                or (urljoin(self.working_url, f"/movie/{slug}") if slug else None)
             )
             for torrent in torrents:
                 info_hash = torrent.get("hash")
@@ -346,7 +347,7 @@ class YTS(TorrentSite):
                 continue
         return results
 
-    def _magnet_from_movie_payload(self, payload: dict) -> str | None:
+    def _magnet_from_movie_payload(self, payload: dict, quality: str | None = None) -> str | None:
         page_props = payload.get("props", {}).get("pageProps", {})
         movie = page_props.get("movie")
         if movie is None and isinstance(page_props.get("props"), dict):
@@ -356,12 +357,20 @@ class YTS(TorrentSite):
         torrents = movie.get("torrents") or []
         if not torrents:
             return None
-        best = max(torrents, key=lambda row: int(row.get("seeds") or 0))
+        chosen = None
+        if quality:
+            chosen = next(
+                (row for row in torrents if str(row.get("quality", "")).lower() == quality.lower()),
+                None,
+            )
+        if chosen is None:
+            chosen = max(torrents, key=lambda row: int(row.get("seeds") or 0))
         title = movie.get("title_long") or movie.get("title") or ""
-        info_hash = best.get("hash")
-        return _magnet_from_hash(info_hash, title) if info_hash else None
+        info_hash = chosen.get("hash")
+        label = f"{title} [{chosen.get('quality')}]" if chosen.get("quality") else title
+        return _magnet_from_hash(info_hash, label) if info_hash else None
 
-    def get_magnet_link(self, detail_url: str | None) -> str | None:
+    def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
         detail_url = self.absolute_detail_url(detail_url)
         if not detail_url:
             return None
@@ -371,7 +380,7 @@ class YTS(TorrentSite):
                 return None
             payload = _extract_next_data(response.content)
             if payload:
-                magnet = self._magnet_from_movie_payload(payload)
+                magnet = self._magnet_from_movie_payload(payload, quality=quality)
                 if magnet:
                     return magnet
             soup = BeautifulSoup(response.content, "lxml")
