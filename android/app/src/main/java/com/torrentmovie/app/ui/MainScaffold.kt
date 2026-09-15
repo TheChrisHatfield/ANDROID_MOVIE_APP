@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +41,7 @@ fun MainScaffold(container: AppContainer) {
     val scope = rememberCoroutineScope()
     val backStack by navController.currentBackStackEntryAsState()
     val route = backStack?.destination?.route ?: Routes.SEARCH
+    val onDetailRoute = route.startsWith("detail/")
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
@@ -68,7 +70,7 @@ fun MainScaffold(container: AppContainer) {
                 Text("Torrent Movies", modifier = Modifier.padding(16.dp))
                 NavigationDrawerItem(
                     label = { Text("Search") },
-                    selected = route.startsWith("search"),
+                    selected = route.startsWith("search") || onDetailRoute,
                     onClick = {
                         navController.navigate(Routes.SEARCH) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -118,8 +120,14 @@ fun MainScaffold(container: AppContainer) {
                 TopAppBar(
                     title = { Text("Torrent Movies") },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        if (onDetailRoute) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
                         }
                     },
                     actions = { SeedboxStatusChip(container) },

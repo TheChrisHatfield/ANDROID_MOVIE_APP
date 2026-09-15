@@ -39,6 +39,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             searchJob?.cancel()
             searchGeneration += 1
         }
+        val revertingToLastSearch = !stale &&
+            trimmed == lastSearchedQuery &&
+            trimmed.isNotEmpty() &&
+            _state.value.results.isEmpty() &&
+            !_state.value.loading
         _state.value = _state.value.copy(
             query = q,
             loading = if (stale) false else _state.value.loading,
@@ -48,6 +53,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             info = if (stale) null else _state.value.info,
             hasSearched = if (stale) false else _state.value.hasSearched,
         )
+        if (revertingToLastSearch) {
+            search()
+        }
     }
 
     fun setMinSeeds(value: Int?) {

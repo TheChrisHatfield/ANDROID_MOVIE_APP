@@ -44,6 +44,7 @@ fun SearchScreen(
     onOpenDetail: (TorrentResultDto) -> Unit,
     modifier: Modifier = Modifier,
     sharedViewModel: SearchViewModel? = null,
+    selectedResultId: String? = null,
 ) {
     val vm: SearchViewModel = sharedViewModel ?: viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
@@ -56,14 +57,28 @@ fun SearchScreen(
         onRefresh = { vm.search() },
     )
 
-    LaunchedEffect(state.error, state.info, state.errorCode) {
+    var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.error, state.info, state.errorCode, state.results.size) {
         val inlineErrorCode = state.errorCode == 503 || state.errorCode == 400
-        if (!inlineErrorCode) {
-            state.error
-                ?.takeIf { state.results.isNotEmpty() || state.errorCode != null }
-                ?.let { snackbar.showSnackbar(it) }
+        state.error
+            ?.takeIf { !inlineErrorCode && state.results.isNotEmpty() }
+            ?.let { msg ->
+                val key = "err:$msg:${state.errorCode}"
+                if (key != lastSnackbarKey) {
+                    snackbar.showSnackbar(msg)
+                    lastSnackbarKey = key
+                }
+            }
+        state.info?.let { msg ->
+            val key = "info:$msg"
+            if (key != lastSnackbarKey) {
+                snackbar.showSnackbar(msg)
+                lastSnackbarKey = key
+            }
         }
-        state.info?.let { snackbar.showSnackbar(it) }
+        if (state.error == null && state.info == null) {
+            lastSnackbarKey = null
+        }
     }
 
     fun isAlreadyUploaded(result: TorrentResultDto): Boolean {
@@ -144,6 +159,7 @@ fun SearchScreen(
                             TorrentResultCard(
                                 result = result,
                                 alreadyUploaded = isAlreadyUploaded(result),
+                                selected = result.id == selectedResultId,
                                 onClick = { onOpenDetail(result) },
                             )
                         }
