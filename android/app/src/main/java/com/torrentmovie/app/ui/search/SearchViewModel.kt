@@ -34,6 +34,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     fun setQuery(q: String) {
         val trimmed = q.trim()
         val stale = lastSearchedQuery != null && trimmed != lastSearchedQuery
+        if (stale) {
+            searchJob?.cancel()
+            searchGeneration += 1
+        }
         _state.value = _state.value.copy(
             query = q,
             results = if (stale) emptyList() else _state.value.results,
@@ -82,7 +86,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     minSeeds = _state.value.minSeeds,
                     maxSize = _state.value.maxSize,
                 )
-                if (generation != searchGeneration) return@launch
+                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
                 val infoMessages = mutableListOf<String>()
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
@@ -107,7 +111,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SearchException) {
-                if (generation != searchGeneration) return@launch
+                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -117,7 +121,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     hasSearched = true,
                 )
             } catch (e: Exception) {
-                if (generation != searchGeneration) return@launch
+                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
