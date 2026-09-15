@@ -10,11 +10,17 @@ _MAX_TMDB_WORKERS = 4
 
 def _apply_tmdb(bucket: dict, tmdb: TmdbClient) -> None:
     info: TmdbMovieInfo | None = tmdb.lookup(bucket["title"], bucket["year"])
-    if info:
+    if not info:
+        return
+    if info.title:
         bucket["title"] = info.title
-        bucket["year"] = info.year or bucket["year"]
+    if info.year is not None:
+        bucket["year"] = info.year
+    if info.overview:
         bucket["overview"] = info.overview
+    if info.poster_url:
         bucket["poster_url"] = info.poster_url
+    if info.trailer_youtube_key:
         bucket["trailer_youtube_key"] = info.trailer_youtube_key
 
 
@@ -34,8 +40,22 @@ def _apply_indexer_metadata(bucket: dict, releases: list[dict]) -> None:
             bucket["overview"] = row["overview"]
         if not bucket.get("trailer_youtube_key") and row.get("trailer_youtube_key"):
             bucket["trailer_youtube_key"] = row["trailer_youtube_key"]
-        if bucket.get("poster_url"):
+        if (
+            bucket.get("poster_url")
+            and bucket.get("overview")
+            and bucket.get("trailer_youtube_key")
+        ):
             break
+
+
+def _year_from_row(row: dict) -> int | None:
+    title, year = parse_torrent_movie_title(str(row.get("name") or ""))
+    if year is not None:
+        return year
+    date_val = str(row.get("date") or "").strip()
+    if date_val.isdigit() and 1900 <= int(date_val) <= 2100:
+        return int(date_val)
+    return None
 
 
 def _append_group(bucket: dict, releases: list[dict], groups: list[dict]) -> None:
@@ -68,7 +88,8 @@ def build_movie_groups(
     order: list[str] = []
 
     for row in rows:
-        title, year = parse_torrent_movie_title(str(row.get("name") or ""))
+        title, _ = parse_torrent_movie_title(str(row.get("name") or ""))
+        year = _year_from_row(row)
         key = group_key_for(title, year)
         if key not in buckets:
             buckets[key] = {
@@ -95,17 +116,21 @@ def build_movie_groups(
             return
         staged.append((bucket, releases))
 
-    for key in order[:max_groups]:
+    primary_keys = order[:max_groups]
+    overflow_keys = order[max_groups:]
+
+    for key in primary_keys:
+        process_key(key)
+    for key in overflow_keys:
         process_key(key)
 
-    for key in order[max_groups:]:
-        process_key(key)
-
-    for bucket, releases in staged:
-        _apply_indexer_metadata(bucket, releases)
+    if enrich_metadata:
+        for bucket, releases in staged:
+            _apply_indexer_metadata(bucket, releases)
 
     if enrich_metadata and tmdb and tmdb.configured:
-        _enrich_buckets_parallel([bucket for bucket, _ in staged], tmdb)
+        primary_buckets = [buckets[k] for k in primary_keys if k in buckets]
+        _enrich_buckets_parallel(primary_buckets, tmdb)
 
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)
