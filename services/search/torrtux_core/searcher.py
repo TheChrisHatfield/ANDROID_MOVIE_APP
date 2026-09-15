@@ -71,8 +71,12 @@ class TorrentSearcher:
             if response.status_code != 200:
                 errored = page == 0 and not results
                 break
+            if page > 0 and getattr(site, "_apibay_mode", False):
+                break
             page_results = site.parse_results(response.content, query)
             if not page_results:
+                if page == 0 and not results:
+                    errored = True
                 break
             results.extend(page_results)
         return results, errored

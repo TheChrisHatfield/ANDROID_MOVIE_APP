@@ -37,6 +37,21 @@ def test_yts_detail_url_is_absolute():
     assert rows[0]["magnet"] is None
 
 
+def test_empty_parse_marks_site_failed():
+    searcher = TorrentSearcher(site_classes=[])
+    mock_site = MagicMock()
+    mock_site.name = "MockSite"
+    mock_site._apibay_mode = False
+    mock_site.build_search_url.return_value = "http://example.com/search"
+
+    with patch("torrtux_core.searcher.http_get") as mock_get:
+        mock_get.return_value = MagicMock(status_code=200, content=b"<html></html>")
+        mock_site.parse_results.return_value = []
+        _, errored = searcher._search_site(mock_site, "test", 1)
+
+    assert errored is True
+
+
 def test_all_sources_failed_flag():
     searcher = TorrentSearcher(site_classes=[])
     mock_site = MagicMock()
