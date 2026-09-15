@@ -66,10 +66,8 @@ fun AppNavGraph(
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
         } else {
-            val pending = container.pendingFoldNarrowDetail
-                ?: container.foldActiveSelection
+            val pending = container.foldActiveSelection
             if (pending != null) {
-                container.pendingFoldNarrowDetail = null
                 container.foldActiveSelection = null
                 val cached = container.searchResultStore.get(pending.resultId)
                 val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name

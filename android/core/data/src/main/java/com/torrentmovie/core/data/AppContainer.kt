@@ -7,9 +7,6 @@ class AppContainer(context: Context) {
     /** Cover/single-pane → unfolded two-pane restore payload. */
     var pendingFoldDetail: PendingFoldDetail? = null
 
-    /** Two-pane → narrow phone nav: push detail route when width drops. */
-    var pendingFoldNarrowDetail: PendingFoldDetail? = null
-
     /** Latest fold two-pane selection (survives layout disposal on width change). */
     var foldActiveSelection: PendingFoldDetail? = null
 
