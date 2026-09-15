@@ -232,6 +232,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-035**: Search API MUST support `group=true` (default) to merge torrent rows for the same film (parsed title + year) into `groups[]` with compact `releases[]` per indexer.
 - **FR-036**: When `TMDB_API_KEY` is set on the search service, grouped results SHOULD include `poster_url`, `overview` (short plot), and `trailer_youtube_key` from TMDB.
 - **FR-037**: Android search UI MUST render movie group cards (poster, title, year, overview, trailer affordance) and expandable compact release rows; detail/send flow unchanged per release.
+- **FR-038**: Torrent detail screen MUST show movie metadata (poster, overview, trailer) when available from grouped search; Settings MAY store optional TMDB API key passed to search API as `tmdb_api_key`.
 
 ### Key Entities
 

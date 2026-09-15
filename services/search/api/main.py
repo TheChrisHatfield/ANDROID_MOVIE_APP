@@ -85,6 +85,7 @@ def search(
     movie_profile: bool = Query(True),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
     enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     q = q.strip()
     if not q:
@@ -134,9 +135,12 @@ def search(
     display_results = flat_results
 
     if group and stored:
+        tmdb_client = _tmdb
+        if tmdb_api_key and tmdb_api_key.strip():
+            tmdb_client = TmdbClient(api_key=tmdb_api_key.strip())
         group_rows, ungrouped_rows = build_movie_groups(
             stored,
-            tmdb=_tmdb,
+            tmdb=tmdb_client,
             enrich_metadata=enrich,
         )
         groups = [MovieGroup(**g) for g in group_rows]

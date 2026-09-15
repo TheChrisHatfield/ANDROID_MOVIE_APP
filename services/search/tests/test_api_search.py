@@ -78,6 +78,30 @@ def test_empty_sites_param_returns_400(_mock_test):
     assert response.status_code == 400
 
 
+@patch("api.main.build_movie_groups")
+@patch.object(_searcher, "test_sites", return_value=True)
+@patch.object(_searcher, "search")
+def test_search_passes_tmdb_api_key_override(mock_search, _mock_test, mock_group):
+    mock_search.return_value = SearchOutcome(
+        results=[
+            {"name": "Inception 2010 1080p", "site": "YTS", "seeds": "1"},
+            {"name": "Inception.2010.720p", "site": "TPB", "seeds": "2"},
+        ],
+        failed_sites=[],
+    )
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    mock_group.return_value = ([], [])
+
+    client.get(
+        "/v1/search",
+        params={"q": "inception", "tmdb_api_key": "test-key-123", "group": True},
+    )
+
+    assert mock_group.called
+    _, kwargs = mock_group.call_args
+    assert kwargs["tmdb"].api_key == "test-key-123"
+
+
 def test_quality_from_result_name_bracketed_and_loose():
     assert _quality_from_result_name("Movie [1080p] BluRay") == "1080p"
     assert _quality_from_result_name("Movie 720p WEB") == "720p"
