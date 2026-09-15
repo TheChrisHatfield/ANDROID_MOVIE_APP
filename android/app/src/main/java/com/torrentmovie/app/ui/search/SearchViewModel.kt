@@ -10,6 +10,7 @@ import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -34,6 +35,19 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private var searchJob: Job? = null
     private var searchGeneration = 0
     private var lastSearchedQuery: String? = null
+    private var lastSearchMinSeeds: Int? = null
+    private var lastSearchMaxSeeds: Int? = null
+    private var lastSearchMaxSize: String? = null
+
+    init {
+        viewModelScope.launch {
+            container.settingsRepository.revision.drop(1).collect {
+                if (_state.value.hasSearched && !_state.value.loading) {
+                    search()
+                }
+            }
+        }
+    }
 
     fun setQuery(q: String) {
         val trimmed = q.trim()
@@ -107,7 +121,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     container.settingsRepository.revision.value == settingsRevision
             }
             try {
-                container.movieMetadataStore.clear()
+                val sameSearch = lastSearchedQuery == q &&
+                    lastSearchMinSeeds == minSeeds &&
+                    lastSearchMaxSeeds == maxSeeds &&
+                    lastSearchMaxSize == maxSize
+                if (!sameSearch) {
+                    container.movieMetadataStore.clear()
+                }
                 _state.value = _state.value.copy(
                     loading = true,
                     results = emptyList(),
@@ -124,6 +144,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
                 if (!requestStillCurrent()) return@launch
                 val infoMessages = mutableListOf<String>()
+                if (minSeeds != null) {
+                    infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
+                }
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
                 }
@@ -152,6 +175,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val snackInfo = if (!hasAnyResults && info != null) null else info
 
                 lastSearchedQuery = q
+                lastSearchMinSeeds = minSeeds
+                lastSearchMaxSeeds = maxSeeds
+                lastSearchMaxSize = maxSize
                 _state.value = _state.value.copy(
                     loading = false,
                     results = outcome.results,
