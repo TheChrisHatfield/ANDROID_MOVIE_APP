@@ -18,6 +18,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,8 +41,9 @@ fun MainScaffold(container: AppContainer) {
     val backStack by navController.currentBackStackEntryAsState()
     val route = backStack?.destination?.route ?: Routes.SEARCH
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
+    val settingsRevision by container.settingsRepository.revision.collectAsState()
 
-    LaunchedEffect(route) {
+    LaunchedEffect(route, settingsRevision) {
         settings = container.settingsRepository.load()
     }
 
@@ -78,7 +80,10 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Uploaded") },
                     selected = route == Routes.UPLOADED,
                     onClick = {
-                        navController.navigate(Routes.UPLOADED) { launchSingleTop = true }
+                        navController.navigate(Routes.UPLOADED) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                        }
                         scope.launch { drawerState.close() }
                     },
                 )
@@ -86,7 +91,10 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Settings") },
                     selected = route == Routes.SETTINGS,
                     onClick = {
-                        navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                        navController.navigate(Routes.SETTINGS) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                        }
                         scope.launch { drawerState.close() }
                     },
                 )
@@ -94,7 +102,10 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Help") },
                     selected = route == Routes.HELP,
                     onClick = {
-                        navController.navigate(Routes.HELP) { launchSingleTop = true }
+                        navController.navigate(Routes.HELP) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                        }
                         scope.launch { drawerState.close() }
                     },
                 )
