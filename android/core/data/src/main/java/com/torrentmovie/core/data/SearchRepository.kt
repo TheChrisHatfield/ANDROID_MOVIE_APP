@@ -56,6 +56,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             )
         } catch (e: HttpException) {
             throw mapHttpError(e)
+        } catch (e: IllegalArgumentException) {
+            throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
             throw mapNetworkError(e)
         }
@@ -66,6 +68,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             api().getMagnet(resultId)
         } catch (e: HttpException) {
             throw mapHttpError(e)
+        } catch (e: IllegalArgumentException) {
+            throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
             throw mapNetworkError(e)
         }
