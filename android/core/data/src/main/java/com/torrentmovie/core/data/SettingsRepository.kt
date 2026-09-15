@@ -69,7 +69,7 @@ class SettingsRepository(context: Context) {
             .putString(KEY_RUTORRENT_URL, rutorrentUrl)
             .putString(KEY_USERNAME, settings.username)
             .putString(KEY_PASSWORD, settings.password)
-            .putString(KEY_AUTH_SCHEME, settings.authScheme)
+            .putString(KEY_AUTH_SCHEME, normalizeAuthScheme(settings.authScheme))
             .putString(KEY_DOWNLOAD_DIR, downloadDir)
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
@@ -94,8 +94,10 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    private companion object {
-        const val KEY_SEARCH_API = "search_api_base_url"
+    companion object {
+        internal fun normalizeAuthScheme(value: String): String = value.trim().lowercase()
+
+        private const val KEY_SEARCH_API = "search_api_base_url"
         const val KEY_RUTORRENT_URL = "rutorrent_base_url"
         const val KEY_USERNAME = "username"
         const val KEY_PASSWORD = "password"
