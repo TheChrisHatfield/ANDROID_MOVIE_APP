@@ -1,6 +1,7 @@
 """In-memory search result cache for magnet lazy-fetch."""
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,6 +22,7 @@ class ResultCache:
         self.max_entries = max_entries
         self.ttl_seconds = ttl_seconds
         self._store: dict[UUID, CacheEntry] = {}
+        self._lock = threading.Lock()
 
     def _evict_expired(self) -> None:
         now = time.time()
@@ -36,36 +38,39 @@ class ResultCache:
             del self._store[key]
 
     def put_many(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        self._evict_expired()
-        stored = []
-        for row in rows:
-            result_id = uuid4()
-            payload = dict(row)
-            payload["id"] = str(result_id)
-            self._store[result_id] = CacheEntry(payload=payload)
-            stored.append(payload)
-        self._evict_overflow()
-        return stored
+        with self._lock:
+            self._evict_expired()
+            stored = []
+            for row in rows:
+                result_id = uuid4()
+                payload = dict(row)
+                payload["id"] = str(result_id)
+                self._store[result_id] = CacheEntry(payload=payload)
+                stored.append(payload)
+            self._evict_overflow()
+            return stored
 
     def get(self, result_id: UUID) -> dict[str, Any] | None:
-        self._evict_expired()
-        entry = self._store.get(result_id)
-        if not entry:
-            return None
-        if time.time() - entry.created_at > self.ttl_seconds:
-            del self._store[result_id]
-            return None
-        return entry.payload
+        with self._lock:
+            self._evict_expired()
+            entry = self._store.get(result_id)
+            if not entry:
+                return None
+            if time.time() - entry.created_at > self.ttl_seconds:
+                del self._store[result_id]
+                return None
+            return entry.payload
 
     def resolve_magnet(self, result_id: UUID, magnet: str) -> dict[str, Any] | None:
-        self._evict_expired()
-        cached = self._store.get(result_id)
-        if not cached:
-            return None
-        if time.time() - cached.created_at > self.ttl_seconds:
-            del self._store[result_id]
-            return None
-        payload = dict(cached.payload)
-        payload["magnet"] = magnet
-        cached.payload = payload
-        return payload
+        with self._lock:
+            self._evict_expired()
+            cached = self._store.get(result_id)
+            if not cached:
+                return None
+            if time.time() - cached.created_at > self.ttl_seconds:
+                del self._store[result_id]
+                return None
+            payload = dict(cached.payload)
+            payload["magnet"] = magnet
+            cached.payload = payload
+            return payload
