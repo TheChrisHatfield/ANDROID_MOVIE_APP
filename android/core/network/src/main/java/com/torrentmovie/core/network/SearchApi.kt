@@ -18,6 +18,8 @@ interface SearchApi {
         @Query("max_size") maxSize: String? = null,
         @Query("parallel") parallel: Boolean = true,
         @Query("movie_profile") movieProfile: Boolean = true,
+        @Query("group") group: Boolean = true,
+        @Query("enrich") enrich: Boolean = true,
     ): SearchResponseDto
 
     @GET("/v1/results/{id}/magnet")
@@ -36,11 +38,28 @@ data class TorrentResultDto(
     val detail_url: String? = null,
 )
 
+data class MovieGroupDto(
+    val group_key: String,
+    val title: String,
+    val year: Int? = null,
+    val overview: String? = null,
+    val poster_url: String? = null,
+    val trailer_youtube_key: String? = null,
+    val release_count: Int,
+    val releases: List<TorrentResultDto>,
+) {
+    val groupKey: String get() = group_key
+    val posterUrl: String? get() = poster_url
+    val trailerYoutubeKey: String? get() = trailer_youtube_key
+    val releaseCount: Int get() = release_count
+}
+
 data class SearchResponseDto(
     val query: String,
     val count: Int,
     val results: List<TorrentResultDto>,
     val failed_sites: List<String> = emptyList(),
+    val groups: List<MovieGroupDto> = emptyList(),
 ) {
     val failedSites: List<String> get() = failed_sites
 }

@@ -125,6 +125,23 @@ As a user, I filter by minimum seeds and maximum size so I quickly find a health
 
 ---
 
+### User Story 8 - Kodi-style movie library cards (Priority: P2)
+
+As a user searching for a movie, I see **one card per film** (poster, title, year, short description) with duplicate releases from different indexers grouped underneath — like Kodi's movie library — and I can watch a trailer before picking a torrent release.
+
+**Why this priority**: Raw torrent rows for the same film are noisy; metadata makes search feel like a movie app.
+
+**Independent Test**: Search "Inception" with TMDB API key configured on search server → grouped card shows poster + overview + trailer button; expand shows compact per-site releases.
+
+**Acceptance Scenarios**:
+
+1. **Given** multiple indexers return the same film, **When** results load, **Then** the app shows one **movie group** per title/year with a release count, not duplicate full-width cards.
+2. **Given** TMDB is configured (`TMDB_API_KEY` on search service), **When** a group is shown, **Then** poster image and short overview (≤3 lines) appear on the card.
+3. **Given** TMDB returns a YouTube trailer, **When** the user taps the trailer control, **Then** the trailer opens in YouTube (or browser).
+4. **Given** a grouped movie card, **When** the user expands releases, **Then** each row shows site, size, and seeds in one compact line; tap opens detail/send flow unchanged.
+
+---
+
 ### User Story 7 - Phone and Z Fold layouts (Priority: P1)
 
 As a user on **any** supported Android device (traditional phone or Samsung Galaxy Z Fold), I get the same search, detail, and seedbox-send behavior — with a two-pane search+detail layout on Z Fold inner screen when unfolded, and standard single-pane navigation otherwise.
@@ -212,6 +229,9 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-032c**: Transition from cover/single-pane detail to unfolded two-pane MUST restore the selected result when possible (`pendingFoldDetailId` or equivalent).
 - **FR-033**: Bug-hunt and release validation MUST follow **dual-lane** coverage: universal fixes in shared layers plus explicit phone and fold smoke for navigation/selection changes (see `.cursor/rules/bug-hunt-dual-lane.mdc`).
 - **FR-034**: Fixes SHOULD land in shared code first; fold-only wiring changes MUST include fold-lane validation evidence in the cycle summary.
+- **FR-035**: Search API MUST support `group=true` (default) to merge torrent rows for the same film (parsed title + year) into `groups[]` with compact `releases[]` per indexer.
+- **FR-036**: When `TMDB_API_KEY` is set on the search service, grouped results SHOULD include `poster_url`, `overview` (short plot), and `trailer_youtube_key` from TMDB.
+- **FR-037**: Android search UI MUST render movie group cards (poster, title, year, overview, trailer affordance) and expandable compact release rows; detail/send flow unchanged per release.
 
 ### Key Entities
 

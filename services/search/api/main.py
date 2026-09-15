@@ -10,7 +10,9 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException, Query
 
 from api.cache import ResultCache
-from api.models import HealthResponse, MagnetResponse, SearchResponse, SitesHealthResponse, TorrentResult
+from api.models import HealthResponse, MagnetResponse, MovieGroup, SearchResponse, SitesHealthResponse, TorrentResult
+from metadata.grouping import build_movie_groups
+from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import filter_size_bytes
 from torrtux_core.searcher import TorrentSearcher
 
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 _searcher = TorrentSearcher()
 _result_cache = ResultCache()
+_tmdb = TmdbClient()
 _sites_health_cache: dict[str, object] = {"checked_at": 0.0, "working": []}
 _SITES_HEALTH_TTL = 300
 
@@ -80,6 +83,8 @@ def search(
     max_size: str | None = Query(None),
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
+    group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
 ) -> SearchResponse:
     q = q.strip()
     if not q:
@@ -124,11 +129,26 @@ def search(
         raise HTTPException(status_code=503, detail="No sources available")
 
     stored = _result_cache.put_many(outcome.results)
+    flat_results = [TorrentResult(**row) for row in stored]
+    groups: list[MovieGroup] = []
+    display_results = flat_results
+
+    if group and stored:
+        group_rows, ungrouped_rows = build_movie_groups(
+            stored,
+            tmdb=_tmdb,
+            enrich_metadata=enrich,
+        )
+        groups = [MovieGroup(**g) for g in group_rows]
+        if groups:
+            display_results = [TorrentResult(**row) for row in ungrouped_rows]
+
     return SearchResponse(
         query=q,
         count=len(stored),
-        results=[TorrentResult(**row) for row in stored],
+        results=display_results,
         failed_sites=outcome.failed_sites,
+        groups=groups,
     )
 
 

@@ -25,7 +25,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["torrtux_core*", "api*"]
+include = ["torrtux_core*", "api*", "metadata*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

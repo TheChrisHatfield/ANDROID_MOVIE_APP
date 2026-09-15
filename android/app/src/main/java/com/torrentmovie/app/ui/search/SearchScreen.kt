@@ -50,6 +50,7 @@ fun SearchScreen(
     val state by vm.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
+    var expandedGroupKey by remember { mutableStateOf<String?>(null) }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
 
     val pullState = rememberPullRefreshState(
@@ -132,7 +133,8 @@ fun SearchScreen(
                 .pullRefresh(pullState),
         ) {
             when {
-                state.hasSearched && state.results.isEmpty() && !state.loading -> {
+                state.hasSearched && state.groups.isEmpty() &&
+                    state.results.isEmpty() && !state.loading -> {
                     val message = when (state.errorCode) {
                         503 -> "No sources available. Check the search API and try again."
                         400 -> state.error ?: "Invalid search request. Check filters and try again."
@@ -155,6 +157,22 @@ fun SearchScreen(
                 }
                 else -> {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(state.groups, key = { it.groupKey }) { group ->
+                            MovieGroupCard(
+                                group = group,
+                                expanded = expandedGroupKey == group.groupKey,
+                                selectedResultId = selectedResultId,
+                                isAlreadyUploaded = ::isAlreadyUploaded,
+                                onToggleExpand = {
+                                    expandedGroupKey = if (expandedGroupKey == group.groupKey) {
+                                        null
+                                    } else {
+                                        group.groupKey
+                                    }
+                                },
+                                onOpenRelease = onOpenDetail,
+                            )
+                        }
                         items(state.results, key = { it.id }) { result ->
                             TorrentResultCard(
                                 result = result,

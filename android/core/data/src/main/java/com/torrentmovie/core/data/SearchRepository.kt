@@ -60,6 +60,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             SearchResult(
                 results = response.results,
                 failedSites = response.failedSites,
+                groups = response.groups,
             )
         } catch (e: HttpException) {
             throw mapHttpError(e)

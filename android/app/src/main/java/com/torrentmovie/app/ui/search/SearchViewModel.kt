@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.SearchException
+import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val query: String = "",
     val results: List<TorrentResultDto> = emptyList(),
+    val groups: List<MovieGroupDto> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
     val errorCode: Int? = null,
@@ -48,6 +50,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             query = q,
             loading = if (stale) false else _state.value.loading,
             results = if (stale) emptyList() else _state.value.results,
+            groups = if (stale) emptyList() else _state.value.groups,
             error = if (stale) null else _state.value.error,
             errorCode = if (stale) null else _state.value.errorCode,
             info = if (stale) null else _state.value.info,
@@ -79,6 +82,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value = _state.value.copy(
                 loading = false,
                 results = emptyList(),
+                groups = emptyList(),
                 error = null,
                 errorCode = null,
                 info = null,
@@ -102,6 +106,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 _state.value = _state.value.copy(
                     loading = true,
                     results = emptyList(),
+                    groups = emptyList(),
                     error = null,
                     errorCode = null,
                     info = null,
@@ -118,17 +123,22 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
                 }
                 val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
-                val emptyMessage = if (outcome.results.isEmpty() && info == null) {
+                val allReleases = outcome.groups.flatMap { it.releases } + outcome.results
+                allReleases.forEach { container.searchResultStore.put(it) }
+
+                val hasAnyResults = outcome.groups.isNotEmpty() || outcome.results.isNotEmpty()
+                val emptyMessage = if (!hasAnyResults && info == null) {
                     "No results found. Try a broader query."
                 } else null
                 val inlineError = emptyMessage
-                    ?: if (outcome.results.isEmpty() && info != null) info else null
-                val snackInfo = if (outcome.results.isEmpty() && info != null) null else info
+                    ?: if (!hasAnyResults && info != null) info else null
+                val snackInfo = if (!hasAnyResults && info != null) null else info
 
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     results = outcome.results,
+                    groups = outcome.groups,
                     hasSearched = true,
                     info = snackInfo,
                     error = inlineError,
@@ -144,6 +154,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     error = e.message ?: "Search failed",
                     errorCode = e.httpCode,
                     results = emptyList(),
+                    groups = emptyList(),
                     hasSearched = true,
                 )
             } catch (e: Exception) {
@@ -154,6 +165,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     error = e.message ?: "Search failed",
                     errorCode = null,
                     results = emptyList(),
+                    groups = emptyList(),
                     hasSearched = true,
                 )
             } finally {

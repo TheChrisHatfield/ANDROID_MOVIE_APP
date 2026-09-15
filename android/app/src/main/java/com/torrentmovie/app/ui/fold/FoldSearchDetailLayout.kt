@@ -37,9 +37,14 @@ fun FoldSearchDetailLayout(
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
 
-    val selected: TorrentResultDto? = selectedId?.let { id ->
-        state.results.find { it.id == id }
+    fun findRelease(id: String): TorrentResultDto? {
+        return state.results.find { it.id == id }
+            ?: state.groups.asSequence().flatMap { it.releases }.find { it.id == id }
             ?: container.searchResultStore.get(id)
+    }
+
+    val selected: TorrentResultDto? = selectedId?.let { id ->
+        findRelease(id)
             ?: restoredName?.let { name ->
                 TorrentResultDto(
                     id = id,
@@ -58,12 +63,12 @@ fun FoldSearchDetailLayout(
         }
     }
 
-    LaunchedEffect(state.results.map { it.id }, state.hasSearched, state.loading) {
+    LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
         if (state.loading) return@LaunchedEffect
         val id = selectedId ?: return@LaunchedEffect
-        if (state.hasSearched && state.results.isNotEmpty() &&
-            state.results.none { it.id == id }
-        ) {
+        val allIds = state.results.map { it.id } +
+            state.groups.flatMap { g -> g.releases.map { it.id } }
+        if (state.hasSearched && allIds.isNotEmpty() && id !in allIds) {
             selectedId = null
             restoredName = null
             restoredSite = null
