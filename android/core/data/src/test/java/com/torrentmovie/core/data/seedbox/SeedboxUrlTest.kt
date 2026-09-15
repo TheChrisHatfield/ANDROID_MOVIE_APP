@@ -21,6 +21,14 @@ class SeedboxUrlTest {
     }
 
     @Test
+    fun lanIpWithoutSchemeUsesHttp() {
+        assertEquals(
+            "http://192.168.1.10/rutorrent/",
+            normalizeSeedboxUrl("192.168.1.10/rutorrent"),
+        )
+    }
+
+    @Test
     fun searchApiAddsHttpWhenSchemeMissing() {
         assertEquals(
             "http://192.168.1.5:8765",

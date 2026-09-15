@@ -450,7 +450,9 @@ class EZTV(TorrentSite):
             ]
         )
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/search/{quote(query)}"
+        base = f"{self.working_url}/search/{quote(query)}"
+        return base if page == 0 else f"{base}/{page + 1}"
+
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
         results = []
@@ -1234,7 +1236,11 @@ class LinuxTracker(TorrentSite):
             ["https://linuxtracker.org"]
         )
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/index.php?page=torrents&search={quote(query)}"
+        return (
+            f"{self.working_url}/index.php?page=torrents"
+            f"&search={quote(query)}&pages={page + 1}"
+        )
+
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
         results = []
