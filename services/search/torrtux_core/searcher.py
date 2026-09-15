@@ -54,6 +54,18 @@ class TorrentSearcher:
             if s.name.lower() in wanted and s.name not in EXCLUDED_FROM_MOVIE_PROFILE
         ]
 
+    def site_for_name(self, site_name: str | None):
+        """Thread-safe lookup of an indexer by display name."""
+        if not site_name:
+            return None
+        with self._lock:
+            working = list(self.working_sites)
+            all_sites = list(self.sites)
+        site = next((s for s in working if s.name == site_name), None)
+        if site is None:
+            site = next((s for s in all_sites if s.name == site_name), None)
+        return site
+
     def _search_site(self, site, query: str, page_limit: int) -> tuple[list[dict], bool]:
         results: list[dict] = []
         errored = False

@@ -179,9 +179,7 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
     if not magnet:
         site_name = row.get("site")
         detail_url = row.get("detail_url")
-        site = next((s for s in _searcher.working_sites if s.name == site_name), None)
-        if site is None:
-            site = next((s for s in _searcher.sites if s.name == site_name), None)
+        site = _searcher.site_for_name(site_name)
         if site and detail_url:
             quality = _quality_from_result_name(row.get("name"))
             try:
