@@ -15,6 +15,7 @@ class SeedboxRepository(
     private val sentWithoutPersist = mutableSetOf<String>()
     private var cachedClient: RuTorrentClient? = null
     private var cachedClientRevision = -1
+    private var sentWithoutPersistRevision = -1
 
     @Synchronized
     private fun client(): RuTorrentClient {
@@ -38,6 +39,11 @@ class SeedboxRepository(
         displayName: String,
         site: String,
     ): SeedboxResult = addMutex.withLock {
+        val revision = settingsRepository.revision.value
+        if (revision != sentWithoutPersistRevision) {
+            sentWithoutPersist.clear()
+            sentWithoutPersistRevision = revision
+        }
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
         if (isDuplicate(magnet, displayName, site)) {
             return SeedboxResult.Failure("Already uploaded — remove from Uploaded list to re-send")

@@ -57,9 +57,10 @@ fun TorrentDetailScreen(
     val metadata = container.movieMetadataStore.get(resultId)
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
-        if (magnetValue.isNullOrBlank()) return false
-        val key = MagnetHashUtil.storageKey(magnetValue, name, site)
-        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
+        val key = MagnetHashUtil.storageKey(magnetValue ?: "", name, site)
+        if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+        if (!magnetValue.isNullOrBlank()) return false
+        return uploaded.any { it.displayName == name && it.site == site }
     }
 
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
@@ -98,6 +99,9 @@ fun TorrentDetailScreen(
                 magnetError = "Magnet unavailable — tap retry"
             }
         } catch (e: SearchException) {
+            if (e.httpCode == 404) {
+                container.searchResultStore.remove(resultId)
+            }
             magnetError = when {
                 e.httpCode == 404 && e.message?.contains("expired", ignoreCase = true) == true ->
                     "Result expired — go back and search again"
