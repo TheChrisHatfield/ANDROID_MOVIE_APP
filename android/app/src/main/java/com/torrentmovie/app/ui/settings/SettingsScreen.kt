@@ -93,8 +93,12 @@ fun SettingsScreen(container: AppContainer) {
 
         Button(
             onClick = {
-                val saved = container.settingsRepository.save(settings)
-                val message = if (saved) "Settings saved" else "Failed to save settings"
+                val validationError = container.settingsRepository.saveError(settings)
+                val message = when {
+                    validationError != null -> validationError
+                    container.settingsRepository.save(settings) -> "Settings saved"
+                    else -> "Failed to save settings"
+                }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier.padding(top = 16.dp),

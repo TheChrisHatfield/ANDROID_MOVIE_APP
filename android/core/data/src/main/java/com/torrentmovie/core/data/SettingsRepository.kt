@@ -51,23 +51,35 @@ class SettingsRepository(context: Context) {
         disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
     )
 
-    fun save(settings: AppSettings): Boolean {
+    fun saveError(settings: AppSettings): String? {
         val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
         if (searchApiUrl.isBlank() || !isValidHttpUrl(searchApiUrl)) {
-            return false
+            return "Invalid search API URL"
         }
         val downloadDir = settings.downloadDirectory.trim()
         if (downloadDir.isBlank()) {
-            return false
+            return "Download folder cannot be empty"
+        }
+        if (!downloadDir.startsWith("/")) {
+            return "Download folder must be an absolute path (start with /)"
         }
         val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
         if (settings.rutorrentBaseUrl.isNotBlank() && !isValidHttpUrl(rutorrentUrl)) {
-            return false
+            return "Invalid ruTorrent URL"
         }
         val authScheme = normalizeAuthScheme(settings.authScheme)
         if (authScheme !in setOf("basic", "digest")) {
-            return false
+            return "Auth scheme must be basic or digest"
         }
+        return null
+    }
+
+    fun save(settings: AppSettings): Boolean {
+        if (saveError(settings) != null) return false
+        val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
+        val downloadDir = settings.downloadDirectory.trim()
+        val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
+        val authScheme = normalizeAuthScheme(settings.authScheme)
         val ok = prefs.edit()
             .putString(KEY_SEARCH_API, searchApiUrl)
             .putString(KEY_RUTORRENT_URL, rutorrentUrl)
