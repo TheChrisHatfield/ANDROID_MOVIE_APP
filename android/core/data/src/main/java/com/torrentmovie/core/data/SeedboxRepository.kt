@@ -48,32 +48,61 @@ class SeedboxRepository(
         if (!settingsRepository.isSeedboxConfigured()) {
             return SeedboxResult.Failure("Configure seedbox URL and credentials in Settings")
         }
+        if (key in sentWithoutPersist) {
+            return persistUploadedMagnet(
+                key = key,
+                magnet = magnet,
+                displayName = displayName,
+                site = site,
+                downloadDirectory = settings.downloadDirectory,
+            )
+        }
         val result = client().addMagnet(magnet, settings.downloadDirectory)
         if (result is SeedboxResult.Success) {
-            val key = MagnetHashUtil.storageKey(magnet, displayName, site)
-            try {
-                database.uploadedMagnetDao().insert(
-                    UploadedMagnet(
-                        infoHash = key,
-                        displayName = displayName,
-                        site = site,
-                        magnetUri = magnet,
-                        sentAt = System.currentTimeMillis(),
-                        downloadDirectory = settings.downloadDirectory,
-                    ),
-                )
-                sentWithoutPersist.remove(key)
-            } catch (_: Exception) {
-                return SeedboxResult.Failure(
-                    "Sent to seedbox but failed to save locally — you can retry send",
-                )
+            val persisted = persistUploadedMagnet(
+                key = key,
+                magnet = magnet,
+                displayName = displayName,
+                site = site,
+                downloadDirectory = settings.downloadDirectory,
+            )
+            if (persisted is SeedboxResult.Failure) {
+                sentWithoutPersist.add(key)
             }
+            return persisted
         }
         result
     }
 
     fun clearSentWithoutPersist(infoHash: String) {
         sentWithoutPersist.remove(infoHash)
+    }
+
+    private suspend fun persistUploadedMagnet(
+        key: String,
+        magnet: String,
+        displayName: String,
+        site: String,
+        downloadDirectory: String,
+    ): SeedboxResult {
+        return try {
+            database.uploadedMagnetDao().insert(
+                UploadedMagnet(
+                    infoHash = key,
+                    displayName = displayName,
+                    site = site,
+                    magnetUri = magnet,
+                    sentAt = System.currentTimeMillis(),
+                    downloadDirectory = downloadDirectory,
+                ),
+            )
+            sentWithoutPersist.remove(key)
+            SeedboxResult.Success
+        } catch (_: Exception) {
+            SeedboxResult.Failure(
+                "Sent to seedbox but failed to save locally — tap send again",
+            )
+        }
     }
 
     suspend fun pingSeedbox(): Boolean {
