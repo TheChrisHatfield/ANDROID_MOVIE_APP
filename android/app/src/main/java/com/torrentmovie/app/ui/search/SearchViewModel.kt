@@ -169,9 +169,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
                 }
                 val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
-                val allReleases = outcome.groups.flatMap { it.releases } + outcome.results
+                val display = normalizeKodiGroups(outcome.groups, outcome.results)
+                val allReleases = display.groups.flatMap { it.releases }
                 allReleases.forEach { container.searchResultStore.put(it) }
-                outcome.groups.forEach { group ->
+                display.groups.forEach { group ->
                     val metadata = MovieMetadata(
                         title = group.title,
                         year = group.year,
@@ -184,7 +185,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     }
                 }
 
-                val hasAnyResults = outcome.groups.isNotEmpty() || outcome.results.isNotEmpty()
+                val hasAnyResults = display.groups.isNotEmpty()
                 val emptyMessage = if (!hasAnyResults && info == null) {
                     "No results found. Try a broader query."
                 } else null
@@ -199,8 +200,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 lastSearchSettingsKey = searchSettingsKey()
                 _state.value = _state.value.copy(
                     loading = false,
-                    results = outcome.results,
-                    groups = outcome.groups,
+                    results = display.results,
+                    groups = display.groups,
                     hasSearched = true,
                     info = snackInfo,
                     error = inlineError,
@@ -236,5 +237,29 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }
         }
+    }
+
+    private data class DisplaySearchOutcome(
+        val groups: List<MovieGroupDto>,
+        val results: List<TorrentResultDto>,
+    )
+
+    private fun normalizeKodiGroups(
+        groups: List<MovieGroupDto>,
+        flat: List<TorrentResultDto>,
+    ): DisplaySearchOutcome {
+        val synthetic = flat.map { result ->
+            MovieGroupDto(
+                group_key = "flat-${result.id}",
+                title = result.name,
+                year = null,
+                overview = null,
+                poster_url = null,
+                trailer_youtube_key = null,
+                release_count = 1,
+                releases = listOf(result),
+            )
+        }
+        return DisplaySearchOutcome(groups = groups + synthetic, results = emptyList())
     }
 }

@@ -38,11 +38,18 @@ fun MovieGroupCard(
     onOpenRelease: (TorrentResultDto) -> Unit,
 ) {
     val context = LocalContext.current
+    val singleRelease = group.releaseCount == 1 && group.releases.size == 1
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onToggleExpand),
+            .clickable(onClick = {
+                if (singleRelease) {
+                    onOpenRelease(group.releases.first())
+                } else {
+                    onToggleExpand()
+                }
+            }),
         colors = CardDefaults.cardColors(),
     ) {
         Row(
@@ -87,7 +94,7 @@ fun MovieGroupCard(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "${group.releaseCount} releases",
+                    text = if (group.releaseCount == 1) "1 release" else "${group.releaseCount} releases",
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(top = 2.dp),
                     color = MaterialTheme.colorScheme.primary,
@@ -105,8 +112,10 @@ fun MovieGroupCard(
                     modifier = Modifier.padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onToggleExpand) {
-                        Text(if (expanded) "Hide releases" else "Show releases")
+                    if (!singleRelease) {
+                        TextButton(onClick = onToggleExpand) {
+                            Text(if (expanded) "Hide releases" else "Show releases")
+                        }
                     }
                     group.trailerYoutubeKey?.let { key ->
                         IconButton(
