@@ -34,3 +34,13 @@ def test_single_release_becomes_group_card():
     assert len(groups) == 1
     assert groups[0]["release_count"] == 1
     assert ungrouped == []
+
+
+def test_max_groups_still_groups_overflow_without_tmdb():
+    rows = [
+        {"id": str(i), "name": f"Film {i} 2020 1080p", "site": "YTS"}
+        for i in range(35)
+    ]
+    groups, ungrouped = build_movie_groups(rows, tmdb=None, enrich_metadata=False, max_groups=30)
+    assert len(groups) == 35
+    assert ungrouped == []
