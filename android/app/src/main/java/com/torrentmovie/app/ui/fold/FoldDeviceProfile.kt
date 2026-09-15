@@ -37,6 +37,7 @@ object FoldDeviceProfile {
     ): Boolean {
         if (!manufacturer.equals("samsung", ignoreCase = true)) return false
         val normalizedModel = model.uppercase()
+        if (normalizedModel.startsWith("SM-F7")) return false
         if (normalizedModel.startsWith("SM-F")) return true
         // Samsung internal device names for Z Fold line (e.g. q2q, q2q_usa).
         val normalizedDevice = device.lowercase()

@@ -17,6 +17,17 @@ class FoldDeviceProfileTest {
     }
 
     @Test
+    fun rejectsGalaxyZFlip() {
+        assertFalse(
+            FoldDeviceProfile.isSamsungGalaxyZFoldModel(
+                manufacturer = "samsung",
+                model = "SM-F731U",
+                device = "b5q",
+            ),
+        )
+    }
+
+    @Test
     fun rejectsNonFoldSamsung() {
         assertFalse(
             FoldDeviceProfile.isSamsungGalaxyZFoldModel(
