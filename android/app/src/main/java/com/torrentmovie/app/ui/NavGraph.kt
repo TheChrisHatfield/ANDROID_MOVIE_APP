@@ -2,6 +2,7 @@ package com.torrentmovie.app.ui
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -47,6 +48,15 @@ fun AppNavGraph(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val useFoldTwoPane = foldTwoPaneDevice &&
         screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
+
+    LaunchedEffect(useFoldTwoPane) {
+        if (useFoldTwoPane) {
+            val route = navController.currentBackStackEntry?.destination?.route
+            if (route != null && route.startsWith("detail/")) {
+                navController.popBackStack(Routes.SEARCH, inclusive = false)
+            }
+        }
+    }
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
