@@ -53,6 +53,32 @@ def test_empty_parse_is_not_indexer_failure():
     assert errored is False
 
 
+def test_parse_exception_keeps_partial_results():
+    searcher = TorrentSearcher(site_classes=[])
+    mock_site = MagicMock()
+    mock_site.name = "MockSite"
+    mock_site._apibay_mode = False
+    mock_site.build_search_url.side_effect = [
+        "http://example.com/search?page=1",
+        "http://example.com/search?page=2",
+    ]
+
+    def parse_side_effect(_content, _query):
+        if mock_site.build_search_url.call_count <= 1:
+            return [{"name": "page1", "seeds": "1", "site": "MockSite"}]
+        raise ValueError("bad html")
+
+    mock_site.parse_results.side_effect = parse_side_effect
+
+    with patch("torrtux_core.searcher.http_get") as mock_get:
+        mock_get.return_value = MagicMock(status_code=200, content=b"<html></html>")
+        results, errored = searcher._search_site(mock_site, "test", 2)
+
+    assert len(results) == 1
+    assert results[0]["name"] == "page1"
+    assert errored is False
+
+
 def test_http_error_marks_site_failed():
     searcher = TorrentSearcher(site_classes=[])
     mock_site = MagicMock()

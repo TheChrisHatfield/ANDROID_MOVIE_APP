@@ -82,7 +82,12 @@ class TorrentSearcher:
                 break
             if page > 0 and getattr(site, "_apibay_mode", False):
                 break
-            page_results = site.parse_results(response.content, query)
+            try:
+                page_results = site.parse_results(response.content, query)
+            except Exception as exc:
+                logger.debug("parse_results failed %s page %s: %s", site.name, page, exc)
+                errored = page == 0 and not results
+                break
             if not page_results:
                 break
             results.extend(page_results)
