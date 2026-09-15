@@ -35,7 +35,10 @@ fun AppNavGraph(
         composable(Routes.SEARCH) {
             SearchScreen(container, onOpenDetail = { r ->
                 container.searchResultStore.put(r)
-                navController.navigate(Routes.detail(r.id))
+                navController.navigate(Routes.detail(r.id)) {
+                    launchSingleTop = true
+                    popUpTo(Routes.SEARCH) { inclusive = false }
+                }
             })
         }
         composable(
