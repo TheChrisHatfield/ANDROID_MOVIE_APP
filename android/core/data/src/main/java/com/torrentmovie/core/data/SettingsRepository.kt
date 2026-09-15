@@ -60,9 +60,13 @@ class SettingsRepository(context: Context) {
         if (downloadDir.isBlank()) {
             return false
         }
+        val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
+        if (settings.rutorrentBaseUrl.isNotBlank() && !isValidHttpUrl(rutorrentUrl)) {
+            return false
+        }
         val ok = prefs.edit()
             .putString(KEY_SEARCH_API, searchApiUrl)
-            .putString(KEY_RUTORRENT_URL, normalizeSeedboxUrl(settings.rutorrentBaseUrl))
+            .putString(KEY_RUTORRENT_URL, rutorrentUrl)
             .putString(KEY_USERNAME, settings.username)
             .putString(KEY_PASSWORD, settings.password)
             .putString(KEY_AUTH_SCHEME, settings.authScheme)
