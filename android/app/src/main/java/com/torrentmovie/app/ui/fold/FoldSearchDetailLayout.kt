@@ -62,12 +62,19 @@ fun FoldSearchDetailLayout(
     }
 
     LaunchedEffect(Unit) {
-        container.pendingFoldDetail?.let { pending ->
+        val pending = container.pendingFoldDetail
+        if (pending != null) {
             selectedId = pending.resultId
             restoredName = pending.name.takeIf { it.isNotBlank() }
             restoredSite = pending.site.takeIf { it.isNotBlank() }
             syncFoldSelection(pending.resultId, pending.name, pending.site)
             container.pendingFoldDetail = null
+        } else if (selectedId == null) {
+            container.foldActiveSelection?.let { active ->
+                selectedId = active.resultId
+                restoredName = active.name.takeIf { it.isNotBlank() }
+                restoredSite = active.site.takeIf { it.isNotBlank() }
+            }
         }
     }
 
@@ -86,15 +93,29 @@ fun FoldSearchDetailLayout(
     }
 
     LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
-        if (state.loading) return@LaunchedEffect
+        if (state.loading || !state.hasSearched) return@LaunchedEffect
         val id = selectedId ?: return@LaunchedEffect
-        val allIds = state.results.map { it.id } +
-            state.groups.flatMap { g -> g.releases.map { it.id } }
-        if (state.hasSearched && (allIds.isEmpty() || id !in allIds)) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
+        val allReleases = state.results + state.groups.flatMap { it.releases }
+        if (id in allReleases.map { it.id }) return@LaunchedEffect
+        val anchor = findRelease(id)
+        val matchName = anchor?.name ?: restoredName
+        val matchSite = anchor?.site ?: restoredSite
+        if (!matchName.isNullOrBlank()) {
+            val rematched = allReleases.find { release ->
+                release.name == matchName &&
+                    (matchSite.isNullOrBlank() || release.site == matchSite)
+            }
+            if (rematched != null) {
+                selectedId = rematched.id
+                restoredName = rematched.name
+                restoredSite = rematched.site
+                container.searchResultStore.put(rematched)
+                return@LaunchedEffect
+            }
         }
+        selectedId = null
+        restoredName = null
+        restoredSite = null
     }
 
     Row(Modifier.fillMaxSize()) {
