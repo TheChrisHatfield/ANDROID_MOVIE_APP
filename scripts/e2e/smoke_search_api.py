@@ -40,8 +40,11 @@ def main() -> int:
         print("WARN: no working indexers (503) — network/indexer issue, API OK")
         return 0
     assert status == 200, search
+    assert isinstance(search.get("failed_sites"), list), search
     results = search.get("results", [])
     print(f"search: {search.get('count', 0)} results")
+    for row in results:
+        assert row.get("site") != "EZTV", "EZTV must not appear in movie profile results"
     if not results:
         print("WARN: zero results — indexers may be blocked")
         return 0
