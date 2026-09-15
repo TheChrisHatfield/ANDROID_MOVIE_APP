@@ -12,6 +12,15 @@ class MagnetHashUtilTest {
     }
 
     @Test
+    fun extractsBase32Hash() {
+        val magnet = "magnet:?xt=urn:btih:VPG66AJDIVTYTK6N54ASGRLHRGV433YB&dn=test"
+        assertEquals(
+            "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            MagnetHashUtil.extractInfoHash(magnet),
+        )
+    }
+
+    @Test
     fun storageKeyFallsBackWhenHashMissing() {
         val key = MagnetHashUtil.storageKey("not-a-magnet", "Movie", "YTS")
         assertEquals(40, key.length)

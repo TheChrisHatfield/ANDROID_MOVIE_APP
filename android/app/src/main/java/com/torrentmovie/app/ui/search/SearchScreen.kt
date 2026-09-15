@@ -146,6 +146,15 @@ fun SearchScreen(
                 .pullRefresh(pullState),
         ) {
             when {
+                !state.hasSearched && state.query.isNotBlank() && !state.loading -> {
+                    Text(
+                        text = "Tap Search to find movies",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(24.dp),
+                    )
+                }
                 state.hasSearched && state.groups.isEmpty() &&
                     state.results.isEmpty() && !state.loading -> {
                     val message = when (state.errorCode) {

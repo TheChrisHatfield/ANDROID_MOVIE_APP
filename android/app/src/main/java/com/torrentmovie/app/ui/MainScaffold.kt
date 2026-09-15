@@ -75,6 +75,7 @@ fun MainScaffold(container: AppContainer) {
                         navController.navigate(Routes.SEARCH) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -86,6 +87,7 @@ fun MainScaffold(container: AppContainer) {
                         navController.navigate(Routes.UPLOADED) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -97,6 +99,7 @@ fun MainScaffold(container: AppContainer) {
                         navController.navigate(Routes.SETTINGS) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                         scope.launch { drawerState.close() }
                     },
@@ -108,6 +111,7 @@ fun MainScaffold(container: AppContainer) {
                         navController.navigate(Routes.HELP) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                         scope.launch { drawerState.close() }
                     },
