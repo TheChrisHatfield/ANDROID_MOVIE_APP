@@ -52,7 +52,9 @@ fun TorrentDetailScreen(
         magnetLoading = true
         magnetError = null
         try {
-            val resolved = container.searchRepository.resolveMagnet(resultId)
+            val resolved = withContext(Dispatchers.IO) {
+                container.searchRepository.resolveMagnet(resultId)
+            }
             magnet = resolved.magnet.takeIf { it.isNotBlank() }
             if (magnet.isNullOrBlank()) {
                 magnetError = "Magnet unavailable — tap retry"
