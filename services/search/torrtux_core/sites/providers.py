@@ -334,6 +334,12 @@ class YTS(TorrentSite):
                 if detail_url in seen_urls:
                     continue
                 seen_urls.add(detail_url)
+                img_el = movie.select_one("img.hero__card-img, img.image, img[src*='cover']")
+                poster_url = None
+                if img_el and img_el.get("src"):
+                    src = img_el["src"].strip()
+                    if src and "placeholder" not in src.lower():
+                        poster_url = urljoin(self.working_url, src)
                 results.append(
                     {
                         "name": f"{name} ({year})" if year != "-" else name,
@@ -344,6 +350,7 @@ class YTS(TorrentSite):
                         "magnet": None,
                         "detail_url": detail_url,
                         "site": self.name,
+                        "poster_url": poster_url,
                     }
                 )
             except Exception:
