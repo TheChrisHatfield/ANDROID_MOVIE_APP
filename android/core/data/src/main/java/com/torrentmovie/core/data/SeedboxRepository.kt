@@ -30,10 +30,7 @@ class SeedboxRepository(
 
     private suspend fun isDuplicate(magnet: String, displayName: String, site: String): Boolean {
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
-        if (database.uploadedMagnetDao().countByHash(key) > 0) return true
-        return database.uploadedMagnetDao().listAll().any {
-            it.displayName == displayName && it.site == site
-        }
+        return database.uploadedMagnetDao().countByHash(key) > 0
     }
 
     suspend fun addMagnet(
@@ -69,6 +66,7 @@ class SeedboxRepository(
             )
             if (persisted is SeedboxResult.Failure) {
                 sentWithoutPersist.add(key)
+                return SeedboxResult.Success()
             }
             return persisted
         }

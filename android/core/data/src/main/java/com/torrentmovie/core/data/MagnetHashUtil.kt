@@ -29,7 +29,7 @@ object MagnetHashUtil {
     }
 
     private fun base32ToHex(base32: String): String? {
-        val alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
+        val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
         var buffer = 0L
         var bits = 0
         val out = StringBuilder()
