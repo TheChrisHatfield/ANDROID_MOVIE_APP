@@ -35,8 +35,10 @@ fun SeedboxStatusChip(container: AppContainer) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(settingsRevision, resumeTick) {
-        if (!container.settingsRepository.isSeedboxConfigured()) {
+    val configured = container.settingsRepository.isSeedboxConfigured()
+
+    LaunchedEffect(settingsRevision, resumeTick, configured) {
+        if (!configured) {
             online = false
             return@LaunchedEffect
         }
@@ -44,6 +46,14 @@ fun SeedboxStatusChip(container: AppContainer) {
     }
     AssistChip(
         onClick = {},
-        label = { Text(if (online) "Seedbox ●" else "Seedbox ○") },
+        label = {
+            Text(
+                when {
+                    !configured -> "Seedbox —"
+                    online -> "Seedbox ●"
+                    else -> "Seedbox ○"
+                },
+            )
+        },
     )
 }

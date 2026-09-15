@@ -45,7 +45,12 @@ fun UploadedScreen(container: AppContainer) {
         onRefresh = {
             refreshing = true
             scope.launch {
-                withContext(Dispatchers.IO) { container.uploadedRepository.list() }
+                withContext(Dispatchers.IO) {
+                    if (container.settingsRepository.isSeedboxConfigured()) {
+                        container.seedboxRepository.pingSeedbox()
+                    }
+                    container.uploadedRepository.list()
+                }
                 refreshing = false
             }
         },
