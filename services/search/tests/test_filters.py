@@ -69,6 +69,10 @@ def test_seed_count_with_commas():
     assert seed_count("1,474") == 1474
 
 
+def test_parse_size_with_thousands_comma():
+    assert parse_size("1,474 MB") == 1474 * 1024**2
+
+
 def test_sort_by_seeds_desc():
     rows = [{"seeds": "3"}, {"seeds": "99"}, {"seeds": "-"}]
     out = sort_by_seeds_desc(rows)

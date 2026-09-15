@@ -1,11 +1,19 @@
 """Torrent result filters (ported from torrtux-c)."""
 from __future__ import annotations
 
+import re
+
+_THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3})")
+
+
+def _normalize_size_label(size_str: str) -> str:
+    return _THOUSANDS_COMMA.sub("", size_str.strip().upper())
+
 
 def parse_size(size_str: str) -> float:
     """Return size in bytes, or -1.0 when the label cannot be parsed."""
     try:
-        normalized = size_str.strip().upper().replace(",", "")
+        normalized = _normalize_size_label(size_str)
         for suffix, factor in (
             ("TIB", 1024**4),
             ("TB", 1024**4),
@@ -27,7 +35,7 @@ def parse_size(size_str: str) -> float:
 
 def filter_size_bytes(raw: str) -> float:
     """Parse a user-supplied size filter; raise ValueError when invalid."""
-    normalized = raw.strip().upper().replace(",", "")
+    normalized = _normalize_size_label(raw)
     has_unit = any(
         normalized.endswith(suffix)
         for suffix in ("TIB", "TB", "GIB", "GB", "MIB", "MB", "KIB", "KB", "B")
