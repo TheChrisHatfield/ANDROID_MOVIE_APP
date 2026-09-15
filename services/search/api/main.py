@@ -124,6 +124,8 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
         raise HTTPException(status_code=404, detail="Result not found or expired")
 
     magnet = row.get("magnet")
+    if not magnet or not str(magnet).strip():
+        magnet = None
     if not magnet:
         site_name = row.get("site")
         detail_url = row.get("detail_url")
@@ -140,7 +142,7 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
         if magnet:
             _result_cache.resolve_magnet(result_id, magnet)
 
-    if not magnet:
+    if not magnet or not str(magnet).strip():
         raise HTTPException(status_code=404, detail="Magnet unavailable")
 
     return MagnetResponse(id=str(result_id), magnet=magnet)

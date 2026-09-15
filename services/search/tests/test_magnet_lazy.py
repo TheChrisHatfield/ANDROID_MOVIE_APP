@@ -35,6 +35,31 @@ def test_magnet_endpoint_fetches_when_detail_url_present():
     mock_site.get_magnet_link.assert_called_once_with(row["detail_url"], quality=None)
 
 
+def test_magnet_endpoint_refetches_when_cached_magnet_blank():
+    row = {
+        "name": "Test",
+        "site": "1337x",
+        "size": "1 GB",
+        "seeds": "10",
+        "leeches": "1",
+        "date": "2024",
+        "magnet": "   ",
+        "detail_url": "https://1337x.to/torrent/123/test/",
+    }
+    result_id = _result_cache.put_many([row])[0]["id"]
+
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    mock_site.get_magnet_link.return_value = "magnet:?xt=urn:btih:deadbeef"
+
+    with patch.object(_searcher, "sites", [mock_site]):
+        response = client.get(f"/v1/results/{result_id}/magnet")
+
+    assert response.status_code == 200
+    assert response.json()["magnet"].startswith("magnet:")
+    mock_site.get_magnet_link.assert_called_once_with(row["detail_url"], quality=None)
+
+
 def test_magnet_endpoint_uses_inline_magnet_without_fetch():
     row = {
         "name": "Inline",
