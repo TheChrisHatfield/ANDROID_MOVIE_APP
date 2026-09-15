@@ -9,6 +9,15 @@ def test_parse_size_gib():
     assert abs(parse_size("1.85 GiB") - 1.85 * 1024**3) < 1
 
 
+def test_invalid_max_size_raises():
+    import pytest
+
+    from torrtux_core.filters import filter_size_bytes
+
+    with pytest.raises(ValueError):
+        filter_size_bytes("not-a-size")
+
+
 def test_max_size_filters_gib_rows():
     rows = [
         {"name": "big", "size": "8.50 GiB", "seeds": "10"},

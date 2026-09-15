@@ -25,6 +25,14 @@ def parse_size(size_str: str) -> float:
         return -1.0
 
 
+def filter_size_bytes(raw: str) -> float:
+    """Parse a user-supplied size filter; raise ValueError when invalid."""
+    value = parse_size(raw)
+    if value < 0:
+        raise ValueError(f"Invalid size filter: {raw}")
+    return value
+
+
 def seed_count(seeds: str) -> int | None:
     if not seeds or seeds == "-":
         return None
@@ -59,7 +67,7 @@ def apply_filters(
             and seed_count(r["seeds"]) <= max_seeds
         ]
     if min_size is not None:
-        min_bytes = parse_size(min_size)
+        min_bytes = filter_size_bytes(min_size)
         filtered = [
             r
             for r in filtered
@@ -68,7 +76,7 @@ def apply_filters(
             and size_bytes >= min_bytes
         ]
     if max_size is not None:
-        max_bytes = parse_size(max_size)
+        max_bytes = filter_size_bytes(max_size)
         filtered = [
             r
             for r in filtered

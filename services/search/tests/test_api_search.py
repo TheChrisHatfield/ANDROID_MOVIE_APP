@@ -53,6 +53,14 @@ def test_search_all_sources_failed_returns_503(mock_search, _mock_test):
 
 
 @patch.object(_searcher, "test_sites", return_value=True)
+def test_invalid_max_size_returns_400(_mock_test):
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    response = client.get("/v1/search", params={"q": "inception", "max_size": "garbage"})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid max_size"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
 def test_empty_sites_param_returns_400(_mock_test):
     _searcher.working_sites = [MagicMock(name="YTS")]
     response = client.get("/v1/search", params={"q": "inception", "sites": ""})

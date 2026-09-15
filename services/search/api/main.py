@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 
 from api.cache import ResultCache
 from api.models import HealthResponse, MagnetResponse, SearchResponse, SitesHealthResponse, TorrentResult
+from torrtux_core.filters import filter_size_bytes
 from torrtux_core.searcher import TorrentSearcher
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,12 @@ def search(
         site_list = [s.strip() for s in sites.split(",") if s.strip()]
         if not site_list:
             raise HTTPException(status_code=400, detail="sites parameter must name at least one indexer")
+
+    try:
+        if max_size is not None:
+            filter_size_bytes(max_size)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid max_size")
 
     outcome = _searcher.search(
         q,
