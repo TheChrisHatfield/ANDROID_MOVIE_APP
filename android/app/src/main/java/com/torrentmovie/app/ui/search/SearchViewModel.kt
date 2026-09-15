@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.network.TorrentResultDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,8 +43,18 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun search() {
         val q = _state.value.query.trim()
-        if (q.isEmpty()) return
         searchJob?.cancel()
+        if (q.isEmpty()) {
+            _state.value = _state.value.copy(
+                loading = false,
+                results = emptyList(),
+                error = null,
+                errorCode = null,
+                info = null,
+                hasSearched = false,
+            )
+            return
+        }
         searchJob = viewModelScope.launch {
             _state.value = _state.value.copy(
                 loading = true,
@@ -78,6 +89,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     error = emptyMessage,
                     errorCode = null,
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: SearchException) {
                 _state.value = _state.value.copy(
                     loading = false,
