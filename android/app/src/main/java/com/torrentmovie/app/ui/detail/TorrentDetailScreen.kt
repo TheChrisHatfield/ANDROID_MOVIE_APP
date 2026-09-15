@@ -37,11 +37,11 @@ fun TorrentDetailScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var magnet by remember { mutableStateOf(initialMagnet?.takeIf { it.isNotBlank() }) }
-    var loading by remember { mutableStateOf(false) }
-    var duplicate by remember { mutableStateOf(false) }
-    var magnetError by remember { mutableStateOf<String?>(null) }
-    var magnetLoading by remember { mutableStateOf(false) }
+    var magnet by remember(resultId) { mutableStateOf(initialMagnet?.takeIf { it.isNotBlank() }) }
+    var loading by remember(resultId) { mutableStateOf(false) }
+    var duplicate by remember(resultId) { mutableStateOf(false) }
+    var magnetError by remember(resultId) { mutableStateOf<String?>(null) }
+    var magnetLoading by remember(resultId) { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
     val seedboxConfigured = remember(settingsRevision) {
         container.settingsRepository.isSeedboxConfigured()
