@@ -82,6 +82,9 @@ fun SettingsScreen(container: AppContainer) {
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
+        RowSwitch("Fetch posters & trailers", settings.fetchMovieMetadata) {
+            settings = settings.copy(fetchMovieMetadata = it)
+        }
 
         Text("Seedbox", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         OutlinedTextField(
