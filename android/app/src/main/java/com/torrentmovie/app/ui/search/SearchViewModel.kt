@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.network.TorrentResultDto
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ data class SearchUiState(
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
+    private var searchJob: Job? = null
 
     fun setQuery(q: String) {
         _state.value = _state.value.copy(query = q)
@@ -41,8 +43,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     fun search() {
         val q = _state.value.query.trim()
         if (q.isEmpty()) return
-        viewModelScope.launch {
-            _state.value = _state.value.copy(loading = true, error = null, errorCode = null, info = null)
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _state.value = _state.value.copy(
+                loading = true,
+                results = emptyList(),
+                error = null,
+                errorCode = null,
+                info = null,
+            )
             try {
                 val outcome = container.searchRepository.search(
                     q,
