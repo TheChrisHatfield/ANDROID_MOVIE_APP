@@ -4,6 +4,10 @@ import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import com.torrentmovie.app.ui.fold.FoldDeviceProfile
+import com.torrentmovie.app.ui.fold.FoldSearchDetailLayout
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -34,15 +38,27 @@ fun AppNavGraph(
     container: AppContainer,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val foldTwoPaneDevice = remember {
+        FoldDeviceProfile.twoPaneSearchDetailEnabled(context)
+    }
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val useFoldTwoPane = foldTwoPaneDevice &&
+        screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
+
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
-            SearchScreen(container, onOpenDetail = { r ->
-                container.searchResultStore.put(r)
-                navController.navigate(Routes.detail(r.id, r.name, r.site)) {
-                    launchSingleTop = true
-                    popUpTo(Routes.SEARCH) { inclusive = false }
-                }
-            })
+            if (useFoldTwoPane) {
+                FoldSearchDetailLayout(container)
+            } else {
+                SearchScreen(container, onOpenDetail = { r ->
+                    container.searchResultStore.put(r)
+                    navController.navigate(Routes.detail(r.id, r.name, r.site)) {
+                        launchSingleTop = true
+                        popUpTo(Routes.SEARCH) { inclusive = false }
+                    }
+                })
+            }
         }
         composable(
             route = Routes.DETAIL,

@@ -42,6 +42,7 @@ import com.torrentmovie.core.network.TorrentResultDto
 fun SearchScreen(
     container: AppContainer,
     onOpenDetail: (TorrentResultDto) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val vm: SearchViewModel = viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
@@ -86,7 +87,7 @@ fun SearchScreen(
         )
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize()) {
         SnackbarHost(snackbar)
         OutlinedTextField(
             value = state.query,

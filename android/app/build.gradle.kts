@@ -25,9 +25,12 @@ android {
     kotlinOptions { jvmTarget = "17" }
 
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+
+    testOptions { unitTests.isIncludeAndroidResources = false }
 }
 
 dependencies {
+    testImplementation(libs.junit)
     implementation(project(":core:data"))
     implementation(project(":core:network"))
     implementation(libs.androidx.core.ktx)
