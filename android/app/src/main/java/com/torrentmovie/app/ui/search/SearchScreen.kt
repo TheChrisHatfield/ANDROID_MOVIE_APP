@@ -1,11 +1,15 @@
 package com.torrentmovie.app.ui.search
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import com.torrentmovie.core.data.MagnetHashUtil
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ExperimentalMaterialApi
@@ -45,6 +49,7 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     sharedViewModel: SearchViewModel? = null,
     selectedResultId: String? = null,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     val vm: SearchViewModel = sharedViewModel ?: viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
@@ -145,6 +150,41 @@ fun SearchScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             enabled = !state.loading,
         ) { Text("Search") }
+
+        if (state.showTmdbSetupHint) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Posters and descriptions need a free TMDB API key.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Sign up at themoviedb.org → Settings → API → paste the key below, Save, then search again.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    if (onOpenSettings != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            Button(onClick = onOpenSettings) {
+                                Text("Open Settings")
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Box(
             modifier = Modifier

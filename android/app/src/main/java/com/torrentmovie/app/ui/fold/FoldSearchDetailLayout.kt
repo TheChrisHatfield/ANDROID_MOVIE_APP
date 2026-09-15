@@ -30,6 +30,7 @@ import com.torrentmovie.core.network.TorrentResultDto
 fun FoldSearchDetailLayout(
     container: AppContainer,
     searchViewModel: SearchViewModel,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -123,6 +124,7 @@ fun FoldSearchDetailLayout(
             container = container,
             sharedViewModel = searchViewModel,
             selectedResultId = selectedId,
+            onOpenSettings = onOpenSettings,
             onOpenDetail = { result ->
                 container.searchResultStore.put(result)
                 selectedId = result.id

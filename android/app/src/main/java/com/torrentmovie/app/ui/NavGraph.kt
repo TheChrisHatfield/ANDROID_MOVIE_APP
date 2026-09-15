@@ -88,11 +88,24 @@ fun AppNavGraph(
         composable(Routes.SEARCH) {
             val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
             if (useFoldTwoPane) {
-                FoldSearchDetailLayout(container, searchViewModel)
+                FoldSearchDetailLayout(
+                    container = container,
+                    searchViewModel = searchViewModel,
+                    onOpenSettings = {
+                        navController.navigate(Routes.SETTINGS) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
             } else {
                 SearchScreen(
                     container = container,
                     sharedViewModel = searchViewModel,
+                    onOpenSettings = {
+                        navController.navigate(Routes.SETTINGS) {
+                            launchSingleTop = true
+                        }
+                    },
                     onOpenDetail = { r ->
                     container.searchResultStore.put(r)
                     navController.navigate(Routes.detail(r.id, r.name, r.site)) {

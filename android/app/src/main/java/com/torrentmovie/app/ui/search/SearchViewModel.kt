@@ -27,6 +27,7 @@ data class SearchUiState(
     val maxSeeds: Int? = null,
     val maxSize: String? = null,
     val hasSearched: Boolean = false,
+    val showTmdbSetupHint: Boolean = false,
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
@@ -80,16 +81,17 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value.results.isEmpty() &&
             _state.value.groups.isEmpty() &&
             !_state.value.loading
-        _state.value = _state.value.copy(
-            query = q,
-            loading = if (stale) false else _state.value.loading,
-            results = if (stale) emptyList() else _state.value.results,
-            groups = if (stale) emptyList() else _state.value.groups,
-            error = if (stale) null else _state.value.error,
-            errorCode = if (stale) null else _state.value.errorCode,
-            info = if (stale) null else _state.value.info,
-            hasSearched = if (stale) false else _state.value.hasSearched,
-        )
+            _state.value = _state.value.copy(
+                query = q,
+                loading = if (stale) false else _state.value.loading,
+                results = if (stale) emptyList() else _state.value.results,
+                groups = if (stale) emptyList() else _state.value.groups,
+                error = if (stale) null else _state.value.error,
+                errorCode = if (stale) null else _state.value.errorCode,
+                info = if (stale) null else _state.value.info,
+                hasSearched = if (stale) false else _state.value.hasSearched,
+                showTmdbSetupHint = if (stale) false else _state.value.showTmdbSetupHint,
+            )
         if (revertingToLastSearch) {
             search()
         }
@@ -170,19 +172,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 val display = normalizeKodiGroups(outcome.groups, outcome.results)
                 val settings = container.settingsRepository.load()
-                if (settings.fetchMovieMetadata &&
+                val needsTmdbSetup = settings.fetchMovieMetadata &&
                     display.groups.isNotEmpty() &&
-                    display.groups.none { !it.posterUrl.isNullOrBlank() }
-                ) {
-                    val serverTmdb = try {
+                    display.groups.none { !it.posterUrl.isNullOrBlank() } &&
+                    settings.tmdbApiKey.isBlank() &&
+                    !try {
                         container.searchRepository.isTmdbConfigured()
                     } catch (_: Exception) {
                         false
                     }
-                    if (!serverTmdb && settings.tmdbApiKey.isBlank()) {
-                        infoMessages += "No posters — add a free TMDB API key in Settings (themoviedb.org), then search a film title."
-                    }
-                }
                 val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
                 val allReleases = display.groups.flatMap { it.releases }
                 allReleases.forEach { container.searchResultStore.put(it) }
@@ -220,6 +218,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     info = snackInfo,
                     error = inlineError,
                     errorCode = null,
+                    showTmdbSetupHint = needsTmdbSetup,
                 )
             } catch (e: CancellationException) {
                 throw e
