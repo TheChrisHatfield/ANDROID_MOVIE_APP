@@ -1,6 +1,7 @@
 package com.torrentmovie.core.data
 
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.torrentmovie.core.network.MagnetResponseDto
 import com.torrentmovie.core.network.SearchApi
@@ -108,8 +109,26 @@ internal fun parseSearchErrorDetail(e: HttpException, gson: Gson): String? {
     val body = e.response()?.errorBody()?.string() ?: return null
     return try {
         val json = gson.fromJson(body, JsonObject::class.java)
-        json.get("detail")?.asString
+        formatErrorDetail(json.get("detail"))
     } catch (_: Exception) {
         null
+    }
+}
+
+internal fun formatErrorDetail(detail: JsonElement?): String? {
+    if (detail == null || detail.isJsonNull) return null
+    return when {
+        detail.isJsonPrimitive -> detail.asString
+        detail.isJsonArray -> {
+            val messages = detail.asJsonArray.mapNotNull { item ->
+                when {
+                    item.isJsonObject -> item.asJsonObject.get("msg")?.asString
+                    item.isJsonPrimitive -> item.asString
+                    else -> null
+                }
+            }
+            messages.takeIf { it.isNotEmpty() }?.joinToString("; ")
+        }
+        else -> null
     }
 }

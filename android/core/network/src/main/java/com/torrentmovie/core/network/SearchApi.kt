@@ -57,6 +57,7 @@ data class MovieGroupDto(
 data class SearchResponseDto(
     val query: String,
     val count: Int,
+    val total_count: Int? = null,
     val results: List<TorrentResultDto>,
     val failed_sites: List<String> = emptyList(),
     val groups: List<MovieGroupDto> = emptyList(),

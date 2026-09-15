@@ -20,6 +20,18 @@ class SearchHttpErrorTest {
     }
 
     @Test
+    fun parses422ValidationArrayDetail() {
+        val body = """{"detail":[{"type":"less_than_equal","loc":["query","limit"],"msg":"Input should be less than or equal to 200"}]}"""
+            .toResponseBody("application/json".toMediaType())
+        val response = Response.error<Any>(422, body)
+        val exception = mapSearchHttpError(HttpException(response), Gson())
+        assertEquals(
+            "Input should be less than or equal to 200",
+            exception.message,
+        )
+    }
+
+    @Test
     fun preserves503DetailFromApiBody() {
         val body = """{"detail":"No movie indexers available"}"""
             .toResponseBody("application/json".toMediaType())
