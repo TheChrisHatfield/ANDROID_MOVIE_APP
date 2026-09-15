@@ -78,6 +78,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 _state.value = _state.value.copy(
                     loading = true,
+                    results = emptyList(),
                     error = null,
                     errorCode = null,
                     info = null,
