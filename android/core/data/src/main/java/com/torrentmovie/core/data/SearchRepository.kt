@@ -18,7 +18,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
         .build()
     private var cachedBaseUrl: String? = null
     private var cachedApi: SearchApi? = null
@@ -58,6 +58,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 maxSize = maxSize,
                 movieProfile = settings.movieSitesOnly,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
+                enrich = settings.fetchMovieMetadata && settings.tmdbApiKey.isNotBlank(),
             )
             SearchResult(
                 results = response.results,
