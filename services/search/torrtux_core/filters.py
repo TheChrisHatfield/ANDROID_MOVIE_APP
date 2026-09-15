@@ -27,6 +27,13 @@ def parse_size(size_str: str) -> float:
 
 def filter_size_bytes(raw: str) -> float:
     """Parse a user-supplied size filter; raise ValueError when invalid."""
+    normalized = raw.strip().upper().replace(",", "")
+    has_unit = any(
+        normalized.endswith(suffix)
+        for suffix in ("TIB", "TB", "GIB", "GB", "MIB", "MB", "KIB", "KB", "B")
+    )
+    if not has_unit:
+        raise ValueError(f"Invalid size filter: {raw}")
     value = parse_size(raw)
     if value < 0:
         raise ValueError(f"Invalid size filter: {raw}")
@@ -56,8 +63,11 @@ def apply_filters(
         filtered = [
             r
             for r in filtered
-            if seed_count(r.get("seeds", "-")) is not None
-            and seed_count(r["seeds"]) >= min_seeds
+            if (r.get("site") == "YTS" and r.get("seeds") in (None, "-"))
+            or (
+                seed_count(r.get("seeds", "-")) is not None
+                and seed_count(r["seeds"]) >= min_seeds
+            )
         ]
     if max_seeds is not None:
         filtered = [

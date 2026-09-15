@@ -18,6 +18,21 @@ def test_invalid_max_size_raises():
         filter_size_bytes("not-a-size")
 
 
+def test_unitless_max_size_raises():
+    import pytest
+
+    from torrtux_core.filters import filter_size_bytes
+
+    with pytest.raises(ValueError):
+        filter_size_bytes("500")
+
+
+def test_yts_unknown_seeds_kept_with_min_seeds_filter():
+    rows = [{"name": "movie", "site": "YTS", "seeds": "-", "size": "1 GB"}]
+    out = apply_filters(rows, min_seeds=10)
+    assert len(out) == 1
+
+
 def test_max_size_filters_gib_rows():
     rows = [
         {"name": "big", "size": "8.50 GiB", "seeds": "10"},
