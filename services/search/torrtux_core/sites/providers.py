@@ -1150,7 +1150,10 @@ class GoodTorrent(TorrentSite):
         return False
 
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/search/{quote(query)}"
+        base = f"{self.working_url}/search/{quote(query)}"
+        if page > 0:
+            return f"{base}/page/{page + 1}"
+        return base
     def parse_results(self, content, query):
         # Initial: No detailed parsing yet, to be improved after site structure analysis.
         soup = BeautifulSoup(content, "lxml")
