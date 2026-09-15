@@ -40,6 +40,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         _state.value = _state.value.copy(
             query = q,
+            loading = if (stale) false else _state.value.loading,
             results = if (stale) emptyList() else _state.value.results,
             error = if (stale) null else _state.value.error,
             errorCode = if (stale) null else _state.value.errorCode,
@@ -74,13 +75,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         searchJob = viewModelScope.launch {
-            _state.value = _state.value.copy(
-                loading = true,
-                error = null,
-                errorCode = null,
-                info = null,
-            )
             try {
+                _state.value = _state.value.copy(
+                    loading = true,
+                    error = null,
+                    errorCode = null,
+                    info = null,
+                )
                 val outcome = container.searchRepository.search(
                     q,
                     minSeeds = _state.value.minSeeds,
@@ -130,6 +131,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     results = emptyList(),
                     hasSearched = true,
                 )
+            } finally {
+                if (generation == searchGeneration && _state.value.loading) {
+                    _state.value = _state.value.copy(loading = false)
+                }
             }
         }
     }
