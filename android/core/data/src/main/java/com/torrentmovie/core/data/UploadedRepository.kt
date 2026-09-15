@@ -20,7 +20,8 @@ class UploadedRepository(private val database: AppDatabase) {
 
     suspend fun isUploaded(magnet: String?, displayName: String, site: String): Boolean {
         if (!magnet.isNullOrBlank()) {
-            return containsMagnet(magnet)
+            val key = MagnetHashUtil.storageKey(magnet, displayName, site)
+            if (contains(key)) return true
         }
         return list().any { it.displayName == displayName && it.site == site }
     }
