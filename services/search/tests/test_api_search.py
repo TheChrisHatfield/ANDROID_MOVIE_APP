@@ -44,12 +44,13 @@ def test_health():
 
 @patch.object(_searcher, "test_sites", return_value=True)
 @patch.object(_searcher, "search")
-def test_search_all_sources_failed_returns_503(mock_search, _mock_test):
+def test_search_all_sources_failed_returns_503(mock_search, mock_test):
     mock_search.return_value = SearchOutcome(results=[], failed_sites=["YTS"], all_sources_failed=True)
     _searcher.working_sites = [MagicMock(name="YTS")]
 
     response = client.get("/v1/search", params={"q": "inception"})
     assert response.status_code == 503
+    mock_test.assert_called()
 
 
 @patch.object(_searcher, "test_sites", return_value=True)

@@ -28,6 +28,12 @@ class SettingsValidationTest {
     }
 
     @Test
+    fun clampsInvalidLoadedAuthScheme() {
+        assertEquals("basic", SettingsRepository.normalizeLoadedAuthScheme("diges"))
+        assertEquals("digest", SettingsRepository.normalizeLoadedAuthScheme("DIGEST"))
+    }
+
+    @Test
     fun rejectsInvalidSearchPages() {
         assertEquals(
             "Search pages must be between 1 and 10",

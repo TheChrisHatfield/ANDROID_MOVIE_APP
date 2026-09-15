@@ -50,7 +50,7 @@ class SettingsRepository(context: Context) {
             rutorrentBaseUrl = if (rawRutorrent.isBlank()) "" else normalizeSeedboxUrl(rawRutorrent),
             username = (prefs.getString(KEY_USERNAME, "") ?: "").trim(),
             password = (prefs.getString(KEY_PASSWORD, "") ?: "").trim(),
-            authScheme = normalizeAuthScheme(prefs.getString(KEY_AUTH_SCHEME, "basic") ?: "basic"),
+            authScheme = normalizeLoadedAuthScheme(prefs.getString(KEY_AUTH_SCHEME, "basic") ?: "basic"),
             downloadDirectory = (prefs.getString(KEY_DOWNLOAD_DIR, AppSettings.DEFAULT_DOWNLOAD_DIR)
                 ?: AppSettings.DEFAULT_DOWNLOAD_DIR).trim(),
             movieSitesOnly = prefs.getBoolean(KEY_MOVIE_SITES, true),
@@ -92,6 +92,11 @@ class SettingsRepository(context: Context) {
 
     companion object {
         internal fun normalizeAuthScheme(value: String): String = value.trim().lowercase()
+
+        internal fun normalizeLoadedAuthScheme(value: String): String {
+            val normalized = normalizeAuthScheme(value)
+            return if (normalized in setOf("basic", "digest")) normalized else "basic"
+        }
 
         private const val KEY_SEARCH_API = "search_api_base_url"
         const val KEY_RUTORRENT_URL = "rutorrent_base_url"

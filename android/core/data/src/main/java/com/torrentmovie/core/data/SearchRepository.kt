@@ -23,6 +23,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     private var cachedApi: SearchApi? = null
     private var cachedRevision = -1
 
+    @Synchronized
     private fun api(): SearchApi {
         val revision = settingsRepository.revision.value
         val base = settingsRepository.load().searchApiBaseUrl.trimEnd('/') + "/"

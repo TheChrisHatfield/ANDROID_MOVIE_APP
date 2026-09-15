@@ -120,6 +120,7 @@ def search(
     if outcome.indexers_unavailable:
         raise HTTPException(status_code=503, detail="Requested indexers unavailable")
     if outcome.all_sources_failed:
+        _refresh_sites_health(force=True)
         raise HTTPException(status_code=503, detail="No sources available")
 
     stored = _result_cache.put_many(outcome.results)

@@ -16,6 +16,7 @@ class SeedboxRepository(
     private var cachedClient: RuTorrentClient? = null
     private var cachedClientRevision = -1
 
+    @Synchronized
     private fun client(): RuTorrentClient {
         val revision = settingsRepository.revision.value
         if (cachedClient != null && cachedClientRevision == revision) {
