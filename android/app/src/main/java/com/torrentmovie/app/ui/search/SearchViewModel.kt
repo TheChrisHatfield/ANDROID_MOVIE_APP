@@ -97,14 +97,17 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val emptyMessage = if (outcome.results.isEmpty() && info == null) {
                     "No results found. Try a broader query."
                 } else null
+                val inlineError = emptyMessage
+                    ?: if (outcome.results.isEmpty() && info != null) info else null
+                val snackInfo = if (outcome.results.isEmpty() && info != null) null else info
 
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     results = outcome.results,
                     hasSearched = true,
-                    info = info,
-                    error = emptyMessage,
+                    info = snackInfo,
+                    error = inlineError,
                     errorCode = null,
                 )
             } catch (e: CancellationException) {
