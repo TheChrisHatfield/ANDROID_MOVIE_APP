@@ -12,7 +12,9 @@ interface SearchApi {
     suspend fun search(
         @Query("q") query: String,
         @Query("limit") limit: Int = 50,
+        @Query("pages") pages: Int = 2,
         @Query("min_seeds") minSeeds: Int? = null,
+        @Query("max_seeds") maxSeeds: Int? = null,
         @Query("max_size") maxSize: String? = null,
         @Query("parallel") parallel: Boolean = true,
         @Query("movie_profile") movieProfile: Boolean = true,

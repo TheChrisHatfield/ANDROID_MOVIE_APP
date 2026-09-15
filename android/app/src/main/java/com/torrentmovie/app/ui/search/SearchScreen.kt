@@ -75,11 +75,13 @@ fun SearchScreen(
     if (showFilters) {
         SearchFilterSheet(
             minSeeds = state.minSeeds,
+            maxSeeds = state.maxSeeds,
             maxSize = state.maxSize,
             onDismiss = { showFilters = false },
-            onApply = { min, max ->
+            onApply = { min, maxSeeds, maxSize ->
                 vm.setMinSeeds(min)
-                vm.setMaxSize(max)
+                vm.setMaxSeeds(maxSeeds)
+                vm.setMaxSize(maxSize)
                 if (state.query.isNotBlank()) {
                     vm.search()
                 }

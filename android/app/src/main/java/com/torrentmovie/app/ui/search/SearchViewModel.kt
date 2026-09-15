@@ -20,6 +20,7 @@ data class SearchUiState(
     val errorCode: Int? = null,
     val info: String? = null,
     val minSeeds: Int? = null,
+    val maxSeeds: Int? = null,
     val maxSize: String? = null,
     val hasSearched: Boolean = false,
 )
@@ -51,6 +52,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setMinSeeds(value: Int?) {
         _state.value = _state.value.copy(minSeeds = value?.takeIf { it > 0 })
+    }
+
+    fun setMaxSeeds(value: Int?) {
+        _state.value = _state.value.copy(maxSeeds = value?.takeIf { it > 0 })
     }
 
     fun setMaxSize(value: String?) {
@@ -86,6 +91,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val outcome = container.searchRepository.search(
                     q,
                     minSeeds = _state.value.minSeeds,
+                    maxSeeds = _state.value.maxSeeds,
                     maxSize = _state.value.maxSize,
                 )
                 if (generation != searchGeneration || _state.value.query.trim() != q) return@launch

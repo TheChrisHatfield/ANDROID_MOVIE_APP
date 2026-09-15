@@ -22,30 +22,46 @@ import com.torrentmovie.core.data.SearchFilterValidation
 @Composable
 fun SearchFilterSheet(
     minSeeds: Int?,
+    maxSeeds: Int?,
     maxSize: String?,
     onDismiss: () -> Unit,
-    onApply: (Int?, String?) -> Unit,
+    onApply: (minSeeds: Int?, maxSeeds: Int?, maxSize: String?) -> Unit,
 ) {
-    var seedsText by remember(minSeeds) { mutableStateOf(minSeeds?.toString() ?: "") }
+    var minSeedsText by remember(minSeeds) { mutableStateOf(minSeeds?.toString() ?: "") }
+    var maxSeedsText by remember(maxSeeds) { mutableStateOf(maxSeeds?.toString() ?: "") }
     var sizeText by remember(maxSize) { mutableStateOf(maxSize ?: "") }
-    var seedsError by remember { mutableStateOf<String?>(null) }
+    var minSeedsError by remember { mutableStateOf<String?>(null) }
+    var maxSeedsError by remember { mutableStateOf<String?>(null) }
     var sizeError by remember { mutableStateOf<String?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(16.dp)) {
             Text("Filters")
             OutlinedTextField(
-                value = seedsText,
+                value = minSeedsText,
                 onValueChange = {
-                    seedsText = it
-                    seedsError = null
+                    minSeedsText = it
+                    minSeedsError = null
                 },
                 label = { Text("Min seeds") },
-                isError = seedsError != null,
-                supportingText = seedsError?.let { { Text(it, color = Color.Red) } },
+                isError = minSeedsError != null,
+                supportingText = minSeedsError?.let { { Text(it, color = Color.Red) } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
+            )
+            OutlinedTextField(
+                value = maxSeedsText,
+                onValueChange = {
+                    maxSeedsText = it
+                    maxSeedsError = null
+                },
+                label = { Text("Max seeds") },
+                isError = maxSeedsError != null,
+                supportingText = maxSeedsError?.let { { Text(it, color = Color.Red) } },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
             )
             OutlinedTextField(
                 value = sizeText,
@@ -62,14 +78,28 @@ fun SearchFilterSheet(
             )
             Button(
                 onClick = {
-                    val trimmed = seedsText.trim()
-                    val parsedSeeds = if (trimmed.isEmpty()) null else trimmed.toIntOrNull()
-                    if (trimmed.isNotEmpty() && parsedSeeds == null) {
-                        seedsError = "Enter a whole number"
+                    val minTrimmed = minSeedsText.trim()
+                    val parsedMin = if (minTrimmed.isEmpty()) null else minTrimmed.toIntOrNull()
+                    if (minTrimmed.isNotEmpty() && parsedMin == null) {
+                        minSeedsError = "Enter a whole number"
                         return@Button
                     }
-                    if (parsedSeeds != null && parsedSeeds < 0) {
-                        seedsError = "Must be 0 or greater"
+                    if (parsedMin != null && parsedMin < 0) {
+                        minSeedsError = "Must be 0 or greater"
+                        return@Button
+                    }
+                    val maxTrimmed = maxSeedsText.trim()
+                    val parsedMax = if (maxTrimmed.isEmpty()) null else maxTrimmed.toIntOrNull()
+                    if (maxTrimmed.isNotEmpty() && parsedMax == null) {
+                        maxSeedsError = "Enter a whole number"
+                        return@Button
+                    }
+                    if (parsedMax != null && parsedMax < 0) {
+                        maxSeedsError = "Must be 0 or greater"
+                        return@Button
+                    }
+                    if (parsedMin != null && parsedMax != null && parsedMin > parsedMax) {
+                        maxSeedsError = "Must be >= min seeds"
                         return@Button
                     }
                     val trimmedSize = sizeText.trim()
@@ -77,7 +107,7 @@ fun SearchFilterSheet(
                         sizeError = "Use a size like 4GB or 1.5 GiB (unit required)"
                         return@Button
                     }
-                    onApply(parsedSeeds, trimmedSize.ifBlank { null })
+                    onApply(parsedMin, parsedMax, trimmedSize.ifBlank { null })
                     onDismiss()
                 },
                 modifier = Modifier.padding(top = 16.dp),

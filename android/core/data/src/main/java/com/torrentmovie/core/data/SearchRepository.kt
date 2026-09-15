@@ -43,13 +43,17 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     suspend fun search(
         query: String,
         minSeeds: Int? = null,
+        maxSeeds: Int? = null,
         maxSize: String? = null,
+        pages: Int = 2,
     ): SearchResult {
         val settings = settingsRepository.load()
         return try {
             val response = api().search(
                 query = query,
+                pages = pages,
                 minSeeds = minSeeds,
+                maxSeeds = maxSeeds,
                 maxSize = maxSize,
                 movieProfile = settings.movieSitesOnly,
             )
