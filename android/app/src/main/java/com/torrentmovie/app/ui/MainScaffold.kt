@@ -68,7 +68,7 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Uploaded") },
                     selected = route == Routes.UPLOADED,
                     onClick = {
-                        navController.navigate(Routes.UPLOADED)
+                        navController.navigate(Routes.UPLOADED) { launchSingleTop = true }
                         scope.launch { drawerState.close() }
                     },
                 )
@@ -76,7 +76,7 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Settings") },
                     selected = route == Routes.SETTINGS,
                     onClick = {
-                        navController.navigate(Routes.SETTINGS)
+                        navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
                         scope.launch { drawerState.close() }
                     },
                 )
@@ -84,7 +84,7 @@ fun MainScaffold(container: AppContainer) {
                     label = { Text("Help") },
                     selected = route == Routes.HELP,
                     onClick = {
-                        navController.navigate(Routes.HELP)
+                        navController.navigate(Routes.HELP) { launchSingleTop = true }
                         scope.launch { drawerState.close() }
                     },
                 )
