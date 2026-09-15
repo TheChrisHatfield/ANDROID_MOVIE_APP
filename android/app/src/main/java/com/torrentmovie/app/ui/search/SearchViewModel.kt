@@ -80,6 +80,16 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         searchJob = viewModelScope.launch {
+            val minSeeds = _state.value.minSeeds
+            val maxSeeds = _state.value.maxSeeds
+            val maxSize = _state.value.maxSize
+            fun requestStillCurrent(): Boolean {
+                return generation == searchGeneration &&
+                    _state.value.query.trim() == q &&
+                    _state.value.minSeeds == minSeeds &&
+                    _state.value.maxSeeds == maxSeeds &&
+                    _state.value.maxSize == maxSize
+            }
             try {
                 _state.value = _state.value.copy(
                     loading = true,
@@ -90,11 +100,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
                 val outcome = container.searchRepository.search(
                     q,
-                    minSeeds = _state.value.minSeeds,
-                    maxSeeds = _state.value.maxSeeds,
-                    maxSize = _state.value.maxSize,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
                 )
-                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
+                if (!requestStillCurrent()) return@launch
                 val infoMessages = mutableListOf<String>()
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
@@ -119,7 +129,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SearchException) {
-                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
+                if (!requestStillCurrent()) return@launch
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -129,7 +139,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     hasSearched = true,
                 )
             } catch (e: Exception) {
-                if (generation != searchGeneration || _state.value.query.trim() != q) return@launch
+                if (!requestStillCurrent()) return@launch
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
