@@ -37,18 +37,25 @@ class ResultCache:
         for key, _ in ordered[: len(self._store) - self.max_entries]:
             del self._store[key]
 
+    def _make_room(self) -> None:
+        while len(self._store) >= self.max_entries:
+            ordered = sorted(self._store.items(), key=lambda item: item[1].created_at)
+            if not ordered:
+                break
+            del self._store[ordered[0][0]]
+
     def put_many(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         with self._lock:
             self._evict_expired()
-            stored = []
+            stored: list[dict[str, Any]] = []
             for row in rows:
+                self._make_room()
                 result_id = uuid4()
                 payload = dict(row)
                 payload["id"] = str(result_id)
                 self._store[result_id] = CacheEntry(payload=payload)
-                stored.append(payload)
-            self._evict_overflow()
-            return stored
+                stored.append(dict(payload))
+            return [row for row in stored if UUID(row["id"]) in self._store]
 
     def get(self, result_id: UUID) -> dict[str, Any] | None:
         with self._lock:

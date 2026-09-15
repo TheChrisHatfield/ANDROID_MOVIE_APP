@@ -33,3 +33,24 @@ def test_cache_evicts_oldest_on_overflow():
     assert len(third) == 1
     # Only two entries remain total
     assert len(cache._store) == 2
+
+
+def test_put_many_batch_returns_only_surviving_ids():
+    cache = ResultCache(max_entries=2, ttl_seconds=60)
+    stored = cache.put_many(
+        [
+            {"name": "one", "site": "a"},
+            {"name": "two", "site": "a"},
+            {"name": "three", "site": "a"},
+        ]
+    )
+    assert len(stored) == 2
+    for row in stored:
+        assert cache.get(UUID(row["id"])) is not None
+
+
+def test_put_many_returns_defensive_copies():
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    stored = cache.put_many([{"name": "Inception", "site": "YTS"}])
+    stored[0]["name"] = "mutated"
+    assert cache.get(UUID(stored[0]["id"]))["name"] == "Inception"
