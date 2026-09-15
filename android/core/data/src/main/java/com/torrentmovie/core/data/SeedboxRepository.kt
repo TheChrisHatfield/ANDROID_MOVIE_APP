@@ -78,6 +78,10 @@ class SeedboxRepository(
         result
     }
 
+    fun clearSentWithoutPersist(infoHash: String) {
+        sentWithoutPersist.remove(infoHash)
+    }
+
     suspend fun pingSeedbox(): Boolean {
         if (!settingsRepository.isSeedboxConfigured()) return false
         return try {
