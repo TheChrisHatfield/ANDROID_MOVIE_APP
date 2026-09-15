@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.PendingFoldDetail
 
 object Routes {
     const val SEARCH = "search"
@@ -54,8 +55,27 @@ fun AppNavGraph(
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
-                container.pendingFoldDetailId = entry.arguments?.getString("resultId")
+                container.pendingFoldDetail = PendingFoldDetail(
+                    resultId = entry.arguments?.getString("resultId") ?: return@LaunchedEffect,
+                    name = entry.arguments?.getString("name") ?: "",
+                    site = entry.arguments?.getString("site") ?: "",
+                )
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
+            }
+        } else {
+            val pending = container.pendingFoldNarrowDetail
+            if (pending != null) {
+                container.pendingFoldNarrowDetail = null
+                val cached = container.searchResultStore.get(pending.resultId)
+                val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
+                val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
+                val currentRoute = navController.currentBackStackEntry?.destination?.route
+                if (currentRoute?.startsWith("detail/") != true) {
+                    navController.navigate(Routes.detail(pending.resultId, name, site)) {
+                        launchSingleTop = true
+                        popUpTo(Routes.SEARCH) { inclusive = false }
+                    }
+                }
             }
         }
     }

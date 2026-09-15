@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
 
 @Composable
@@ -31,26 +33,55 @@ fun FoldSearchDetailLayout(
     searchViewModel: SearchViewModel,
 ) {
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
+    var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
 
     val selected: TorrentResultDto? = selectedId?.let { id ->
-        state.results.find { it.id == id } ?: container.searchResultStore.get(id)
+        state.results.find { it.id == id }
+            ?: container.searchResultStore.get(id)
+            ?: restoredName?.let { name ->
+                TorrentResultDto(
+                    id = id,
+                    name = name,
+                    site = restoredSite ?: "",
+                )
+            }
     }
 
     LaunchedEffect(Unit) {
-        container.pendingFoldDetailId?.let { id ->
-            selectedId = id
-            container.pendingFoldDetailId = null
+        container.pendingFoldDetail?.let { pending ->
+            selectedId = pending.resultId
+            restoredName = pending.name.takeIf { it.isNotBlank() }
+            restoredSite = pending.site.takeIf { it.isNotBlank() }
+            container.pendingFoldDetail = null
         }
     }
 
-    LaunchedEffect(state.results.map { it.id }) {
-        val id = selectedId
-        if (id != null && state.results.isNotEmpty() &&
-            state.results.none { it.id == id } &&
-            container.searchResultStore.get(id) == null
+    LaunchedEffect(state.results.map { it.id }, state.hasSearched, state.loading) {
+        if (state.loading) return@LaunchedEffect
+        val id = selectedId ?: return@LaunchedEffect
+        if (state.hasSearched && state.results.isNotEmpty() &&
+            state.results.none { it.id == id }
         ) {
             selectedId = null
+            restoredName = null
+            restoredSite = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val id = selectedId
+            if (id != null) {
+                val result = state.results.find { it.id == id }
+                    ?: container.searchResultStore.get(id)
+                container.pendingFoldNarrowDetail = PendingFoldDetail(
+                    resultId = id,
+                    name = result?.name ?: restoredName ?: "",
+                    site = result?.site ?: restoredSite ?: "",
+                )
+            }
         }
     }
 
@@ -58,9 +89,12 @@ fun FoldSearchDetailLayout(
         SearchScreen(
             container = container,
             sharedViewModel = searchViewModel,
+            selectedResultId = selectedId,
             onOpenDetail = { result ->
                 container.searchResultStore.put(result)
                 selectedId = result.id
+                restoredName = result.name
+                restoredSite = result.site
             },
             modifier = Modifier
                 .weight(0.42f)

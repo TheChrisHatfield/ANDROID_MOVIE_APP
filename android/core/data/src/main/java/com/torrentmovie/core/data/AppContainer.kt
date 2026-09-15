@@ -4,7 +4,11 @@ import android.content.Context
 import com.torrentmovie.core.data.db.AppDatabase
 
 class AppContainer(context: Context) {
-    var pendingFoldDetailId: String? = null
+    /** Cover/single-pane → unfolded two-pane restore payload. */
+    var pendingFoldDetail: PendingFoldDetail? = null
+
+    /** Two-pane → narrow phone nav: push detail route when width drops. */
+    var pendingFoldNarrowDetail: PendingFoldDetail? = null
 
     val settingsRepository = SettingsRepository(context)
     val searchResultStore = SearchResultStore()

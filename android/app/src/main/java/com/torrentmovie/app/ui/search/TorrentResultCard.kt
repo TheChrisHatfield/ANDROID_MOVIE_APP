@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,12 +19,18 @@ fun TorrentResultCard(
     result: TorrentResultDto,
     alreadyUploaded: Boolean,
     onClick: () -> Unit,
+    selected: Boolean = false,
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable(onClick = onClick),
+        colors = if (selected) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        },
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(result.name, style = MaterialTheme.typography.titleMedium)

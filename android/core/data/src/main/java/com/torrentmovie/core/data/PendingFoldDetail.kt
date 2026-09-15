@@ -1,0 +1,7 @@
+package com.torrentmovie.core.data
+
+data class PendingFoldDetail(
+    val resultId: String,
+    val name: String = "",
+    val site: String = "",
+)
