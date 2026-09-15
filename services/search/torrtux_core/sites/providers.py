@@ -722,7 +722,9 @@ class TorrentFunk(TorrentSite):
             ]
         )
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/search/all/{quote(query)}/"
+        base = f"{self.working_url}/search/all/{quote(query)}/"
+        return base if page == 0 else f"{base}{page + 1}/"
+
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
         results = []
@@ -1044,7 +1046,8 @@ class Torrentz2(TorrentSite):
             ]
         )
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/search?f={quote(query)}"
+        return f"{self.working_url}/search?f={quote(query)}&p={page}"
+
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
         results = []
@@ -1202,14 +1205,22 @@ class FitGirlRepacks(TorrentSite):
             ["https://fitgirl-repacks.site"]
         )
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/?s={quote(query)}"
+        base = f"{self.working_url}/?s={quote(query)}"
+        return base if page == 0 else f"{self.working_url}/page/{page + 1}/?s={quote(query)}"
+
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")
         results = []
         for post in soup.select(".post"):
             try:
-                name = post.find("h1", class_="post-title").text.strip()
-                detail_url = urljoin(self.working_url, post.find("a")["href"])
+                title = post.find("h1", class_="entry-title") or post.find("h1", class_="post-title")
+                if not title:
+                    continue
+                link = title.find("a")
+                if not link or not link.get("href"):
+                    continue
+                name = title.get_text(strip=True)
+                detail_url = urljoin(self.working_url, link["href"])
                 size = "-"
                 seeds = "-"
                 leeches = "-"
