@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from contextlib import asynccontextmanager
 from uuid import UUID
@@ -19,6 +20,13 @@ _searcher = TorrentSearcher()
 _result_cache = ResultCache()
 _sites_health_cache: dict[str, object] = {"checked_at": 0.0, "working": []}
 _SITES_HEALTH_TTL = 300
+
+
+def _quality_from_result_name(name: str | None) -> str | None:
+    if not name:
+        return None
+    match = re.search(r"\[(\d+p)\]", name, re.IGNORECASE)
+    return match.group(1) if match else None
 
 
 def _refresh_sites_health(force: bool = False) -> list[str]:
@@ -93,6 +101,8 @@ def search(
         max_size=max_size,
         limit=limit,
     )
+    if outcome.movie_indexers_unavailable:
+        raise HTTPException(status_code=503, detail="No movie indexers available")
     if outcome.indexers_unavailable:
         raise HTTPException(status_code=503, detail="Requested indexers unavailable")
     if outcome.all_sources_failed:
@@ -119,7 +129,14 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
         detail_url = row.get("detail_url")
         site = next((s for s in _searcher.sites if s.name == site_name), None)
         if site and detail_url:
-            magnet = site.get_magnet_link(detail_url)
+            quality = _quality_from_result_name(row.get("name"))
+            if hasattr(site, "get_magnet_link"):
+                try:
+                    magnet = site.get_magnet_link(detail_url, quality=quality)
+                except TypeError:
+                    magnet = site.get_magnet_link(detail_url)
+            else:
+                magnet = site.get_magnet_link(detail_url)
         if magnet:
             _result_cache.resolve_magnet(result_id, magnet)
 

@@ -53,6 +53,16 @@ def test_search_all_sources_failed_returns_503(mock_search, _mock_test):
 
 
 @patch.object(_searcher, "test_sites", return_value=True)
+@patch.object(_searcher, "search")
+def test_movie_indexers_unavailable_message(mock_search, _mock_test):
+    mock_search.return_value = SearchOutcome([], [], movie_indexers_unavailable=True)
+    _searcher.working_sites = [MagicMock(name="EZTV")]
+    response = client.get("/v1/search", params={"q": "inception"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "No movie indexers available"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
 def test_invalid_max_size_returns_400(_mock_test):
     _searcher.working_sites = [MagicMock(name="YTS")]
     response = client.get("/v1/search", params={"q": "inception", "max_size": "garbage"})

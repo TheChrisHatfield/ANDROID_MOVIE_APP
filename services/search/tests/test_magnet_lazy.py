@@ -32,7 +32,7 @@ def test_magnet_endpoint_fetches_when_detail_url_present():
 
     assert response.status_code == 200
     assert response.json()["magnet"].startswith("magnet:")
-    mock_site.get_magnet_link.assert_called_once_with(row["detail_url"])
+    mock_site.get_magnet_link.assert_called_once_with(row["detail_url"], quality=None)
 
 
 def test_magnet_endpoint_uses_inline_magnet_without_fetch():
