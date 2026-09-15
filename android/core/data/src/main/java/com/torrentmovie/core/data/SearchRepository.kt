@@ -15,19 +15,26 @@ import java.util.concurrent.TimeUnit
 
 class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
+    private var cachedBaseUrl: String? = null
+    private var cachedApi: SearchApi? = null
 
     private fun api(): SearchApi {
         val base = settingsRepository.load().searchApiBaseUrl.trimEnd('/') + "/"
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-        return Retrofit.Builder()
+        if (cachedApi != null && cachedBaseUrl == base) {
+            return cachedApi!!
+        }
+        cachedBaseUrl = base
+        cachedApi = Retrofit.Builder()
             .baseUrl(base)
-            .client(client)
+            .client(httpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(SearchApi::class.java)
+        return cachedApi!!
     }
 
     suspend fun search(
