@@ -23,26 +23,21 @@ def parse_torrent_movie_title(raw_name: str) -> tuple[str, int | None]:
     if not name:
         return "", None
 
-    year: int | None = None
-    year_match = _YEAR_RE.search(name)
-    if year_match:
-        year = int(year_match.group(1))
-
-    cut = len(name)
-    if year_match:
-        cut = min(cut, year_match.start())
     quality_match = _QUALITY_RE.search(name)
-    if quality_match:
-        cut = min(cut, quality_match.start())
+    prefix_end = quality_match.start() if quality_match else len(name)
+    prefix = name[:prefix_end]
 
-    title_part = name[:cut] if cut > 0 else name
+    year_matches = list(_YEAR_RE.finditer(prefix))
+    year: int | None = int(year_matches[-1].group(1)) if year_matches else None
+
+    title_cut = prefix_end
+    if year_matches:
+        title_cut = year_matches[-1].start()
+
+    title_part = name[:title_cut] if title_cut > 0 else name
     title_part = _NOISE_RE.sub(" ", title_part)
     title_part = re.sub(r"[._]+", " ", title_part)
     title_part = re.sub(r"\s+", " ", title_part).strip(" -")
-
-    if not title_part and year_match:
-        before_year = name[: year_match.start()]
-        title_part = re.sub(r"[._]+", " ", before_year).strip()
 
     if not title_part:
         title_part = name
