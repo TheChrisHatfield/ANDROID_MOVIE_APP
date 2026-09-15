@@ -22,15 +22,17 @@ data class AppSettings(
     val disclaimerAccepted: Boolean = false,
     val searchPages: Int = DEFAULT_SEARCH_PAGES,
     val tmdbApiKey: String = "",
+    val fetchMovieMetadata: Boolean = true,
 ) {
     companion object {
-        const val DEFAULT_SEARCH_API = "http://10.0.2.2:8765"
+        const val EMULATOR_SEARCH_API = "http://10.0.2.2:8765"
+        const val DEFAULT_SEARCH_API = EMULATOR_SEARCH_API
         const val DEFAULT_DOWNLOAD_DIR = "/home5/chris82/downloads/MOVIES/"
         const val DEFAULT_SEARCH_PAGES = 2
     }
 }
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(private val context: Context) {
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision.asStateFlow()
 
@@ -43,8 +45,8 @@ class SettingsRepository(context: Context) {
     )
 
     fun load(): AppSettings {
-        val rawSearchApi = prefs.getString(KEY_SEARCH_API, AppSettings.DEFAULT_SEARCH_API)
-            ?: AppSettings.DEFAULT_SEARCH_API
+        val rawSearchApi = prefs.getString(KEY_SEARCH_API, null)
+            ?: defaultSearchApiUrl()
         val rawRutorrent = prefs.getString(KEY_RUTORRENT_URL, "") ?: ""
         return AppSettings(
             searchApiBaseUrl = normalizeSearchApiUrl(rawSearchApi),
@@ -59,7 +61,16 @@ class SettingsRepository(context: Context) {
             searchPages = prefs.getInt(KEY_SEARCH_PAGES, AppSettings.DEFAULT_SEARCH_PAGES)
                 .coerceIn(1, MAX_SEARCH_PAGES),
             tmdbApiKey = (prefs.getString(KEY_TMDB_API_KEY, "") ?: "").trim(),
+            fetchMovieMetadata = prefs.getBoolean(KEY_FETCH_METADATA, true),
         )
+    }
+
+    private fun defaultSearchApiUrl(): String {
+        return if (DeviceProfile.isEmulator()) {
+            AppSettings.EMULATOR_SEARCH_API
+        } else {
+            ""
+        }
     }
 
     fun saveError(settings: AppSettings): String? = validateAppSettings(settings)
@@ -81,6 +92,7 @@ class SettingsRepository(context: Context) {
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
             .putInt(KEY_SEARCH_PAGES, settings.searchPages.coerceIn(1, MAX_SEARCH_PAGES))
             .putString(KEY_TMDB_API_KEY, settings.tmdbApiKey.trim())
+            .putBoolean(KEY_FETCH_METADATA, settings.fetchMovieMetadata)
             .commit()
         if (ok) {
             _revision.value += 1
@@ -111,6 +123,7 @@ class SettingsRepository(context: Context) {
         const val KEY_DISCLAIMER = "disclaimer_accepted"
         private const val KEY_SEARCH_PAGES = "search_pages"
         private const val KEY_TMDB_API_KEY = "tmdb_api_key"
+        private const val KEY_FETCH_METADATA = "fetch_movie_metadata"
         private const val MAX_SEARCH_PAGES = 10
     }
 }
