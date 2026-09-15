@@ -111,17 +111,26 @@ fun TorrentDetailScreen(
                 if (loading) return@Button
                 loading = true
                 scope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        container.seedboxRepository.addMagnet(m, name, site)
+                    try {
+                        val result = withContext(Dispatchers.IO) {
+                            container.seedboxRepository.addMagnet(m, name, site)
+                        }
+                        when (result) {
+                            is SeedboxResult.Success ->
+                                Toast.makeText(context, "Sent to seedbox", Toast.LENGTH_SHORT).show()
+                            is SeedboxResult.Failure ->
+                                Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                        }
+                        duplicate = container.uploadedRepository.isUploaded(m, name, site)
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            e.message ?: "Send failed",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    } finally {
+                        loading = false
                     }
-                    loading = false
-                    when (result) {
-                        is SeedboxResult.Success ->
-                            Toast.makeText(context, "Sent to seedbox", Toast.LENGTH_SHORT).show()
-                        is SeedboxResult.Failure ->
-                            Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
-                    }
-                    duplicate = container.uploadedRepository.isUploaded(m, name, site)
                 }
             },
             enabled = seedboxConfigured && !loading && !magnet.isNullOrBlank() && !duplicate && !magnetLoading,
