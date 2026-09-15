@@ -28,6 +28,10 @@ class MovieMetadataStore {
         meta
     }
 
+    fun remove(resultId: String) {
+        synchronized(this) { byResultId.remove(resultId) }
+    }
+
     fun clear() {
         synchronized(this) { byResultId.clear() }
     }

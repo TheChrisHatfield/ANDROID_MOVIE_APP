@@ -140,6 +140,9 @@ fun AppNavGraph(
                 name = cached?.name ?: navName,
                 site = cached?.site ?: navSite,
                 initialMagnet = cached?.magnet,
+                onResultExpired = {
+                    navController.popBackStack(Routes.SEARCH, inclusive = false)
+                },
             )
         }
         composable(Routes.UPLOADED) { UploadedScreen(container) }

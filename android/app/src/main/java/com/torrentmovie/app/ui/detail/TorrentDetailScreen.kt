@@ -40,6 +40,7 @@ fun TorrentDetailScreen(
     name: String,
     site: String,
     initialMagnet: String?,
+    onResultExpired: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -48,6 +49,7 @@ fun TorrentDetailScreen(
     var duplicate by remember(resultId) { mutableStateOf(false) }
     var magnetError by remember(resultId) { mutableStateOf<String?>(null) }
     var magnetLoading by remember(resultId) { mutableStateOf(false) }
+    var resultExpired by remember(resultId) { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
     val seedboxConfigured = remember(settingsRevision) {
         container.settingsRepository.isSeedboxConfigured()
@@ -99,14 +101,18 @@ fun TorrentDetailScreen(
                 magnetError = "Magnet unavailable — tap retry"
             }
         } catch (e: SearchException) {
+            val expired = e.httpCode == 404 &&
+                e.message?.contains("expired", ignoreCase = true) == true
             if (e.httpCode == 404) {
                 container.searchResultStore.remove(resultId)
+                container.movieMetadataStore.remove(resultId)
+            }
+            if (expired) {
+                resultExpired = true
             }
             magnetError = when {
-                e.httpCode == 404 && e.message?.contains("expired", ignoreCase = true) == true ->
-                    "Result expired — go back and search again"
-                e.httpCode == 404 ->
-                    "Magnet unavailable — tap retry"
+                expired -> "Result expired — search again"
+                e.httpCode == 404 -> "Magnet unavailable — tap retry"
                 else -> e.message ?: "Magnet fetch failed"
             }
         } catch (e: Exception) {
@@ -140,8 +146,17 @@ fun TorrentDetailScreen(
         }
         magnetError?.let { msg ->
             Text(msg, color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { resolveRequest++ }) {
-                Text("Retry magnet")
+            if (resultExpired) {
+                Button(
+                    onClick = { onResultExpired?.invoke() },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    Text("Search again")
+                }
+            } else {
+                TextButton(onClick = { resolveRequest++ }) {
+                    Text("Retry magnet")
+                }
             }
         }
         if (!seedboxConfigured) {

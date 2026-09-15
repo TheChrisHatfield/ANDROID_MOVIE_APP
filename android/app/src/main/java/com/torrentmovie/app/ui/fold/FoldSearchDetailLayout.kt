@@ -165,6 +165,12 @@ fun FoldSearchDetailLayout(
                         name = result.name,
                         site = result.site,
                         initialMagnet = result.magnet,
+                        onResultExpired = {
+                            selectedId = null
+                            restoredName = null
+                            restoredSite = null
+                            syncFoldSelection(null, "", "")
+                        },
                     )
                 }
             }
