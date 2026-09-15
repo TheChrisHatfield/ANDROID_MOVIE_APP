@@ -16,7 +16,10 @@ internal object DigestAuth {
         val params = parseChallenge(wwwAuthenticate) ?: return null
         val realm = params["realm"] ?: return null
         val nonce = params["nonce"] ?: return null
-        val qop = params["qop"]?.split(',')?.firstOrNull()?.trim()
+        val qop = params["qop"]
+            ?.split(',')
+            ?.map { it.trim().removeSurrounding("\"") }
+            ?.firstOrNull { it == "auth" || it == "auth-int" }
         val opaque = params["opaque"]
         val algorithm = params["algorithm"]?.uppercase() ?: "MD5"
         if (algorithm != "MD5") return null
@@ -25,7 +28,7 @@ internal object DigestAuth {
         val ha2 = md5("$method:$requestUri")
         val nc = "%08x".format(nonceCounter.incrementAndGet())
         val cnonce = md5(System.nanoTime().toString()).take(16)
-        val response = if (qop == "auth") {
+        val response = if (qop == "auth" || qop == "auth-int") {
             md5("$ha1:$nonce:$nc:$cnonce:$qop:$ha2")
         } else {
             md5("$ha1:$nonce:$ha2")
@@ -39,7 +42,7 @@ internal object DigestAuth {
             "response=\"$response\"",
         )
         if (opaque != null) parts += "opaque=\"$opaque\""
-        if (qop == "auth") {
+        if (qop == "auth" || qop == "auth-int") {
             parts += "qop=$qop"
             parts += "nc=$nc"
             parts += "cnonce=\"$cnonce\""

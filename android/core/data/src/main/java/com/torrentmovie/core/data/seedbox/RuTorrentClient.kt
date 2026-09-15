@@ -84,7 +84,11 @@ class RuTorrentClient(
             path,
             username,
             password,
-        ) ?: return client.newCall(request).execute()
+        ) ?: run {
+            first.body?.close()
+            first.close()
+            return first
+        }
         val authed = request.newBuilder()
             .header("Authorization", digest)
             .build()
