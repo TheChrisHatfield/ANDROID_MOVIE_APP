@@ -1,17 +1,52 @@
 """Site adapters ported from torrtux-c (read-only upstream)."""
-from urllib.parse import urljoin, quote
+import json
+import re
+from urllib.parse import quote, urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
 from torrtux_core.base import TorrentSite
+from torrtux_core.http_client import http_get
+
+APIBAY_SEARCH_URL = "https://apibay.org/q.php"
+
+
+def _bytes_to_size_label(raw: str | int) -> str:
+    try:
+        nbytes = int(raw)
+    except (TypeError, ValueError):
+        return str(raw)
+    if nbytes >= 1024**3:
+        return f"{nbytes / (1024**3):.2f} GB"
+    if nbytes >= 1024**2:
+        return f"{nbytes / (1024**2):.2f} MB"
+    return f"{nbytes} B"
+
+
+def _magnet_from_hash(info_hash: str, name: str) -> str:
+    return f"magnet:?xt=urn:btih:{info_hash.upper()}&dn={quote(name)}"
+
+
+def _extract_next_data(content: bytes) -> dict | None:
+    text = content.decode("utf-8", errors="replace")
+    match = re.search(
+        r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+        text,
+    )
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+
 
 class PirateBay(TorrentSite):
     def __init__(self):
         super().__init__(
             "The Pirate Bay",
             [
-                "https://thepiratebay.org",
                 "https://tpb.party",
                 "https://pirateproxy.live",
                 "https://thehiddenbay.com",
@@ -21,12 +56,73 @@ class PirateBay(TorrentSite):
                 "https://piratebay.ink",
                 "https://piratebayproxy.net",
                 "https://thepiratebay10.org",
-                "https://thepiratebay3.to"
-            ]
+                "https://thepiratebay3.to",
+                "https://thepiratebay.org",
+            ],
         )
+        self._apibay_mode = False
+
+    def test_connection(self) -> bool:
+        for url in self.base_urls:
+            try:
+                probe_url = f"{url.rstrip('/')}/search/test/1/99/0"
+                response = http_get(probe_url, timeout=12)
+                if response.status_code == 200 and b'id="searchResult"' in response.content:
+                    self.working_url = url.rstrip("/")
+                    self._apibay_mode = False
+                    return True
+            except Exception:
+                continue
+        try:
+            response = http_get(f"{APIBAY_SEARCH_URL}?q=test&cat=0", timeout=12)
+            if response.status_code == 200 and response.json():
+                self.working_url = "https://tpb.party"
+                self._apibay_mode = True
+                return True
+        except Exception:
+            pass
+        return False
+
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/s/?q={quote(query)}&page={page}&orderby=99"
+        if self._apibay_mode:
+            return f"{APIBAY_SEARCH_URL}?q={quote(query)}&cat=0"
+        return f"{self.working_url}/search/{quote(query)}/{page + 1}/99/0"
+
+    def _parse_apibay_rows(self, content: bytes) -> list[dict]:
+        try:
+            rows = json.loads(content)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(rows, list):
+            return []
+        results = []
+        mirror = self.working_url or "https://tpb.party"
+        for row in rows:
+            try:
+                name = row.get("name", "-")
+                info_hash = row.get("info_hash", "")
+                torrent_id = row.get("id")
+                results.append(
+                    {
+                        "name": name,
+                        "size": _bytes_to_size_label(row.get("size", "-")),
+                        "seeds": str(row.get("seeders", "-")),
+                        "leeches": str(row.get("leechers", "-")),
+                        "date": "-",
+                        "magnet": _magnet_from_hash(info_hash, name) if info_hash else None,
+                        "detail_url": f"{mirror}/description.php?id={torrent_id}" if torrent_id else None,
+                        "site": self.name,
+                    }
+                )
+            except Exception:
+                continue
+        return results
+
     def parse_results(self, content, query):
+        stripped = content.lstrip()
+        if self._apibay_mode or stripped.startswith(b"[") or stripped.startswith(b"{"):
+            return self._parse_apibay_rows(content)
+
         soup = BeautifulSoup(content, "lxml")
         results = []
         table = soup.find("table", id="searchResult")
@@ -34,29 +130,40 @@ class PirateBay(TorrentSite):
             return results
         for row in table.find_all("tr")[1:]:
             try:
-                name_cell = row.find("a", class_="detLink")
+                name_cell = row.find("a", class_="detLink") or row.find(
+                    "a",
+                    href=lambda href: href and "/torrent/" in href,
+                )
                 name = name_cell.get_text(strip=True) if name_cell else "-"
                 detail_url = urljoin(self.working_url, name_cell["href"]) if name_cell else None
                 magnet_link = row.find("a", href=lambda href: href and href.startswith("magnet:"))
                 magnet = magnet_link["href"] if magnet_link else None
                 desc_cell = row.find("font", class_="detDesc")
-                desc_text = desc_cell.get_text().split(",") if desc_cell else []
-                date = desc_text[0].replace("Uploaded ", "").strip() if len(desc_text) > 0 else "-"
-                size = desc_text[1].replace("Size ", "").strip() if len(desc_text) > 1 else "-"
-                seed_leeches = row.find_all("td", align="right")
-                seeds = seed_leeches[0].get_text() if len(seed_leeches) > 0 else "-"
-                leeches = seed_leeches[1].get_text() if len(seed_leeches) > 1 else "-"
-                results.append({
-                    "name": name,
-                    "size": size,
-                    "seeds": seeds,
-                    "leeches": leeches,
-                    "date": date,
-                    "magnet": magnet,
-                    "detail_url": detail_url,
-                    "site": self.name
-                })
-            except Exception as e:
+                if desc_cell:
+                    desc_text = desc_cell.get_text().split(",")
+                    date = desc_text[0].replace("Uploaded ", "").strip() if desc_text else "-"
+                    size = desc_text[1].replace("Size ", "").strip() if len(desc_text) > 1 else "-"
+                else:
+                    cells = row.find_all("td")
+                    date = cells[2].get_text(strip=True) if len(cells) > 2 else "-"
+                    aligned = row.find_all("td", align="right")
+                    size = aligned[0].get_text(strip=True) if len(aligned) > 0 else "-"
+                aligned = row.find_all("td", align="right")
+                seeds = aligned[1].get_text(strip=True) if len(aligned) > 1 else "-"
+                leeches = aligned[2].get_text(strip=True) if len(aligned) > 2 else "-"
+                results.append(
+                    {
+                        "name": name,
+                        "size": size,
+                        "seeds": seeds,
+                        "leeches": leeches,
+                        "date": date,
+                        "magnet": magnet,
+                        "detail_url": detail_url,
+                        "site": self.name,
+                    }
+                )
+            except Exception:
                 continue
         return results
 
@@ -112,57 +219,136 @@ class YTS(TorrentSite):
         super().__init__(
             "YTS",
             [
-                "https://yts.mx",
                 "https://yts.rs",
-                "https://yts.lt"
-            ]
+                "https://yts.lt",
+                "https://yts.mx",
+            ],
         )
+
     def build_search_url(self, query, page=0):
-        return f"{self.working_url}/browse-movies/{quote(query)}/all/all/0/latest"
+        return f"{self.working_url}/browse-movies/{quote(query)}/all/all/{page}/latest"
+
+    def _movie_rows_from_payload(self, payload: dict) -> list[dict]:
+        movies = payload.get("props", {}).get("pageProps", {}).get("movies") or []
+        results = []
+        for movie in movies:
+            torrents = movie.get("torrents") or []
+            if not torrents:
+                continue
+            best = max(torrents, key=lambda row: int(row.get("seeds") or 0))
+            title = movie.get("title_long") or movie.get("title") or "-"
+            slug = movie.get("slug")
+            detail_url = movie.get("url") or (
+                urljoin(self.working_url, f"/movie/{slug}") if slug else None
+            )
+            info_hash = best.get("hash")
+            results.append(
+                {
+                    "name": title,
+                    "size": best.get("size", "-"),
+                    "seeds": str(best.get("seeds", "-")),
+                    "leeches": str(best.get("peers", "-")),
+                    "date": str(movie.get("year", "-")),
+                    "magnet": _magnet_from_hash(info_hash, title) if info_hash else None,
+                    "detail_url": detail_url,
+                    "site": self.name,
+                }
+            )
+        return results
+
+    def _movie_row_from_card(self, card) -> dict | None:
+        title_el = card.select_one("a.title, .browse-movie-title")
+        year_el = card.select_one("span.year, .browse-movie-year")
+        link_el = card.select_one("a[href*='/movie/']")
+        if not title_el or not link_el:
+            return None
+        name = title_el.get_text(strip=True)
+        year = year_el.get_text(strip=True) if year_el else "-"
+        detail_url = urljoin(self.working_url, link_el["href"])
+        return {
+            "name": f"{name} ({year})" if year != "-" else name,
+            "size": "-",
+            "seeds": "-",
+            "leeches": "-",
+            "date": year,
+            "magnet": None,
+            "detail_url": detail_url,
+            "site": self.name,
+        }
+
     def parse_results(self, content, query):
+        payload = _extract_next_data(content)
+        if payload:
+            rows = self._movie_rows_from_payload(payload)
+            if rows:
+                return rows
+
         soup = BeautifulSoup(content, "lxml")
         results = []
         for movie in soup.select(".browse-movie-wrap"):
             try:
-                name = movie.select_one(".browse-movie-title").text.strip()
-                year = movie.select_one(".browse-movie-year").text.strip()
-                detail_url = urljoin(self.working_url, movie.select_one("a")['href'])
-                seeds = "-"
-                leeches = "-"
-                size = "-"
-                date = year
-                magnet = None
-                results.append({
-                    "name": f"{name} ({year})",
-                    "size": size,
-                    "seeds": seeds,
-                    "leeches": leeches,
-                    "date": date,
-                    "magnet": magnet,
-                    "detail_url": detail_url,
-                    "site": self.name
-                })
-            except:
+                title_el = movie.select_one(".browse-movie-title")
+                year_el = movie.select_one(".browse-movie-year")
+                link_el = movie.select_one("a[href]")
+                if not title_el or not link_el:
+                    continue
+                name = title_el.get_text(strip=True)
+                year = year_el.get_text(strip=True) if year_el else "-"
+                detail_url = urljoin(self.working_url, link_el["href"])
+                results.append(
+                    {
+                        "name": f"{name} ({year})" if year != "-" else name,
+                        "size": "-",
+                        "seeds": "-",
+                        "leeches": "-",
+                        "date": year,
+                        "magnet": None,
+                        "detail_url": detail_url,
+                        "site": self.name,
+                    }
+                )
+            except Exception:
+                continue
+        for movie in soup.select(".card"):
+            try:
+                row = self._movie_row_from_card(movie)
+                if row:
+                    results.append(row)
+            except Exception:
                 continue
         return results
+
+    def _magnet_from_movie_payload(self, payload: dict) -> str | None:
+        page_props = payload.get("props", {}).get("pageProps", {})
+        movie = page_props.get("movie")
+        if movie is None and isinstance(page_props.get("props"), dict):
+            movie = page_props["props"].get("movie")
+        if not movie:
+            return None
+        torrents = movie.get("torrents") or []
+        if not torrents:
+            return None
+        best = max(torrents, key=lambda row: int(row.get("seeds") or 0))
+        title = movie.get("title_long") or movie.get("title") or ""
+        info_hash = best.get("hash")
+        return _magnet_from_hash(info_hash, title) if info_hash else None
 
     def get_magnet_link(self, detail_url: str | None) -> str | None:
         detail_url = self.absolute_detail_url(detail_url)
         if not detail_url:
             return None
         try:
-            from torrtux_core.http_client import http_get
-
-            response = http_get(detail_url, timeout=15)
+            response = http_get(detail_url, timeout=20)
             if response.status_code != 200:
                 return None
+            payload = _extract_next_data(response.content)
+            if payload:
+                magnet = self._magnet_from_movie_payload(payload)
+                if magnet:
+                    return magnet
             soup = BeautifulSoup(response.content, "lxml")
             for anchor in soup.find_all("a", href=True):
                 href = anchor["href"]
-                if href.startswith("magnet:"):
-                    return href
-            for anchor in soup.select("a.download-torrent, a[href*='magnet']"):
-                href = anchor.get("href", "")
                 if href.startswith("magnet:"):
                     return href
         except Exception:

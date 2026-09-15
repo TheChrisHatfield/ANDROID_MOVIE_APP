@@ -1,0 +1,53 @@
+import json
+from pathlib import Path
+
+from torrtux_core.sites.providers import PirateBay, YTS
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_yts_parses_next_data_fixture():
+    site = YTS()
+    site.working_url = "https://yts.rs"
+    html = (FIXTURES / "yts_search.html").read_bytes()
+    rows = site.parse_results(html, "inception")
+    assert len(rows) == 1
+    assert rows[0]["name"] == "Inception (2010)"
+    assert rows[0]["site"] == "YTS"
+    assert rows[0]["seeds"] == "100"
+    assert rows[0]["magnet"].startswith("magnet:?xt=urn:btih:")
+    assert "inception-2010" in rows[0]["detail_url"]
+
+
+def test_tpb_parses_apibay_json():
+    site = PirateBay()
+    site.working_url = "https://tpb.party"
+    site._apibay_mode = True
+    payload = [
+        {
+            "id": "1",
+            "name": "Inception (2010) 1080p",
+            "info_hash": "224BF45881252643DFC2E71ABC7B2660A21C68C4",
+            "seeders": "812",
+            "leechers": "162",
+            "size": "1991613584",
+        }
+    ]
+    rows = site.parse_results(json.dumps(payload).encode(), "inception")
+    assert len(rows) == 1
+    assert "Inception" in rows[0]["name"]
+    assert rows[0]["seeds"] == "812"
+    assert rows[0]["magnet"].startswith("magnet:?xt=urn:btih:224BF458")
+
+
+def test_tpb_html_fixture_if_present():
+    fixture = FIXTURES / "tpb_party_search.html"
+    if not fixture.exists():
+        return
+    site = PirateBay()
+    site.working_url = "https://tpb.party"
+    site._apibay_mode = False
+    rows = site.parse_results(fixture.read_bytes(), "inception")
+    assert rows
+    assert any("inception" in row["name"].lower() for row in rows)
+    assert rows[0]["seeds"] != "1.85 GiB"
