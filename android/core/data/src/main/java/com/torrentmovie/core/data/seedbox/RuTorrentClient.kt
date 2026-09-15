@@ -84,11 +84,7 @@ class RuTorrentClient(
             path,
             username,
             password,
-        ) ?: run {
-            first.body?.close()
-            first.close()
-            return first
-        }
+        ) ?: throw IllegalStateException("Digest authentication failed")
         val authed = request.newBuilder()
             .header("Authorization", digest)
             .build()

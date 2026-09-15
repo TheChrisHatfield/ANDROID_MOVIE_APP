@@ -6,9 +6,23 @@ import org.junit.Test
 
 class DigestAuthTest {
     @Test
-    fun parsesAuthIntQopChallenge() {
+    fun prefersAuthOverAuthIntWhenBothOffered() {
         val header = DigestAuth.authorizationHeader(
             wwwAuthenticate = """Digest realm="ruTorrent", nonce="abc123", qop="auth-int,auth"""",
+            method = "POST",
+            requestUri = "/rutorrent/php/addtorrent.php",
+            username = "user",
+            password = "pass",
+        )
+        assertNotNull(header)
+        assertTrue(header!!.contains("qop=auth"))
+        assertTrue(!header.contains("qop=auth-int"))
+    }
+
+    @Test
+    fun parsesAuthIntQopChallenge() {
+        val header = DigestAuth.authorizationHeader(
+            wwwAuthenticate = """Digest realm="ruTorrent", nonce="abc123", qop=auth-int""",
             method = "GET",
             requestUri = "/rutorrent/",
             username = "user",

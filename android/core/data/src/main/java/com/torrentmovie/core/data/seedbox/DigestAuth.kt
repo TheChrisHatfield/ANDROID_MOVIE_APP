@@ -16,10 +16,12 @@ internal object DigestAuth {
         val params = parseChallenge(wwwAuthenticate) ?: return null
         val realm = params["realm"] ?: return null
         val nonce = params["nonce"] ?: return null
-        val qop = params["qop"]
+        val qopOptions = params["qop"]
             ?.split(',')
             ?.map { it.trim().removeSurrounding("\"") }
-            ?.firstOrNull { it == "auth" || it == "auth-int" }
+            ?: emptyList()
+        val qop = qopOptions.firstOrNull { it == "auth" }
+            ?: qopOptions.firstOrNull { it == "auth-int" }
         val opaque = params["opaque"]
         val algorithm = params["algorithm"]?.uppercase() ?: "MD5"
         if (algorithm != "MD5") return null
