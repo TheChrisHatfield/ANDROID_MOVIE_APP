@@ -18,9 +18,12 @@ class SeedboxRepository(
         return RuTorrentClient(s.rutorrentBaseUrl, s.username, s.password, s.authScheme)
     }
 
-    suspend fun isDuplicate(magnet: String): Boolean {
-        val hash = MagnetHashUtil.extractInfoHash(magnet) ?: return false
-        return database.uploadedMagnetDao().countByHash(hash) > 0
+    private suspend fun isDuplicate(magnet: String, displayName: String, site: String): Boolean {
+        val key = MagnetHashUtil.storageKey(magnet, displayName, site)
+        if (database.uploadedMagnetDao().countByHash(key) > 0) return true
+        return database.uploadedMagnetDao().listAll().any {
+            it.displayName == displayName && it.site == site
+        }
     }
 
     suspend fun addMagnet(
@@ -28,7 +31,7 @@ class SeedboxRepository(
         displayName: String,
         site: String,
     ): SeedboxResult = addMutex.withLock {
-        if (isDuplicate(magnet)) {
+        if (isDuplicate(magnet, displayName, site)) {
             return SeedboxResult.Failure("Already uploaded — remove from Uploaded list to re-send")
         }
         val settings = settingsRepository.load()
@@ -37,19 +40,16 @@ class SeedboxRepository(
         }
         val result = client().addMagnet(magnet, settings.downloadDirectory)
         if (result is SeedboxResult.Success) {
-            val hash = MagnetHashUtil.extractInfoHash(magnet)
-            if (hash != null) {
-                database.uploadedMagnetDao().insert(
-                    UploadedMagnet(
-                        infoHash = hash,
-                        displayName = displayName,
-                        site = site,
-                        magnetUri = magnet,
-                        sentAt = System.currentTimeMillis(),
-                        downloadDirectory = settings.downloadDirectory,
-                    ),
-                )
-            }
+            database.uploadedMagnetDao().insert(
+                UploadedMagnet(
+                    infoHash = MagnetHashUtil.storageKey(magnet, displayName, site),
+                    displayName = displayName,
+                    site = site,
+                    magnetUri = magnet,
+                    sentAt = System.currentTimeMillis(),
+                    downloadDirectory = settings.downloadDirectory,
+                ),
+            )
         }
         result
     }
