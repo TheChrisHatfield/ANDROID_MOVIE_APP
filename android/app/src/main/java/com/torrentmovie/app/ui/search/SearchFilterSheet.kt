@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.core.data.SearchFilterValidation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,9 +30,6 @@ fun SearchFilterSheet(
     var sizeText by remember(maxSize) { mutableStateOf(maxSize ?: "") }
     var seedsError by remember { mutableStateOf<String?>(null) }
     var sizeError by remember { mutableStateOf<String?>(null) }
-    val sizePattern = remember {
-        Regex("""^\d+(\.\d+)?\s*(GB|MB|KB|GiB|MiB|KiB|TB|TiB|B)?$""", RegexOption.IGNORE_CASE)
-    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(16.dp)) {
@@ -75,8 +73,8 @@ fun SearchFilterSheet(
                         return@Button
                     }
                     val trimmedSize = sizeText.trim()
-                    if (trimmedSize.isNotEmpty() && !sizePattern.matches(trimmedSize)) {
-                        sizeError = "Use a size like 4GB or 1.5 GiB"
+                    if (trimmedSize.isNotEmpty() && !SearchFilterValidation.isValidMaxSize(trimmedSize)) {
+                        sizeError = "Use a size like 4GB or 1.5 GiB (unit required)"
                         return@Button
                     }
                     onApply(parsedSeeds, trimmedSize.ifBlank { null })
