@@ -28,6 +28,10 @@ fun SearchFilterSheet(
     var seedsText by remember(minSeeds) { mutableStateOf(minSeeds?.toString() ?: "") }
     var sizeText by remember(maxSize) { mutableStateOf(maxSize ?: "") }
     var seedsError by remember { mutableStateOf<String?>(null) }
+    var sizeError by remember { mutableStateOf<String?>(null) }
+    val sizePattern = remember {
+        Regex("""^\d+(\.\d+)?\s*(GB|MB|KB|GiB|MiB|KiB|TB|TiB|B)?$""", RegexOption.IGNORE_CASE)
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(16.dp)) {
@@ -47,8 +51,13 @@ fun SearchFilterSheet(
             )
             OutlinedTextField(
                 value = sizeText,
-                onValueChange = { sizeText = it },
+                onValueChange = {
+                    sizeText = it
+                    sizeError = null
+                },
                 label = { Text("Max size (e.g. 4GB)") },
+                isError = sizeError != null,
+                supportingText = sizeError?.let { { Text(it, color = Color.Red) } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -61,7 +70,16 @@ fun SearchFilterSheet(
                         seedsError = "Enter a whole number"
                         return@Button
                     }
-                    onApply(parsedSeeds, sizeText.trim().ifBlank { null })
+                    if (parsedSeeds != null && parsedSeeds < 0) {
+                        seedsError = "Must be 0 or greater"
+                        return@Button
+                    }
+                    val trimmedSize = sizeText.trim()
+                    if (trimmedSize.isNotEmpty() && !sizePattern.matches(trimmedSize)) {
+                        sizeError = "Use a size like 4GB or 1.5 GiB"
+                        return@Button
+                    }
+                    onApply(parsedSeeds, trimmedSize.ifBlank { null })
                     onDismiss()
                 },
                 modifier = Modifier.padding(top = 16.dp),
