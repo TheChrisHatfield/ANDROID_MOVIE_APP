@@ -78,7 +78,7 @@ fun SettingsScreen(container: AppContainer) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "Optional. Get a free key at themoviedb.org. Sent to your search API for metadata only.",
+            "Required for posters and descriptions. Free key at themoviedb.org — paste here or set TMDB_API_KEY in services/search/.env on your PC.",
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )

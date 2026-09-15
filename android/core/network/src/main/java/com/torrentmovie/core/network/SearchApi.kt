@@ -6,7 +6,7 @@ import retrofit2.http.Query
 
 interface SearchApi {
     @GET("/v1/health")
-    suspend fun health(): Map<String, String>
+    suspend fun health(): HealthResponseDto
 
     @GET("/v1/search")
     suspend fun search(
@@ -70,3 +70,10 @@ data class MagnetResponseDto(
     val id: String,
     val magnet: String,
 )
+
+data class HealthResponseDto(
+    val status: String,
+    val tmdb_configured: Boolean = false,
+) {
+    val tmdbConfigured: Boolean get() = tmdb_configured
+}

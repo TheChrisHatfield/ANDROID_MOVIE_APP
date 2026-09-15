@@ -168,8 +168,22 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
                 }
-                val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
                 val display = normalizeKodiGroups(outcome.groups, outcome.results)
+                val settings = container.settingsRepository.load()
+                if (settings.fetchMovieMetadata &&
+                    display.groups.isNotEmpty() &&
+                    display.groups.none { !it.posterUrl.isNullOrBlank() }
+                ) {
+                    val serverTmdb = try {
+                        container.searchRepository.isTmdbConfigured()
+                    } catch (_: Exception) {
+                        false
+                    }
+                    if (!serverTmdb && settings.tmdbApiKey.isBlank()) {
+                        infoMessages += "No posters — add a free TMDB API key in Settings (themoviedb.org), then search a film title."
+                    }
+                }
+                val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
                 val allReleases = display.groups.flatMap { it.releases }
                 allReleases.forEach { container.searchResultStore.put(it) }
                 display.groups.forEach { group ->

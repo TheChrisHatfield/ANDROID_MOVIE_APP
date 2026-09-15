@@ -58,7 +58,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 maxSize = maxSize,
                 movieProfile = settings.movieSitesOnly,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata && settings.tmdbApiKey.isNotBlank(),
+                enrich = settings.fetchMovieMetadata,
             )
             SearchResult(
                 results = response.results,
@@ -71,6 +71,14 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
             throw mapNetworkError(e)
+        }
+    }
+
+    suspend fun isTmdbConfigured(): Boolean {
+        return try {
+            api().health().tmdbConfigured
+        } catch (_: Exception) {
+            false
         }
     }
 

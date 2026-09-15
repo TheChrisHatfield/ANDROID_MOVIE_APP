@@ -33,13 +33,13 @@ def test_search_returns_cached_results(mock_search, _mock_test):
     assert response.status_code == 200
     body = response.json()
     assert body["count"] == 1
-    assert body["results"][0]["name"] == "Inception 2010"
-    assert body["results"][0]["id"]
+    assert body["groups"][0]["releases"][0]["name"] == "Inception 2010"
+    assert body["groups"][0]["releases"][0]["id"]
     assert body["failed_sites"] == ["EZTV"]
 
 
 def test_health():
-    assert client.get("/v1/health").json() == {"status": "ok"}
+    assert client.get("/v1/health").json() == {"status": "ok", "tmdb_configured": False}
 
 
 @patch.object(_searcher, "test_sites", return_value=True)

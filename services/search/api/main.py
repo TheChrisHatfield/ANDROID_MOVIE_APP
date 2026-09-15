@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Query
@@ -18,6 +20,21 @@ from torrtux_core.searcher import TorrentSearcher
 
 logger = logging.getLogger(__name__)
 
+def _load_local_env() -> None:
+    env_file = Path(__file__).resolve().parents[1] / ".env"
+    if not env_file.is_file():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
+_load_local_env()
 _searcher = TorrentSearcher()
 _result_cache = ResultCache()
 _tmdb = TmdbClient()
@@ -75,7 +92,7 @@ app = FastAPI(title="Torrent Movie Search API", version="1.0.0", lifespan=lifesp
 
 @app.get("/v1/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse()
+    return HealthResponse(tmdb_configured=_tmdb.configured)
 
 
 @app.get("/v1/sites/health", response_model=SitesHealthResponse)

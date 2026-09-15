@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 class HealthResponse(BaseModel):
     status: str = "ok"
+    tmdb_configured: bool = False
 
 
 class SitesHealthResponse(BaseModel):
