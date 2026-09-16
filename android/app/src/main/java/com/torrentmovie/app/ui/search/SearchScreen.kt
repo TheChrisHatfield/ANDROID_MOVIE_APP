@@ -78,9 +78,16 @@ fun SearchScreen(
     LaunchedEffect(selectedResultId, state.groups) {
         val id = selectedResultId
         if (id != null) {
+            playingTrailerGroupKey = null
             state.groups.find { group -> group.releases.any { it.id == id } }
                 ?.groupKey
                 ?.let { expandedGroupKey = it }
+        }
+        if (
+            playingTrailerGroupKey != null &&
+            state.groups.none { it.groupKey == playingTrailerGroupKey }
+        ) {
+            playingTrailerGroupKey = null
         }
     }
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
@@ -116,9 +123,17 @@ fun SearchScreen(
     }
 
     fun isAlreadyUploaded(result: TorrentResultDto): Boolean {
-        val magnet = result.magnet?.takeIf { it.isNotBlank() } ?: return false
-        val key = MagnetHashUtil.storageKey(magnet, result.name, result.site)
-        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
+        val magnet = result.magnet?.takeIf { it.isNotBlank() }
+        if (magnet != null) {
+            val key = MagnetHashUtil.storageKey(magnet, result.name, result.site)
+            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+        }
+        return uploaded.any { it.displayName == result.name && it.site == result.site }
+    }
+
+    fun openDetail(result: TorrentResultDto) {
+        playingTrailerGroupKey = null
+        onOpenDetail(result)
     }
 
     if (showFilters) {
@@ -254,7 +269,7 @@ fun SearchScreen(
                                         group.groupKey
                                     }
                                 },
-                                onOpenRelease = onOpenDetail,
+                                onOpenRelease = ::openDetail,
                             )
                         }
                         items(state.results, key = { it.id }) { result ->
@@ -262,7 +277,7 @@ fun SearchScreen(
                                 result = result,
                                 alreadyUploaded = isAlreadyUploaded(result),
                                 selected = result.id == selectedResultId,
-                                onClick = { onOpenDetail(result) },
+                                onClick = { openDetail(result) },
                             )
                         }
                     }
