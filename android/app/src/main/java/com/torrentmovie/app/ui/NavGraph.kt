@@ -49,6 +49,25 @@ fun AppNavGraph(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val useFoldTwoPane = foldTwoPaneDevice &&
         screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
+    val currentRoute = navController.currentBackStackEntry?.destination?.route
+
+    fun restoreFoldSelectionOnPhone() {
+        if (useFoldTwoPane) return
+        val pending = container.foldActiveSelection ?: return
+        if (currentRoute != Routes.SEARCH) return
+        container.foldActiveSelection = null
+        val cached = container.searchResultStore.get(pending.resultId)
+        val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
+        val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
+        navController.navigate(Routes.detail(pending.resultId, name, site)) {
+            launchSingleTop = true
+            popUpTo(Routes.SEARCH) { inclusive = false }
+        }
+    }
+
+    LaunchedEffect(useFoldTwoPane, currentRoute) {
+        restoreFoldSelectionOnPhone()
+    }
 
     LaunchedEffect(useFoldTwoPane) {
         if (useFoldTwoPane) {
@@ -64,22 +83,6 @@ fun AppNavGraph(
                     )
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
-            }
-        } else {
-            val pending = container.foldActiveSelection
-            if (pending != null) {
-                val currentRoute = navController.currentBackStackEntry?.destination?.route
-                val onSearch = currentRoute == Routes.SEARCH
-                if (onSearch && currentRoute?.startsWith("detail/") != true) {
-                    container.foldActiveSelection = null
-                    val cached = container.searchResultStore.get(pending.resultId)
-                    val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
-                    val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
-                    navController.navigate(Routes.detail(pending.resultId, name, site)) {
-                        launchSingleTop = true
-                        popUpTo(Routes.SEARCH) { inclusive = false }
-                    }
-                }
             }
         }
     }
