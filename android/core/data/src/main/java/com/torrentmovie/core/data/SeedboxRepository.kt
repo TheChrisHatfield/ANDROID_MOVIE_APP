@@ -75,7 +75,7 @@ class SeedboxRepository(
             )
             if (persisted is SeedboxResult.Failure) {
                 sentWithoutPersist.add(key)
-                return SeedboxResult.Success()
+                return persisted
             }
             return persisted
         }
