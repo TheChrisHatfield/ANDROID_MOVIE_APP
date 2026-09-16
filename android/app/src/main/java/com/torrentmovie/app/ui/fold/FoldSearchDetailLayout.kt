@@ -100,19 +100,33 @@ fun FoldSearchDetailLayout(
         }
     }
 
-    var lastSearchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(selectedId) {
+        if (selectedId != null) return@LaunchedEffect
+        container.foldActiveSelection?.let { active ->
+            selectedId = active.resultId
+            restoredName = active.name.takeIf { it.isNotBlank() }
+            restoredSite = active.site.takeIf { it.isNotBlank() }
+        }
+    }
+
     var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(state.query, state.hasSearched, state.loading) {
-        if (state.loading || !state.hasSearched) return@LaunchedEffect
+    LaunchedEffect(state.query, state.lastExecutedQuery, state.hasSearched) {
+        if (!state.hasSearched) return@LaunchedEffect
         val query = state.query.trim()
-        if (lastSearchQuery != null && lastSearchQuery != query) {
+        if (query.isBlank()) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+            return@LaunchedEffect
+        }
+        if (state.lastExecutedQuery.isNotBlank() && query != state.lastExecutedQuery) {
             selectedId = null
             restoredName = null
             restoredSite = null
             syncFoldSelection(null, "", "")
         }
-        lastSearchQuery = query
     }
 
     LaunchedEffect(
@@ -136,15 +150,6 @@ fun FoldSearchDetailLayout(
             syncFoldSelection(null, "", "")
         }
         lastSearchFilterKey = filterKey
-    }
-
-    LaunchedEffect(state.query, state.hasSearched) {
-        if (!state.hasSearched || state.query.isBlank()) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            syncFoldSelection(null, "", "")
-        }
     }
 
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading) {

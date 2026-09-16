@@ -74,12 +74,12 @@ fun AppNavGraph(
         if (useFoldTwoPane) return
         val pending = container.foldActiveSelection ?: return
         if (requireSearchRoute && currentRoute != Routes.SEARCH) return
-        container.foldActiveSelection = null
         val matched = rematchRelease(pending.resultId, pending.name, pending.site)
             ?: container.searchResultStore.get(pending.resultId)?.let { stored ->
                 rematchRelease(stored.id, stored.name, stored.site)
             }
         if (matched == null) return
+        container.foldActiveSelection = null
         container.searchResultStore.put(matched)
         navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
             launchSingleTop = true
@@ -120,6 +120,8 @@ fun AppNavGraph(
                     onOpenSettings = {
                         navController.navigate(Routes.SETTINGS) {
                             launchSingleTop = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            restoreState = true
                         }
                     },
                 )
@@ -130,6 +132,8 @@ fun AppNavGraph(
                     onOpenSettings = {
                         navController.navigate(Routes.SETTINGS) {
                             launchSingleTop = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            restoreState = true
                         }
                     },
                     onOpenDetail = { r ->
@@ -170,6 +174,9 @@ fun AppNavGraph(
                 if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
                 val releases = allReleases()
                 if (resultId in releases.map { it.id }) return@LaunchedEffect
+                if (searchState.error != null && container.searchResultStore.get(resultId) != null) {
+                    return@LaunchedEffect
+                }
                 val matched = rematchRelease(resultId, navName, navSite)
                 if (matched != null) {
                     container.searchResultStore.put(matched)
