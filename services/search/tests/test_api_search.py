@@ -38,8 +38,12 @@ def test_search_returns_cached_results(mock_search, _mock_test):
     assert body["failed_sites"] == ["EZTV"]
 
 
-def test_health():
+@patch("api.main._tmdb")
+def test_health(mock_tmdb):
+    mock_tmdb.configured = False
     assert client.get("/v1/health").json() == {"status": "ok", "tmdb_configured": False}
+    mock_tmdb.configured = True
+    assert client.get("/v1/health").json() == {"status": "ok", "tmdb_configured": True}
 
 
 @patch.object(_searcher, "test_sites", return_value=True)
