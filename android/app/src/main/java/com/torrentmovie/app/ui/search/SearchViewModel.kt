@@ -60,10 +60,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.settingsRepository.revision.drop(1).collect {
                 val key = searchSettingsKey()
-                if (key != lastSearchSettingsKey &&
-                    _state.value.hasSearched &&
-                    !_state.value.loading
-                ) {
+                if (key != lastSearchSettingsKey && _state.value.hasSearched) {
                     lastSearchSettingsKey = key
                     search()
                 }
@@ -163,13 +160,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     searchSettingsKey() == settingsKeyAtStart
             }
             try {
-                val sameSearch = lastSearchedQuery == q &&
-                    lastSearchMinSeeds == minSeeds &&
-                    lastSearchMaxSeeds == maxSeeds &&
-                    lastSearchMaxSize == maxSize
-                if (!sameSearch || settingsKeyAtStart != lastSearchSettingsKey) {
-                    container.movieMetadataStore.clear()
-                }
+                container.movieMetadataStore.clear()
                 _state.value = _state.value.copy(
                     loading = true,
                     results = emptyList(),
@@ -188,6 +179,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val infoMessages = mutableListOf<String>()
                 if (minSeeds != null) {
                     infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
+                }
+                if (maxSeeds != null) {
+                    infoMessages += "Max seeds filter may hide indexers without seed counts."
+                }
+                if (outcome.tmdbKeyRejected) {
+                    infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
                 }
                 if (outcome.failedSites.isNotEmpty()) {
                     infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
