@@ -27,7 +27,7 @@ data class AppSettings(
     companion object {
         const val EMULATOR_SEARCH_API = "http://10.0.2.2:8765"
         const val DEFAULT_SEARCH_API = EMULATOR_SEARCH_API
-        const val DEFAULT_DOWNLOAD_DIR = ""
+        const val DEFAULT_DOWNLOAD_DIR = "/home5/chris82/downloads/MOVIES/"
         const val DEFAULT_SEARCH_PAGES = 2
     }
 }
@@ -36,13 +36,21 @@ class SettingsRepository(private val context: Context) {
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision.asStateFlow()
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "torrent_movie_settings",
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val prefs: SharedPreferences = openSettingsPrefs(context)
+
+    private fun openSettingsPrefs(context: Context): SharedPreferences {
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                "torrent_movie_settings",
+                MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (_: Exception) {
+            context.getSharedPreferences("torrent_movie_settings_plain", Context.MODE_PRIVATE)
+        }
+    }
 
     fun load(): AppSettings {
         val rawSearchApi = prefs.getString(KEY_SEARCH_API, null)
