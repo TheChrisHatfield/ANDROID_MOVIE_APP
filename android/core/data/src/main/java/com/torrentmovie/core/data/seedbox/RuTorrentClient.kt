@@ -25,12 +25,10 @@ class RuTorrentClient(
         .followSslRedirects(false)
         .build()
 
-    private fun normalizedBase(): String = normalizeSeedboxUrl(baseUrl)
-
     override suspend fun ping(): Boolean {
         return try {
             val request = Request.Builder()
-                .url("${normalizedBase()}php/addtorrent.php")
+                .url(seedboxAddTorrentUrl(baseUrl))
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .get()
                 .build()
@@ -58,7 +56,7 @@ class RuTorrentClient(
                 .add("dir_edit", downloadDirectory)
                 .build()
             val request = Request.Builder()
-                .url("${normalizedBase()}php/addtorrent.php")
+                .url(seedboxAddTorrentUrl(baseUrl))
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .post(body)
                 .build()
@@ -71,6 +69,7 @@ class RuTorrentClient(
                         val msg = when (response.code) {
                             401 -> "Authentication failed — check username, password, and auth scheme"
                             403 -> "Forbidden — ruTorrent rejected the request"
+                            404 -> "ruTorrent URL not found — use https://<user>.<slot>.seedhost.eu/rutorrent/ in Settings (not addtorrent.php)"
                             else -> "HTTP ${response.code}"
                         }
                         SeedboxResult.Failure(msg, response.code)

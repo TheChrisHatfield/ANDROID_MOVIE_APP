@@ -93,6 +93,11 @@ fun SettingsScreen(container: AppContainer) {
             label = { Text("ruTorrent base URL") },
             modifier = Modifier.fillMaxWidth(),
         )
+        Text(
+            "Example: https://yourname.snow.seedhost.eu/rutorrent/ — do not paste addtorrent.php.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         OutlinedTextField(
             value = settings.username,
             onValueChange = { settings = settings.copy(username = it) },

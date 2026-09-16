@@ -29,6 +29,30 @@ class SeedboxUrlTest {
     }
 
     @Test
+    fun hostOnlyAppendsRutorrentPath() {
+        assertEquals(
+            "https://chris82.snow.seedhost.eu/rutorrent/",
+            normalizeSeedboxUrl("https://chris82.snow.seedhost.eu"),
+        )
+    }
+
+    @Test
+    fun stripsAccidentalAddTorrentEndpoint() {
+        assertEquals(
+            "https://chris82.snow.seedhost.eu/rutorrent/",
+            normalizeSeedboxUrl("https://chris82.snow.seedhost.eu/rutorrent/php/addtorrent.php"),
+        )
+    }
+
+    @Test
+    fun addTorrentUrlUsesNormalizedBase() {
+        assertEquals(
+            "https://chris82.snow.seedhost.eu/rutorrent/php/addtorrent.php",
+            seedboxAddTorrentUrl("https://chris82.snow.seedhost.eu"),
+        )
+    }
+
+    @Test
     fun searchApiAddsHttpWhenSchemeMissing() {
         assertEquals(
             "http://192.168.1.5:8765",
