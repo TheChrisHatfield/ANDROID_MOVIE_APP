@@ -70,9 +70,7 @@ fun AppNavGraph(
     }
 
     LaunchedEffect(useFoldTwoPane) {
-        if (!useFoldTwoPane) {
-            restoreFoldSelectionOnPhone(requireSearchRoute = false)
-        } else {
+        if (useFoldTwoPane) {
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
