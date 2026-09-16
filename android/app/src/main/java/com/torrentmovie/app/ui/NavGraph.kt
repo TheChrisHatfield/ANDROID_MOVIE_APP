@@ -51,10 +51,10 @@ fun AppNavGraph(
         screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
-    fun restoreFoldSelectionOnPhone() {
+    fun restoreFoldSelectionOnPhone(requireSearchRoute: Boolean) {
         if (useFoldTwoPane) return
         val pending = container.foldActiveSelection ?: return
-        if (currentRoute != Routes.SEARCH) return
+        if (requireSearchRoute && currentRoute != Routes.SEARCH) return
         container.foldActiveSelection = null
         val cached = container.searchResultStore.get(pending.resultId)
         val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
@@ -66,11 +66,13 @@ fun AppNavGraph(
     }
 
     LaunchedEffect(useFoldTwoPane, currentRoute) {
-        restoreFoldSelectionOnPhone()
+        restoreFoldSelectionOnPhone(requireSearchRoute = true)
     }
 
     LaunchedEffect(useFoldTwoPane) {
-        if (useFoldTwoPane) {
+        if (!useFoldTwoPane) {
+            restoreFoldSelectionOnPhone(requireSearchRoute = false)
+        } else {
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
