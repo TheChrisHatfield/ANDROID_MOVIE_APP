@@ -59,7 +59,11 @@ fun TorrentDetailScreen(
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
     var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
-    val metadata = container.movieMetadataStore.get(resultId)
+    var metadata by remember(resultId) { mutableStateOf(container.movieMetadataStore.get(resultId)) }
+
+    LaunchedEffect(resultId) {
+        metadata = container.movieMetadataStore.get(resultId)
+    }
 
     LaunchedEffect(settingsRevision) {
         val apiUrl = container.settingsRepository.load().searchApiBaseUrl
@@ -136,10 +140,12 @@ fun TorrentDetailScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        if (metadata != null) {
+        val headerMetadata = metadata
+        if (headerMetadata != null) {
             MovieDetailHeader(
-                metadata = metadata,
+                metadata = headerMetadata,
                 releaseLabel = "$site · ${name.take(80)}",
+                resultId = resultId,
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
         } else {
