@@ -38,7 +38,7 @@ fun TorrentResultCard(
                 Text("${result.site} · ${result.size ?: "?"} · seeds ${result.seeds ?: "?"}")
             }
             if (alreadyUploaded) {
-                Text("Already uploaded", color = MaterialTheme.colorScheme.tertiary)
+                Text("Sent", color = MaterialTheme.colorScheme.tertiary)
             }
         }
     }
