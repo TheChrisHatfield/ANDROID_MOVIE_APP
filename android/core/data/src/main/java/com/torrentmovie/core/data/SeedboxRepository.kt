@@ -4,6 +4,7 @@ import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.db.UploadedMagnet
 import com.torrentmovie.core.data.seedbox.RuTorrentClient
 import com.torrentmovie.core.data.seedbox.SeedboxListResult
+import com.torrentmovie.core.data.seedbox.SeedboxProbeResult
 import com.torrentmovie.core.data.seedbox.SeedboxResult
 import com.torrentmovie.core.data.seedbox.SeedboxTorrentStatus
 import kotlinx.coroutines.sync.Mutex
@@ -140,6 +141,36 @@ class SeedboxRepository(
             client().listTorrentStatuses()
         } catch (e: Exception) {
             SeedboxListResult.Failure(e.message ?: "Could not load seedbox status")
+        }
+    }
+
+    suspend fun probeSeedbox(): SeedboxProbeResult {
+        if (!settingsRepository.isSeedboxConfigured()) {
+            return SeedboxProbeResult(
+                addReachable = false,
+                httprpcAvailable = false,
+                message = "Configure seedbox URL and credentials",
+            )
+        }
+        val addOk = pingSeedbox()
+        if (!addOk) {
+            return SeedboxProbeResult(
+                addReachable = false,
+                httprpcAvailable = false,
+                message = "Seedbox unreachable — check URL and credentials",
+            )
+        }
+        return when (val status = fetchTorrentStatuses()) {
+            is SeedboxListResult.Success -> SeedboxProbeResult(
+                addReachable = true,
+                httprpcAvailable = true,
+                message = "Seedbox ready",
+            )
+            is SeedboxListResult.Failure -> SeedboxProbeResult(
+                addReachable = true,
+                httprpcAvailable = false,
+                message = status.message,
+            )
         }
     }
 

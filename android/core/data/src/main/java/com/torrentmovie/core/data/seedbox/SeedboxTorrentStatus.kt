@@ -70,3 +70,11 @@ sealed class SeedboxListResult {
     data class Success(val statuses: Map<String, SeedboxTorrentStatus>) : SeedboxListResult()
     data class Failure(val message: String) : SeedboxListResult()
 }
+
+data class SeedboxProbeResult(
+    val addReachable: Boolean,
+    val httprpcAvailable: Boolean,
+    val message: String,
+) {
+    val fullyOnline: Boolean get() = addReachable && httprpcAvailable
+}
