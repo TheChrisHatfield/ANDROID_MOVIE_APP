@@ -11,7 +11,7 @@ interface SearchApi {
     @GET("/v1/search")
     suspend fun search(
         @Query("q") query: String,
-        @Query("limit") limit: Int = 50,
+        @Query("limit") limit: Int = 100,
         @Query("pages") pages: Int = 2,
         @Query("min_seeds") minSeeds: Int? = null,
         @Query("max_seeds") maxSeeds: Int? = null,

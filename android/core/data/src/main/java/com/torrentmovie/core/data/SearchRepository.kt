@@ -52,6 +52,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             val response = api().search(
                 query = query,
+                limit = settings.searchPages * 50,
                 pages = settings.searchPages,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
