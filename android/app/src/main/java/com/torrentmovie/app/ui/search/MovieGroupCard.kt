@@ -45,6 +45,8 @@ fun MovieGroupCard(
     val context = LocalContext.current
     val singleRelease = group.releases.size == 1
     val playableTrailerId = group.trailerYoutubeKey?.let { normalizeYoutubeVideoId(it) }
+    val posterUrl = group.posterUrl?.takeIf { it.isNotBlank() }
+        ?: group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -62,9 +64,9 @@ fun MovieGroupCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            if (!group.posterUrl.isNullOrBlank()) {
+            if (!posterUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = group.posterUrl,
+                    model = posterUrl,
                     contentDescription = group.title,
                     modifier = Modifier
                         .width(72.dp)
