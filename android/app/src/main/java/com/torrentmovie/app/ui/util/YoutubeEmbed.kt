@@ -111,6 +111,7 @@ fun WebView.loadYoutubeEmbed(
     onPlayerError: (() -> Unit)? = null,
 ) {
     configureForYoutubeEmbed()
+    removeJavascriptInterface("AndroidBridge")
     if (onPlayerError != null) {
         addJavascriptInterface(
             object {

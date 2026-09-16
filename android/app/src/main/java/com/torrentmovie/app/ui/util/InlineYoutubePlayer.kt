@@ -86,6 +86,9 @@ fun InlineYoutubePlayer(
             TextButton(onClick = { openYoutubeTrailerFullscreen(context, videoId) }) {
                 Text("Open fullscreen")
             }
+            TextButton(onClick = { openYoutubeExternal(context, videoId) }) {
+                Text("Open in YouTube")
+            }
         }
         return
     }
