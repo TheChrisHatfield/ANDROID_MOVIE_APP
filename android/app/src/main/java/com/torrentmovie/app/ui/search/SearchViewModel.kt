@@ -160,7 +160,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     searchSettingsKey() == settingsKeyAtStart
             }
             try {
-                container.movieMetadataStore.clear()
                 _state.value = _state.value.copy(
                     loading = true,
                     results = emptyList(),
@@ -176,6 +175,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     maxSize = maxSize,
                 )
                 if (!requestStillCurrent()) return@launch
+                container.movieMetadataStore.clear()
                 val infoMessages = mutableListOf<String>()
                 if (minSeeds != null) {
                     infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
