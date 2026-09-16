@@ -15,7 +15,15 @@ class SeedboxRepository(
     private val sentWithoutPersist = mutableSetOf<String>()
     private var cachedClient: RuTorrentClient? = null
     private var cachedClientRevision = -1
-    private var sentWithoutPersistRevision = -1
+    private var lastSeedboxSettingsKey: String? = null
+
+    private fun seedboxSettingsKey(settings: AppSettings): String = listOf(
+        settings.rutorrentBaseUrl,
+        settings.username,
+        settings.password,
+        settings.authScheme,
+        settings.downloadDirectory,
+    ).joinToString("|")
 
     @Synchronized
     private fun client(): RuTorrentClient {
@@ -39,16 +47,16 @@ class SeedboxRepository(
         displayName: String,
         site: String,
     ): SeedboxResult = addMutex.withLock {
-        val revision = settingsRepository.revision.value
-        if (revision != sentWithoutPersistRevision) {
+        val settings = settingsRepository.load()
+        val seedboxKey = seedboxSettingsKey(settings)
+        if (seedboxKey != lastSeedboxSettingsKey) {
             sentWithoutPersist.clear()
-            sentWithoutPersistRevision = revision
+            lastSeedboxSettingsKey = seedboxKey
         }
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
         if (isDuplicate(magnet, displayName, site)) {
             return SeedboxResult.Failure("Already uploaded — remove from Uploaded list to re-send")
         }
-        val settings = settingsRepository.load()
         if (!settingsRepository.isSeedboxConfigured()) {
             return SeedboxResult.Failure("Configure seedbox URL and credentials in Settings")
         }
