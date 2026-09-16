@@ -28,6 +28,11 @@ class SettingsValidationTest {
     }
 
     @Test
+    fun allowsBlankSearchApiForSeedboxOnlySave() {
+        assertNull(validateAppSettings(validSettings().copy(searchApiBaseUrl = "")))
+    }
+
+    @Test
     fun clampsInvalidLoadedAuthScheme() {
         assertEquals("basic", SettingsRepository.normalizeLoadedAuthScheme("diges"))
         assertEquals("digest", SettingsRepository.normalizeLoadedAuthScheme("DIGEST"))

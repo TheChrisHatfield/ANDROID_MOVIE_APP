@@ -130,7 +130,7 @@ class SettingsRepository(private val context: Context) {
 
 internal fun validateAppSettings(settings: AppSettings): String? {
     val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
-    if (searchApiUrl.isBlank() || !isValidHttpUrl(searchApiUrl)) {
+    if (searchApiUrl.isNotBlank() && !isValidHttpUrl(searchApiUrl)) {
         return "Invalid search API URL"
     }
     val downloadDir = settings.downloadDirectory.trim()
