@@ -101,6 +101,7 @@ fun FoldSearchDetailLayout(
     }
 
     var lastSearchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.query, state.hasSearched, state.loading) {
         if (state.loading || !state.hasSearched) return@LaunchedEffect
@@ -112,6 +113,38 @@ fun FoldSearchDetailLayout(
             syncFoldSelection(null, "", "")
         }
         lastSearchQuery = query
+    }
+
+    LaunchedEffect(
+        state.minSeeds,
+        state.maxSeeds,
+        state.maxSize,
+        state.hasSearched,
+        state.loading,
+        state.query,
+    ) {
+        if (state.loading || !state.hasSearched || state.query.isBlank()) return@LaunchedEffect
+        val filterKey = listOf(
+            state.minSeeds?.toString().orEmpty(),
+            state.maxSeeds?.toString().orEmpty(),
+            state.maxSize.orEmpty(),
+        ).joinToString("|")
+        if (lastSearchFilterKey != null && lastSearchFilterKey != filterKey) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
+        lastSearchFilterKey = filterKey
+    }
+
+    LaunchedEffect(state.query, state.hasSearched) {
+        if (!state.hasSearched || state.query.isBlank()) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
     }
 
     LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
@@ -129,10 +162,21 @@ fun FoldSearchDetailLayout(
             }
             if (rematched != null) {
                 val oldId = selectedId
+                val oldRelease = oldId?.let { findRelease(it) }
+                val oldMagnet = oldRelease?.magnet?.takeIf { it.isNotBlank() }
+                    ?: oldId?.let { container.searchResultStore.get(it)?.magnet?.takeIf { m -> m.isNotBlank() } }
                 selectedId = rematched.id
                 restoredName = rematched.name
                 restoredSite = rematched.site
-                container.searchResultStore.put(rematched)
+                val merged = if (
+                    !oldMagnet.isNullOrBlank() &&
+                    rematched.magnet.isNullOrBlank()
+                ) {
+                    rematched.copy(magnet = oldMagnet)
+                } else {
+                    rematched
+                }
+                container.searchResultStore.put(merged)
                 if (oldId != null && oldId != rematched.id) {
                     container.movieMetadataStore.get(oldId)?.let { meta ->
                         container.movieMetadataStore.put(rematched.id, meta)
