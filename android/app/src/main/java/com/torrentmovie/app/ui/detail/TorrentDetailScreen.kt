@@ -90,10 +90,16 @@ fun TorrentDetailScreen(
         duplicate = isAlreadyUploaded(magnet)
     }
 
-    LaunchedEffect(resultId, resolveRequest) {
+    LaunchedEffect(resultId, resolveRequest, settingsRevision) {
         if (resolveRequest == 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
         if (resolveRequest > 0) {
             magnet = null
+        }
+        val apiUrl = container.settingsRepository.load().searchApiBaseUrl
+        if (apiUrl.isBlank()) {
+            magnetLoading = false
+            magnetError = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)"
+            return@LaunchedEffect
         }
         magnetLoading = true
         magnetError = null
