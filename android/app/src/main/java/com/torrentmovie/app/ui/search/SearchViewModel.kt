@@ -98,11 +98,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun setMinSeeds(value: Int?) {
-        _state.value = _state.value.copy(minSeeds = value?.takeIf { it > 0 })
+        _state.value = _state.value.copy(
+            minSeeds = value?.takeIf { it >= 0 },
+        )
     }
 
     fun setMaxSeeds(value: Int?) {
-        _state.value = _state.value.copy(maxSeeds = value?.takeIf { it > 0 })
+        _state.value = _state.value.copy(
+            maxSeeds = value?.takeIf { it >= 0 },
+        )
     }
 
     fun setMaxSize(value: String?) {
@@ -185,11 +189,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val allReleases = display.groups.flatMap { it.releases }
                 allReleases.forEach { container.searchResultStore.put(it) }
                 display.groups.forEach { group ->
+                    val releasePoster = group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
                     val metadata = MovieMetadata(
                         title = group.title,
                         year = group.year,
                         overview = group.overview,
-                        posterUrl = group.posterUrl,
+                        posterUrl = group.posterUrl ?: releasePoster,
                         trailerYoutubeKey = group.trailerYoutubeKey,
                     )
                     group.releases.forEach { release ->
