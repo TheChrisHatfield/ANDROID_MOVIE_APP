@@ -130,6 +130,21 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 errorCode = null,
                 info = null,
                 hasSearched = false,
+                showTmdbSetupHint = false,
+            )
+            return
+        }
+        val settings = container.settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) {
+            _state.value = _state.value.copy(
+                loading = false,
+                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                errorCode = null,
+                results = emptyList(),
+                groups = emptyList(),
+                info = null,
+                hasSearched = false,
+                showTmdbSetupHint = false,
             )
             return
         }
@@ -152,7 +167,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     lastSearchMinSeeds == minSeeds &&
                     lastSearchMaxSeeds == maxSeeds &&
                     lastSearchMaxSize == maxSize
-                if (!sameSearch) {
+                if (!sameSearch || settingsKeyAtStart != lastSearchSettingsKey) {
                     container.movieMetadataStore.clear()
                 }
                 _state.value = _state.value.copy(
@@ -239,7 +254,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     errorCode = e.httpCode,
                     results = emptyList(),
                     groups = emptyList(),
+                    info = null,
                     hasSearched = true,
+                    showTmdbSetupHint = false,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
@@ -250,7 +267,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     errorCode = null,
                     results = emptyList(),
                     groups = emptyList(),
+                    info = null,
                     hasSearched = true,
+                    showTmdbSetupHint = false,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {
