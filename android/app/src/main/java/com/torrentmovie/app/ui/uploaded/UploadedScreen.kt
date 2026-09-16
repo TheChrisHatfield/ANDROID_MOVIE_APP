@@ -18,10 +18,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,70 +47,77 @@ fun UploadedScreen(
     val vm: UploadedViewModel = sharedViewModel ?: viewModel { UploadedViewModel(container) }
     val state by vm.uiState.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
     val pullState = rememberPullRefreshState(
         refreshing = state.refreshing,
         onRefresh = { vm.refreshStatuses() },
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pullRefresh(pullState),
-    ) {
-        if (state.rows.isEmpty()) {
-            Text(
-                "No uploads yet — search and send your first movie.",
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(16.dp),
-            )
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item {
-                    Text(
-                        if (state.seedboxConfigured) {
-                            "Sent from this device · live status from ruTorrent"
-                        } else {
-                            "Sent from this device · configure seedbox for live status"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                    state.statusError?.let { error ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .pullRefresh(pullState),
+        ) {
+            if (state.rows.isEmpty()) {
+                Text(
+                    "No uploads yet — search and send your first movie.",
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp),
+                )
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item {
                         Text(
-                            error,
-                            color = MaterialTheme.colorScheme.error,
+                            if (state.seedboxConfigured) {
+                                "Sent from this device · live status from ruTorrent"
+                            } else {
+                                "Sent from this device · configure seedbox for live status"
+                            },
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        state.statusError?.let { error ->
+                            Text(
+                                error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            )
+                        }
+                    }
+                    items(state.rows, key = { it.entry.infoHash }) { row ->
+                        UploadedRow(
+                            row = row,
+                            onRemove = {
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        container.uploadedRepository.delete(row.entry.infoHash)
+                                        container.seedboxRepository.clearSentWithoutPersist(row.entry.infoHash)
+                                    }
+                                    vm.refreshStatuses()
+                                    snackbar.showSnackbar("Removed from list · torrent remains on seedbox")
+                                }
+                            },
                         )
                     }
                 }
-                items(state.rows, key = { it.entry.infoHash }) { row ->
-                    UploadedRow(
-                        row = row,
-                        onDelete = {
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    container.uploadedRepository.delete(row.entry.infoHash)
-                                    container.seedboxRepository.clearSentWithoutPersist(row.entry.infoHash)
-                                }
-                                vm.refreshStatuses()
-                            }
-                        },
-                    )
-                }
             }
+            PullRefreshIndicator(
+                refreshing = state.refreshing,
+                state = pullState,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
         }
-        PullRefreshIndicator(
-            refreshing = state.refreshing,
-            state = pullState,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
     }
 }
 
 @Composable
-private fun UploadedRow(row: UploadedRowUi, onDelete: () -> Unit) {
+private fun UploadedRow(row: UploadedRowUi, onRemove: () -> Unit) {
     ListItem(
         headlineContent = { Text(row.entry.displayName) },
         supportingContent = {
@@ -132,8 +143,8 @@ private fun UploadedRow(row: UploadedRowUi, onDelete: () -> Unit) {
             }
         },
         trailingContent = {
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.Delete, contentDescription = "Remove from list")
             }
         },
     )
