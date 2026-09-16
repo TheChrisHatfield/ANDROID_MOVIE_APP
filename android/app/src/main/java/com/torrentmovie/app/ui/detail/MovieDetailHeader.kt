@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.torrentmovie.app.ui.util.InlineYoutubePlayer
+import com.torrentmovie.app.ui.util.normalizeYoutubeVideoId
 import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.data.MovieMetadata
 
@@ -39,7 +40,8 @@ fun MovieDetailHeader(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var trailerVisible by remember(resultId, metadata.trailerYoutubeKey) { mutableStateOf(false) }
+    val playableTrailerId = metadata.trailerYoutubeKey?.let { normalizeYoutubeVideoId(it) }
+    var trailerVisible by remember(resultId, playableTrailerId) { mutableStateOf(false) }
     Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Top) {
             if (!metadata.posterUrl.isNullOrBlank()) {
@@ -81,7 +83,7 @@ fun MovieDetailHeader(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-                metadata.trailerYoutubeKey?.let { key ->
+                playableTrailerId?.let { trailerId ->
                     Row(modifier = Modifier.padding(top = 4.dp)) {
                         TextButton(onClick = { trailerVisible = !trailerVisible }) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
@@ -92,7 +94,7 @@ fun MovieDetailHeader(
                         }
                         if (trailerVisible) {
                             TextButton(
-                                onClick = { openYoutubeTrailerFullscreen(context, key) },
+                                onClick = { openYoutubeTrailerFullscreen(context, trailerId) },
                             ) {
                                 Icon(Icons.Default.Fullscreen, contentDescription = null)
                                 Text("Fullscreen", modifier = Modifier.padding(start = 4.dp))
@@ -102,9 +104,9 @@ fun MovieDetailHeader(
                 }
             }
         }
-        if (trailerVisible && !metadata.trailerYoutubeKey.isNullOrBlank()) {
+        if (trailerVisible && playableTrailerId != null) {
             InlineYoutubePlayer(
-                youtubeKey = metadata.trailerYoutubeKey!!,
+                youtubeKey = playableTrailerId,
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
