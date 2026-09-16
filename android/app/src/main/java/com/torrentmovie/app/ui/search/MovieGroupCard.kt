@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.torrentmovie.app.ui.util.InlineYoutubePlayer
+import com.torrentmovie.app.ui.util.normalizeYoutubeVideoId
 import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
@@ -41,7 +42,8 @@ fun MovieGroupCard(
     onOpenRelease: (TorrentResultDto) -> Unit,
 ) {
     val context = LocalContext.current
-    val singleRelease = group.releaseCount == 1 && group.releases.size == 1
+    val singleRelease = group.releases.size == 1
+    val playableTrailerId = group.trailerYoutubeKey?.let { normalizeYoutubeVideoId(it) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,7 +138,7 @@ fun MovieGroupCard(
                             Text(if (expanded) "Hide releases" else "Show releases")
                         }
                     }
-                    group.trailerYoutubeKey?.let { key ->
+                    playableTrailerId?.let {
                         IconButton(onClick = onToggleTrailer) {
                             Icon(
                                 Icons.Default.PlayArrow,
@@ -156,13 +158,13 @@ fun MovieGroupCard(
                 }
             }
         }
-        if (trailerPlaying && !group.trailerYoutubeKey.isNullOrBlank()) {
+        if (trailerPlaying && playableTrailerId != null) {
             InlineYoutubePlayer(
-                youtubeKey = group.trailerYoutubeKey!!,
+                youtubeKey = playableTrailerId,
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
             )
             TextButton(
-                onClick = { openYoutubeTrailerFullscreen(context, group.trailerYoutubeKey!!) },
+                onClick = { openYoutubeTrailerFullscreen(context, playableTrailerId) },
                 modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
             ) {
                 Text("Fullscreen")
