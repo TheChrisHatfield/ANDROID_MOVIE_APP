@@ -112,10 +112,9 @@ fun SearchScreen(
     }
 
     fun isAlreadyUploaded(result: TorrentResultDto): Boolean {
-        val key = MagnetHashUtil.storageKey(result.magnet ?: "", result.name, result.site)
-        if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
-        if (!result.magnet.isNullOrBlank()) return false
-        return uploaded.any { it.displayName == result.name && it.site == result.site }
+        val magnet = result.magnet?.takeIf { it.isNotBlank() } ?: return false
+        val key = MagnetHashUtil.storageKey(magnet, result.name, result.site)
+        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
     }
 
     if (showFilters) {
