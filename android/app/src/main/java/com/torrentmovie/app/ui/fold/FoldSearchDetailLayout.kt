@@ -198,6 +198,7 @@ fun FoldSearchDetailLayout(
         selectedId = null
         restoredName = null
         restoredSite = null
+        syncFoldSelection(null, "", "")
     }
 
     Row(Modifier.fillMaxSize()) {
