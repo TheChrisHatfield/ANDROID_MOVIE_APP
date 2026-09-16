@@ -61,7 +61,7 @@ fun TorrentDetailScreen(
     var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
     var metadata by remember(resultId) { mutableStateOf(container.movieMetadataStore.get(resultId)) }
 
-    LaunchedEffect(resultId) {
+    LaunchedEffect(resultId, settingsRevision) {
         metadata = container.movieMetadataStore.get(resultId)
     }
 
@@ -74,9 +74,12 @@ fun TorrentDetailScreen(
     }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
-        if (magnetValue.isNullOrBlank()) return false
-        val key = MagnetHashUtil.storageKey(magnetValue, name, site)
-        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
+        val magnet = magnetValue?.takeIf { it.isNotBlank() }
+        if (magnet != null) {
+            val key = MagnetHashUtil.storageKey(magnet, name, site)
+            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+        }
+        return uploaded.any { it.displayName == name && it.site == site }
     }
 
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
