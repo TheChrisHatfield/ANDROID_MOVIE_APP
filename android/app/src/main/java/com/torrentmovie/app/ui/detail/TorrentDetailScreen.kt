@@ -162,7 +162,7 @@ fun TorrentDetailScreen(
             Text(site, modifier = Modifier.padding(vertical = 8.dp))
         }
         if (duplicate) {
-            Text("Already uploaded", color = MaterialTheme.colorScheme.error)
+            Text("Sent", color = MaterialTheme.colorScheme.error)
         }
         if (magnetLoading) {
             Text("Loading magnet…")
