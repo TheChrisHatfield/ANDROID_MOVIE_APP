@@ -128,8 +128,8 @@ def build_movie_groups(
         _apply_indexer_metadata(bucket, releases)
 
     if enrich_metadata and tmdb and tmdb.configured:
-        enrich_buckets = [bucket for bucket, _ in staged]
-        _enrich_buckets_parallel(enrich_buckets, tmdb)
+        tmdb_buckets = [buckets[key] for key in primary_keys if key in buckets]
+        _enrich_buckets_parallel(tmdb_buckets, tmdb)
 
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)
