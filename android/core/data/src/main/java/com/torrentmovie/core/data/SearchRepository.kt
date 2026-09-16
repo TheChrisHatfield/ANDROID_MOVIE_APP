@@ -26,8 +26,12 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
 
     @Synchronized
     private fun api(): SearchApi {
+        val settings = settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) {
+            throw SearchException("Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)")
+        }
         val revision = settingsRepository.revision.value
-        val base = settingsRepository.load().searchApiBaseUrl.trimEnd('/') + "/"
+        val base = settings.searchApiBaseUrl.trimEnd('/') + "/"
         if (cachedApi != null && cachedBaseUrl == base && cachedRevision == revision) {
             return cachedApi!!
         }
@@ -65,6 +69,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 results = response.results,
                 failedSites = response.failedSites,
                 groups = response.groups,
+                tmdbKeyRejected = response.tmdbKeyRejected,
             )
         } catch (e: HttpException) {
             throw mapHttpError(e)
