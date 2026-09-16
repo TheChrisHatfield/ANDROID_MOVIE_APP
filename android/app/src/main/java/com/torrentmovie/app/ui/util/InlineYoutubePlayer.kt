@@ -45,7 +45,10 @@ fun InlineYoutubePlayer(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> webView.onPause()
-                Lifecycle.Event.ON_RESUME -> webView.onResume()
+                Lifecycle.Event.ON_RESUME -> {
+                    webView.onResume()
+                    webView.resumeTimers()
+                }
                 else -> Unit
             }
         }
@@ -78,7 +81,6 @@ fun InlineYoutubePlayer(
         },
         onRelease = { webView ->
             webView.stopLoading()
-            webView.onPause()
             webView.destroy()
             if (webViewRef === webView) {
                 webViewRef = null

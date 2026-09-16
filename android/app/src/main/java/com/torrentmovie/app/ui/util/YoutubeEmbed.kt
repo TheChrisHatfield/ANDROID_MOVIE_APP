@@ -1,14 +1,16 @@
 package com.torrentmovie.app.ui.util
 
 import android.annotation.SuppressLint
+import android.view.View
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-/** Origin YouTube expects for embedded playback (app package as https origin). */
-const val YOUTUBE_EMBED_ORIGIN = "https://com.torrentmovie.app"
+/** Origin/referrer YouTube accepts for embedded WebView playback. */
+const val YOUTUBE_EMBED_ORIGIN = "https://www.youtube.com"
 
 private val YOUTUBE_ID_IN_URL = Regex("""(?:[?&]v=|youtu\.be/|/embed/)([\w-]{11})""")
 private val YOUTUBE_VIDEO_ID = Regex("""^[\w-]{11}$""")
@@ -29,7 +31,8 @@ fun youtubeEmbedUrl(videoId: String, autoplay: Boolean = true): String {
     val autoplayFlag = if (autoplay) 1 else 0
     val origin = URLEncoder.encode(YOUTUBE_EMBED_ORIGIN, StandardCharsets.UTF_8)
     return "https://www.youtube.com/embed/$videoId" +
-        "?autoplay=$autoplayFlag&playsinline=1&rel=0&modestbranding=1&origin=$origin"
+        "?autoplay=$autoplayFlag&playsinline=1&rel=0&modestbranding=1" +
+        "&enablejsapi=1&fs=1&origin=$origin"
 }
 
 fun youtubeEmbedHtml(videoId: String, autoplay: Boolean = true): String {
@@ -64,18 +67,23 @@ fun WebView.configureForYoutubeEmbed() {
     settings.mediaPlaybackRequiresUserGesture = false
     settings.loadWithOverviewMode = true
     settings.useWideViewPort = true
+    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+    settings.userAgentString = settings.userAgentString.replace("; wv)", ")")
     webViewClient = WebViewClient()
     webChromeClient = WebChromeClient()
 }
 
-/** Load embed via HTML wrapper + base URL so YouTube receives a valid Referer (Error 153 fix). */
+/** Load embed with Referer + base URL so YouTube accepts WebView playback (Error 153 / black screen). */
 fun WebView.loadYoutubeEmbed(videoId: String, autoplay: Boolean = true) {
     configureForYoutubeEmbed()
+    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    val referer = "$YOUTUBE_EMBED_ORIGIN/"
     loadDataWithBaseURL(
-        YOUTUBE_EMBED_ORIGIN,
+        referer,
         youtubeEmbedHtml(videoId, autoplay),
         "text/html",
         "UTF-8",
         null,
     )
+    onResume()
 }
