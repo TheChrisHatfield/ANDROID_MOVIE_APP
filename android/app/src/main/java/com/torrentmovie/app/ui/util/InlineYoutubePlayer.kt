@@ -17,12 +17,19 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
+private data class PlayerLoadTag(
+    val videoId: String,
+    val autoplay: Boolean,
+    val muted: Boolean,
+)
+
 @Composable
 fun InlineYoutubePlayer(
     youtubeKey: String,
     modifier: Modifier = Modifier,
     autoplay: Boolean = true,
     fixedAspectRatio: Boolean = true,
+    startMuted: Boolean = true,
 ) {
     val videoId = remember(youtubeKey) { normalizeYoutubeVideoId(youtubeKey) }
     if (videoId == null) {
@@ -34,6 +41,7 @@ fun InlineYoutubePlayer(
         )
         return
     }
+    val muted = autoplay && startMuted
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -64,27 +72,28 @@ fun InlineYoutubePlayer(
         modifier
     }
 
+    fun loadPlayer(webView: WebView) {
+        webView.loadYoutubeEmbed(
+            videoId = videoId,
+            autoplay = autoplay,
+            muted = muted,
+        )
+    }
+
     AndroidView(
         modifier = playerModifier,
         factory = { context ->
             WebView(context).apply {
-                tag = videoId
-                loadYoutubeEmbed(
-                    videoId = videoId,
-                    autoplay = autoplay,
-                    muted = false,
-                )
+                tag = PlayerLoadTag(videoId, autoplay, muted)
+                loadPlayer(this)
             }
         },
         update = { webView ->
             webViewRef = webView
-            if (webView.tag != videoId) {
-                webView.tag = videoId
-                webView.loadYoutubeEmbed(
-                    videoId = videoId,
-                    autoplay = autoplay,
-                    muted = false,
-                )
+            val expectedTag = PlayerLoadTag(videoId, autoplay, muted)
+            if (webView.tag != expectedTag) {
+                webView.tag = expectedTag
+                loadPlayer(webView)
             }
         },
         onRelease = { webView ->
