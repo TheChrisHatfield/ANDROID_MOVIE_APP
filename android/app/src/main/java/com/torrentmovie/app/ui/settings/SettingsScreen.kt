@@ -22,16 +22,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.AppSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SettingsScreen(container: AppContainer) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
+    var saving by remember { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
     LaunchedEffect(settingsRevision) {
@@ -129,16 +135,38 @@ fun SettingsScreen(container: AppContainer) {
 
         Button(
             onClick = {
+                if (saving) return@Button
                 val validationError = container.settingsRepository.saveError(settings)
-                val message = when {
-                    validationError != null -> validationError
-                    container.settingsRepository.save(settings) -> "Settings saved"
-                    else -> "Failed to save settings"
+                if (validationError != null) {
+                    Toast.makeText(context, validationError, Toast.LENGTH_SHORT).show()
+                    return@Button
                 }
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                if (!container.settingsRepository.save(settings)) {
+                    Toast.makeText(context, "Failed to save settings", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                saving = true
+                scope.launch {
+                    val message = if (container.settingsRepository.isSeedboxConfigured()) {
+                        val probe = withContext(Dispatchers.IO) {
+                            container.seedboxRepository.probeSeedbox()
+                        }
+                        when {
+                            probe.fullyOnline -> "Settings saved · seedbox ready"
+                            probe.addReachable ->
+                                "Settings saved · send OK, live status unavailable"
+                            else -> "Settings saved · ${probe.message}"
+                        }
+                    } else {
+                        "Settings saved"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    saving = false
+                }
             },
+            enabled = !saving,
             modifier = Modifier.padding(top = 16.dp),
-        ) { Text("Save") }
+        ) { Text(if (saving) "Saving…" else "Save") }
     }
 }
 

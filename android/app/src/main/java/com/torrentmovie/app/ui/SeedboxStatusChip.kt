@@ -23,7 +23,8 @@ fun SeedboxStatusChip(
     container: AppContainer,
     onOpenSettings: (() -> Unit)? = null,
 ) {
-    var online by remember { mutableStateOf(false) }
+    var addReachable by remember { mutableStateOf(false) }
+    var httprpcAvailable by remember { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
     var resumeTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -42,14 +43,17 @@ fun SeedboxStatusChip(
 
     LaunchedEffect(settingsRevision, resumeTick, configured) {
         if (!configured) {
-            online = false
+            addReachable = false
+            httprpcAvailable = false
             return@LaunchedEffect
         }
-        online = withContext(Dispatchers.IO) { container.seedboxRepository.pingSeedbox() }
+        val probe = withContext(Dispatchers.IO) { container.seedboxRepository.probeSeedbox() }
+        addReachable = probe.addReachable
+        httprpcAvailable = probe.httprpcAvailable
     }
     AssistChip(
         onClick = {
-            if (!configured || !online) {
+            if (!configured || !addReachable) {
                 onOpenSettings?.invoke()
             }
         },
@@ -57,7 +61,8 @@ fun SeedboxStatusChip(
             Text(
                 when {
                     !configured -> "Seedbox —"
-                    online -> "Seedbox ●"
+                    addReachable && httprpcAvailable -> "Seedbox ●"
+                    addReachable -> "Seedbox ◐"
                     else -> "Seedbox ○"
                 },
             )

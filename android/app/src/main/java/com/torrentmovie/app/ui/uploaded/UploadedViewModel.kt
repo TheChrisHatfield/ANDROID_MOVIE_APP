@@ -38,6 +38,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     private val _statusError = MutableStateFlow<String?>(null)
     private val _remoteByHash = MutableStateFlow<Map<String, SeedboxTorrentStatus>>(emptyMap())
     private val _pollSucceeded = MutableStateFlow(false)
+    private var refreshGeneration = 0
 
     val uiState: StateFlow<UploadedUiState> = kotlinx.coroutines.flow.combine(
         container.uploadedRepository.observeAll(),
@@ -70,9 +71,19 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 .drop(1)
                 .collect { refreshStatuses() }
         }
+        viewModelScope.launch {
+            container.settingsRepository.revision.drop(1).collect {
+                if (!container.settingsRepository.isSeedboxConfigured()) {
+                    _remoteByHash.value = emptyMap()
+                    _pollSucceeded.value = false
+                }
+                refreshStatuses()
+            }
+        }
     }
 
     fun refreshStatuses() {
+        val generation = ++refreshGeneration
         viewModelScope.launch {
             _refreshing.value = true
             _statusError.value = null
@@ -80,6 +91,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 val entries = withContext(Dispatchers.IO) {
                     container.uploadedRepository.list()
                 }
+                if (generation != refreshGeneration) return@launch
                 if (!container.settingsRepository.isSeedboxConfigured()) {
                     _remoteByHash.value = emptyMap()
                     _pollSucceeded.value = false
@@ -88,6 +100,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 val (statuses, error) = withContext(Dispatchers.IO) {
                     container.seedboxRepository.statusesForUploaded(entries)
                 }
+                if (generation != refreshGeneration) return@launch
                 if (error == null) {
                     _remoteByHash.value = statuses
                     _pollSucceeded.value = true
@@ -95,7 +108,9 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                     _statusError.value = error
                 }
             } finally {
-                _refreshing.value = false
+                if (generation == refreshGeneration) {
+                    _refreshing.value = false
+                }
             }
         }
     }
@@ -116,15 +131,15 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
+            statusError != null -> "Status unavailable"
             remote != null -> buildString {
                 append(remote.statusLabel())
                 remote.rateSummary()?.let { append(" · ").append(it) }
             }
             pollSucceeded -> "Not on seedbox"
-            statusError != null -> "Status unavailable"
             else -> "Status unavailable"
         }
-        val showProgress = remote != null && remote.sizeBytes > 0L &&
+        val showProgress = statusError == null && remote != null && remote.sizeBytes > 0L &&
             remote.leftBytes > 0L && !remote.isHashChecking
         return UploadedRowUi(
             entry = entry,
