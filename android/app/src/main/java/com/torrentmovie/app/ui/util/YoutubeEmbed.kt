@@ -3,6 +3,7 @@ package com.torrentmovie.app.ui.util
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.View
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -27,7 +28,11 @@ fun normalizeYoutubeVideoId(raw: String): String? {
 }
 
 /** HTML page that hosts the YouTube IFrame Player API (proven pattern from android-youtube-player). */
-private fun youtubePlayerHtml(videoId: String, autoplay: Boolean, muted: Boolean): String {
+private fun youtubePlayerHtml(
+    videoId: String,
+    autoplay: Boolean,
+    muted: Boolean,
+): String {
     val autoplayFlag = if (autoplay) 1 else 0
     val muteFlag = if (muted) 1 else 0
     return """
@@ -63,7 +68,12 @@ private fun youtubePlayerHtml(videoId: String, autoplay: Boolean, muted: Boolean
                 },
                 events: {
                   onReady: function(event) { if ($autoplayFlag) event.target.playVideo(); },
-                  onError: function(e) { console.log('YouTube player error', e.data); }
+                  onError: function(e) {
+                    console.log('YouTube player error', e.data);
+                    if (window.AndroidBridge && window.AndroidBridge.onPlayerError) {
+                      window.AndroidBridge.onPlayerError(e.data);
+                    }
+                  }
                 }
               });
             }
@@ -98,8 +108,20 @@ fun WebView.loadYoutubeEmbed(
     videoId: String,
     autoplay: Boolean = true,
     muted: Boolean = false,
+    onPlayerError: (() -> Unit)? = null,
 ) {
     configureForYoutubeEmbed()
+    if (onPlayerError != null) {
+        addJavascriptInterface(
+            object {
+                @JavascriptInterface
+                fun onPlayerError(code: Int) {
+                    onPlayerError()
+                }
+            },
+            "AndroidBridge",
+        )
+    }
     setLayerType(View.LAYER_TYPE_HARDWARE, null)
     loadDataWithBaseURL(
         YOUTUBE_APP_ORIGIN,
