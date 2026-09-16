@@ -1,10 +1,11 @@
 """Host-side E2E smoke: search API liveness + search round-trip."""
 from __future__ import annotations
 
+import json
+import os
 import sys
 import urllib.error
 import urllib.request
-import json
 
 BASE = "http://127.0.0.1:8765"
 
@@ -37,8 +38,11 @@ def main() -> int:
     # Search may take up to ~30s with parallel indexer fan-out
     status, search = get("/v1/search?q=inception&limit=3&pages=1")
     if status == 503:
-        print("WARN: no working indexers (503) — network/indexer issue, API OK")
-        return 0
+        if os.environ.get("SMOKE_ALLOW_DEGRADED") == "1":
+            print("WARN: no working indexers (503) — network/indexer issue, API OK")
+            return 0
+        print("FAIL: search returned 503 (no working indexers)", file=sys.stderr)
+        return 1
     assert status == 200, search
     assert isinstance(search.get("failed_sites"), list), search
     flat = list(search.get("results", []))
@@ -55,8 +59,11 @@ def main() -> int:
     for row in flat:
         assert row.get("site") != "EZTV", "EZTV must not appear in movie profile results"
     if not flat:
-        print("WARN: zero results — indexers may be blocked")
-        return 0
+        if os.environ.get("SMOKE_ALLOW_DEGRADED") == "1":
+            print("WARN: zero results — indexers may be blocked")
+            return 0
+        print("FAIL: search returned zero releases", file=sys.stderr)
+        return 1
 
     result_id = flat[0]["id"]
     status, magnet = get(f"/v1/results/{result_id}/magnet", timeout=30)
