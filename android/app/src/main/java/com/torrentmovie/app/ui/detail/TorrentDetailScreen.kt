@@ -57,11 +57,12 @@ fun TorrentDetailScreen(
         settings.password.isNotBlank()
     val downloadDirConfigured = settings.downloadDirectory.trim().isNotBlank()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
+    val metadataRevision by container.movieMetadataStore.revision.collectAsState()
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
     var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
     var metadata by remember(resultId) { mutableStateOf(container.movieMetadataStore.get(resultId)) }
 
-    LaunchedEffect(resultId, settingsRevision) {
+    LaunchedEffect(resultId, settingsRevision, metadataRevision) {
         metadata = container.movieMetadataStore.get(resultId)
     }
 
@@ -77,7 +78,7 @@ fun TorrentDetailScreen(
         val magnet = magnetValue?.takeIf { it.isNotBlank() }
         if (magnet != null) {
             val key = MagnetHashUtil.storageKey(magnet, name, site)
-            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+            return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
         }
         return uploaded.any { it.displayName == name && it.site == site }
     }
