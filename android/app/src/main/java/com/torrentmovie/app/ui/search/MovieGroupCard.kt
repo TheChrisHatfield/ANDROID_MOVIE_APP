@@ -99,6 +99,14 @@ fun MovieGroupCard(
                     modifier = Modifier.padding(top = 2.dp),
                     color = MaterialTheme.colorScheme.primary,
                 )
+                if (singleRelease) {
+                    val release = group.releases.first()
+                    Text(
+                        text = "${release.site} · ${release.size ?: "?"} · seeds ${release.seeds ?: "?"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 group.overview?.let { overview ->
                     Text(
                         text = overview,
@@ -127,7 +135,7 @@ fun MovieGroupCard(
                 }
             }
         }
-        if (expanded || singleRelease) {
+        if (expanded && !singleRelease) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
                 group.releases.forEach { release ->
                     CompactReleaseRow(
