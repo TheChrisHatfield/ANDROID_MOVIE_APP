@@ -61,11 +61,14 @@ fun SearchScreen(
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
     var playingTrailerGroupKey by remember { mutableStateOf<String?>(null) }
     var lastAutoExpandKey by remember { mutableStateOf<String?>(null) }
+    var highlightedReleaseId by remember { mutableStateOf<String?>(null) }
+    val activeReleaseId = selectedResultId ?: highlightedReleaseId
 
-    LaunchedEffect(state.loading) {
+    LaunchedEffect(state.loading, state.query) {
         if (state.loading) {
             expandedGroupKey = null
             playingTrailerGroupKey = null
+            highlightedReleaseId = null
         }
     }
     LaunchedEffect(state.groups, state.loading, state.hasSearched, state.query, selectedResultId) {
@@ -141,6 +144,7 @@ fun SearchScreen(
 
     fun openDetail(result: TorrentResultDto) {
         playingTrailerGroupKey = null
+        highlightedReleaseId = result.id
         onOpenDetail(result)
     }
 
@@ -263,7 +267,7 @@ fun SearchScreen(
                             MovieGroupCard(
                                 group = group,
                                 expanded = expandedGroupKey == group.groupKey,
-                                selectedResultId = selectedResultId,
+                                selectedResultId = activeReleaseId,
                                 trailerPlaying = playingTrailerGroupKey == group.groupKey,
                                 isAlreadyUploaded = ::isAlreadyUploaded,
                                 onToggleExpand = {
@@ -287,7 +291,7 @@ fun SearchScreen(
                             TorrentResultCard(
                                 result = result,
                                 alreadyUploaded = isAlreadyUploaded(result),
-                                selected = result.id == selectedResultId,
+                                selected = result.id == activeReleaseId,
                                 onClick = { openDetail(result) },
                             )
                         }

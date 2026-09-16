@@ -1,5 +1,6 @@
 package com.torrentmovie.app.ui.search
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -139,15 +140,20 @@ fun MovieGroupCard(
                         }
                     }
                     playableTrailerId?.let {
-                        IconButton(onClick = onToggleTrailer) {
+                        TextButton(onClick = onToggleTrailer) {
                             Icon(
                                 Icons.Default.PlayArrow,
-                                contentDescription = if (trailerPlaying) {
-                                    "Hide trailer"
-                                } else {
-                                    "Play trailer"
-                                },
+                                contentDescription = null,
                                 tint = if (trailerPlaying) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                            Text(
+                                text = if (trailerPlaying) "Hide trailer" else "Play trailer",
+                                modifier = Modifier.padding(start = 4.dp),
+                                color = if (trailerPlaying) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurface
@@ -172,6 +178,12 @@ fun MovieGroupCard(
         }
         if (expanded && !singleRelease) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+                Text(
+                    text = "Tap a release to select",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
                 group.releases.forEach { release ->
                     CompactReleaseRow(
                         release = release,
@@ -192,15 +204,33 @@ private fun CompactReleaseRow(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(8.dp)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
+            .then(
+                if (selected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = shape,
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .clickable(onClick = onClick),
+        shape = shape,
         colors = if (selected) {
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         } else {
             CardDefaults.cardColors()
+        },
+        elevation = if (selected) {
+            CardDefaults.cardElevation(defaultElevation = 4.dp)
+        } else {
+            CardDefaults.cardElevation(defaultElevation = 0.dp)
         },
     ) {
         Row(
@@ -209,13 +239,36 @@ private fun CompactReleaseRow(
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "${release.site} · ${release.size ?: "?"} · seeds ${release.seeds ?: "?"}",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = release.site,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                )
+                Text(
+                    text = "${release.size ?: "?"} · seeds ${release.seeds ?: "?"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+            }
+            if (selected) {
+                Text(
+                    text = "Selected",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
             if (alreadyUploaded) {
                 Text(
                     text = "Sent",
