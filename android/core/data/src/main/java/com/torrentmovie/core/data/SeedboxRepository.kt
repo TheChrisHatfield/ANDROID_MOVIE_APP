@@ -147,13 +147,15 @@ class SeedboxRepository(
         entries: List<UploadedMagnet>,
     ): Pair<Map<String, SeedboxTorrentStatus>, String?> {
         if (entries.isEmpty()) return emptyMap<String, SeedboxTorrentStatus>() to null
-        val trackable = entries.filter { SeedboxTorrentStatus.isTrackableInfoHash(it.infoHash) }
-        if (trackable.isEmpty()) {
+        val lookupHashes = entries.mapNotNull { entry ->
+            MagnetHashUtil.extractInfoHash(entry.magnetUri)?.uppercase(java.util.Locale.US)
+        }
+        if (lookupHashes.isEmpty()) {
             return emptyMap<String, SeedboxTorrentStatus>() to null
         }
         return when (val result = fetchTorrentStatuses()) {
             is SeedboxListResult.Success -> {
-                val wanted = trackable.map { it.infoHash.uppercase() }.toSet()
+                val wanted = lookupHashes.toSet()
                 val matched = result.statuses.filterKeys { it in wanted }
                 matched to null
             }
