@@ -49,6 +49,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             settings.searchPages.toString(),
             settings.movieSitesOnly.toString(),
             settings.fetchMovieMetadata.toString(),
+            _state.value.minSeeds?.toString().orEmpty(),
+            _state.value.maxSeeds?.toString().orEmpty(),
+            _state.value.maxSize.orEmpty(),
         ).joinToString("|")
     }
 
