@@ -26,6 +26,21 @@ def test_group_uses_yts_poster_without_tmdb():
     assert groups[0]["trailer_youtube_key"] == "abc123"
 
 
+def test_indexer_metadata_applied_when_enrich_disabled():
+    rows = [
+        {
+            "id": "1",
+            "name": "Dune 2021 1080p",
+            "site": "YTS",
+            "poster_url": "https://yts.rs/images/dune.jpg",
+            "trailer_youtube_key": "dune-trailer",
+        },
+    ]
+    groups, ungrouped = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
+    assert groups[0]["poster_url"] == "https://yts.rs/images/dune.jpg"
+    assert groups[0]["trailer_youtube_key"] == "dune-trailer"
+
+
 def test_yts_year_from_date_groups_single_card():
     rows = [
         {"id": "1", "name": "Superman [1080p]", "site": "YTS", "date": "2025"},

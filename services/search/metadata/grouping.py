@@ -124,9 +124,8 @@ def build_movie_groups(
     for key in overflow_keys:
         process_key(key)
 
-    if enrich_metadata:
-        for bucket, releases in staged:
-            _apply_indexer_metadata(bucket, releases)
+    for bucket, releases in staged:
+        _apply_indexer_metadata(bucket, releases)
 
     if enrich_metadata and tmdb and tmdb.configured:
         enrich_buckets = [bucket for bucket, _ in staged]
