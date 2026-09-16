@@ -23,6 +23,8 @@ import com.torrentmovie.app.ui.theme.TorrentMovieTheme
 import com.torrentmovie.app.ui.util.youtubeEmbedUrl
 
 class TrailerActivity : ComponentActivity() {
+    private var webView: WebView? = null
+
     @OptIn(ExperimentalMaterial3Api::class)
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,11 +57,16 @@ class TrailerActivity : ComponentActivity() {
                             .padding(padding),
                         factory = { context ->
                             WebView(context).apply {
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                webViewClient = WebViewClient()
-                                webChromeClient = WebChromeClient()
-                                loadUrl(youtubeEmbedUrl(videoId))
+                                configureForYoutubeEmbed()
+                                if (savedInstanceState == null) {
+                                    loadUrl(youtubeEmbedUrl(videoId))
+                                }
+                                webView = this
+                            }
+                        },
+                        update = { view ->
+                            if (view.url.isNullOrBlank()) {
+                                view.loadUrl(youtubeEmbedUrl(videoId))
                             }
                         },
                     )
@@ -68,7 +75,24 @@ class TrailerActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        webView?.destroy()
+        webView = null
+        super.onDestroy()
+    }
+
     companion object {
         const val EXTRA_VIDEO_ID = "video_id"
     }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+private fun WebView.configureForYoutubeEmbed() {
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = true
+    settings.mediaPlaybackRequiresUserGesture = false
+    settings.loadWithOverviewMode = true
+    settings.useWideViewPort = true
+    webViewClient = WebViewClient()
+    webChromeClient = WebChromeClient()
 }
