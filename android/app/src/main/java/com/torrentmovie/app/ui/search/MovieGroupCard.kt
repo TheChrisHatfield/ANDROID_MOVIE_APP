@@ -106,6 +106,14 @@ fun MovieGroupCard(
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )
+                    if (isAlreadyUploaded(release)) {
+                        Text(
+                            text = "Sent",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
                 }
                 group.overview?.let { overview ->
                     Text(
