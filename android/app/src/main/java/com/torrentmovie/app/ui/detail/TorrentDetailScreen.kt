@@ -75,12 +75,9 @@ fun TorrentDetailScreen(
     }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
-        val magnet = magnetValue?.takeIf { it.isNotBlank() }
-        if (magnet != null) {
-            val key = MagnetHashUtil.storageKey(magnet, name, site)
-            return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
-        }
-        return uploaded.any { it.displayName == name && it.site == site }
+        val magnet = magnetValue?.takeIf { it.isNotBlank() } ?: return false
+        val key = MagnetHashUtil.storageKey(magnet, name, site)
+        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
     }
 
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
