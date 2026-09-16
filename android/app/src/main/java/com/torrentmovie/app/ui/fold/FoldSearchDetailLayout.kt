@@ -147,6 +147,16 @@ fun FoldSearchDetailLayout(
         }
     }
 
+    LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading) {
+        if (state.loading || !state.hasSearched) return@LaunchedEffect
+        if (state.error != null && state.groups.isEmpty() && state.results.isEmpty()) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
+    }
+
     LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
         if (state.loading || !state.hasSearched) return@LaunchedEffect
         val id = selectedId ?: return@LaunchedEffect
