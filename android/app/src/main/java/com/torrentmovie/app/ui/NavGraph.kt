@@ -168,16 +168,23 @@ fun AppNavGraph(
                 resultId,
             ) {
                 if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
-                val matched = rematchRelease(resultId, navName, navSite) ?: return@LaunchedEffect
-                if (matched.id == resultId) return@LaunchedEffect
-                container.searchResultStore.put(matched)
-                container.movieMetadataStore.get(resultId)?.let { meta ->
-                    container.movieMetadataStore.put(matched.id, meta)
+                val releases = allReleases()
+                if (resultId in releases.map { it.id }) return@LaunchedEffect
+                val matched = rematchRelease(resultId, navName, navSite)
+                if (matched != null) {
+                    container.searchResultStore.put(matched)
+                    if (matched.id != resultId) {
+                        container.movieMetadataStore.get(resultId)?.let { meta ->
+                            container.movieMetadataStore.put(matched.id, meta)
+                        }
+                        navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
+                            launchSingleTop = true
+                            popUpTo(Routes.SEARCH) { inclusive = false }
+                        }
+                    }
+                    return@LaunchedEffect
                 }
-                navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
-                    launchSingleTop = true
-                    popUpTo(Routes.SEARCH) { inclusive = false }
-                }
+                navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
 
             val cached = container.searchResultStore.get(resultId)
