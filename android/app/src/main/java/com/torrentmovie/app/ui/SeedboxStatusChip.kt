@@ -19,7 +19,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SeedboxStatusChip(container: AppContainer) {
+fun SeedboxStatusChip(
+    container: AppContainer,
+    onOpenSettings: (() -> Unit)? = null,
+) {
     var online by remember { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
     var resumeTick by remember { mutableIntStateOf(0) }
@@ -45,7 +48,11 @@ fun SeedboxStatusChip(container: AppContainer) {
         online = withContext(Dispatchers.IO) { container.seedboxRepository.pingSeedbox() }
     }
     AssistChip(
-        onClick = {},
+        onClick = {
+            if (!configured || !online) {
+                onOpenSettings?.invoke()
+            }
+        },
         label = {
             Text(
                 when {

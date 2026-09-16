@@ -134,7 +134,16 @@ fun MainScaffold(container: AppContainer) {
                             }
                         }
                     },
-                    actions = { SeedboxStatusChip(container) },
+                    actions = {
+                        SeedboxStatusChip(
+                            container = container,
+                            onOpenSettings = {
+                                navController.navigate(Routes.SETTINGS) {
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    },
                 )
             },
         ) { padding ->
