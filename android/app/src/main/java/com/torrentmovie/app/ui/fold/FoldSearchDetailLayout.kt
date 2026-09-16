@@ -38,9 +38,16 @@ fun FoldSearchDetailLayout(
     val state by searchViewModel.state.collectAsState()
 
     fun findRelease(id: String): TorrentResultDto? {
-        return state.results.find { it.id == id }
+        val fromList = state.results.find { it.id == id }
             ?: state.groups.asSequence().flatMap { it.releases }.find { it.id == id }
-            ?: container.searchResultStore.get(id)
+        val fromStore = container.searchResultStore.get(id)
+        return when {
+            fromList == null -> fromStore
+            fromStore == null -> fromList
+            else -> fromList.copy(
+                magnet = fromList.magnet?.takeIf { it.isNotBlank() } ?: fromStore.magnet,
+            )
+        }
     }
 
     fun syncFoldSelection(id: String?, name: String, site: String) {
@@ -91,6 +98,20 @@ fun FoldSearchDetailLayout(
         } else {
             syncFoldSelection(null, "", "")
         }
+    }
+
+    var lastSearchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(state.query, state.hasSearched, state.loading) {
+        if (state.loading || !state.hasSearched) return@LaunchedEffect
+        val query = state.query.trim()
+        if (lastSearchQuery != null && lastSearchQuery != query) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
+        lastSearchQuery = query
     }
 
     LaunchedEffect(state.groups, state.results.map { it.id }, state.hasSearched, state.loading) {
