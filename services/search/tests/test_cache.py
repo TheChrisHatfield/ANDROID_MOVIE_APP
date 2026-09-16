@@ -84,3 +84,15 @@ def test_put_many_returns_defensive_copies():
     stored = cache.put_many([{"name": "Inception", "site": "YTS"}])
     stored[0]["name"] = "mutated"
     assert cache.get(UUID(stored[0]["id"]))["name"] == "Inception"
+
+
+def test_put_many_reuses_stable_id_for_same_release():
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    row = {"name": "Inception", "site": "YTS", "detail_url": "https://yts.mx/movies/inception-2010"}
+    first = cache.put_many([row])[0]
+    second = cache.put_many([dict(row)])[0]
+    assert first["id"] == second["id"]
+    cache.resolve_magnet(UUID(first["id"]), "magnet:?xt=urn:btih:abc")
+    third = cache.put_many([dict(row)])[0]
+    assert third["id"] == first["id"]
+    assert cache.get(UUID(first["id"]))["magnet"] == "magnet:?xt=urn:btih:abc"

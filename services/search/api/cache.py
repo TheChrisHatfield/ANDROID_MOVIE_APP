@@ -5,7 +5,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 DEFAULT_MAX_ENTRIES = 500
 DEFAULT_TTL_SECONDS = 3600
@@ -15,6 +15,24 @@ DEFAULT_TTL_SECONDS = 3600
 class CacheEntry:
     payload: dict[str, Any]
     created_at: float = field(default_factory=time.time)
+
+
+def _stable_row_key(row: dict[str, Any]) -> str | None:
+    site = str(row.get("site") or "").strip().lower()
+    detail = str(row.get("detail_url") or "").strip()
+    name = str(row.get("name") or "").strip().lower()
+    if detail and site:
+        return f"{site}|{detail}"
+    if name and site:
+        return f"{site}|{name}"
+    return None
+
+
+def _result_id_for_row(row: dict[str, Any]) -> UUID:
+    stable_key = _stable_row_key(row)
+    if stable_key:
+        return uuid5(NAMESPACE_URL, stable_key)
+    return uuid4()
 
 
 class ResultCache:
@@ -49,11 +67,19 @@ class ResultCache:
             self._evict_expired()
             stored: list[dict[str, Any]] = []
             for row in rows:
-                self._make_room()
-                result_id = uuid4()
+                result_id = _result_id_for_row(row)
                 payload = dict(row)
                 payload["id"] = str(result_id)
-                self._store[result_id] = CacheEntry(payload=payload)
+                existing = self._store.get(result_id)
+                if existing is not None:
+                    old_magnet = existing.payload.get("magnet")
+                    if not payload.get("magnet") and old_magnet:
+                        payload["magnet"] = old_magnet
+                    existing.payload = payload
+                    existing.created_at = time.time()
+                else:
+                    self._make_room()
+                    self._store[result_id] = CacheEntry(payload=payload)
                 stored.append(dict(payload))
             return [row for row in stored if UUID(row["id"]) in self._store]
 
