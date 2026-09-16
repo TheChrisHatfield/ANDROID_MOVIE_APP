@@ -35,10 +35,11 @@ import com.torrentmovie.core.data.MovieMetadata
 fun MovieDetailHeader(
     metadata: MovieMetadata,
     releaseLabel: String? = null,
+    resultId: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var trailerVisible by remember(metadata.trailerYoutubeKey) { mutableStateOf(false) }
+    var trailerVisible by remember(resultId, metadata.trailerYoutubeKey) { mutableStateOf(false) }
     Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Top) {
             if (!metadata.posterUrl.isNullOrBlank()) {
