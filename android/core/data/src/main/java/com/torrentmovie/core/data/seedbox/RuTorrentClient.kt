@@ -20,6 +20,11 @@ class RuTorrentClient(
 
     private val useDigest = authScheme.equals("digest", ignoreCase = true)
 
+    private val addTorrentClient: OkHttpClient = client.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
     private fun normalizedBase(): String = normalizeSeedboxUrl(baseUrl)
 
     override suspend fun ping(): Boolean {
@@ -57,9 +62,11 @@ class RuTorrentClient(
                 .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                 .post(body)
                 .build()
-            return executeWithAuth(request).use { response ->
+            return executeWithAuth(request, addTorrentClient).use { response ->
                 val text = response.body?.string() ?: ""
                 when {
+                    response.code in 300..399 &&
+                        isAddTorrentSuccess(response, text) -> SeedboxResult.Success()
                     !response.isSuccessful -> {
                         val msg = when (response.code) {
                             401 -> "Authentication failed — check username, password, and auth scheme"
@@ -73,9 +80,8 @@ class RuTorrentClient(
                     text.contains("Failed", ignoreCase = true) &&
                         !text.contains("Success", ignoreCase = true) ->
                         SeedboxResult.Failure("ruTorrent rejected magnet")
-                    !text.contains("Success", ignoreCase = true) ->
-                        SeedboxResult.Failure("Unexpected ruTorrent response")
-                    else -> SeedboxResult.Success()
+                    isAddTorrentSuccess(response, text) -> SeedboxResult.Success()
+                    else -> SeedboxResult.Failure("Unexpected ruTorrent response")
                 }
             }
         } catch (e: Exception) {
@@ -85,8 +91,21 @@ class RuTorrentClient(
 
     private fun basicAuthHeader(): String = Credentials.basic(username, password)
 
-    private fun executeWithAuth(request: Request): okhttp3.Response {
-        val first = client.newCall(request).execute()
+    private fun isAddTorrentSuccess(response: okhttp3.Response, text: String): Boolean {
+        if (text.contains("Success", ignoreCase = true)) return true
+        val location = response.header("Location").orEmpty()
+        if (location.contains("status=Success", ignoreCase = true)) return true
+        if (Regex(""""status"\s*:\s*"Success"""", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+            return true
+        }
+        return false
+    }
+
+    private fun executeWithAuth(
+        request: Request,
+        httpClient: OkHttpClient = client,
+    ): okhttp3.Response {
+        val first = httpClient.newCall(request).execute()
         if (!useDigest || first.code != 401) {
             return first
         }
@@ -105,6 +124,6 @@ class RuTorrentClient(
         val authed = request.newBuilder()
             .header("Authorization", digest)
             .build()
-        return client.newCall(authed).execute()
+        return httpClient.newCall(authed).execute()
     }
 }
