@@ -48,7 +48,7 @@ class TrailerActivity : ComponentActivity() {
                     InlineYoutubePlayer(
                         youtubeKey = videoId,
                         fixedAspectRatio = false,
-                        startMuted = false,
+                        startMuted = true,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding),
