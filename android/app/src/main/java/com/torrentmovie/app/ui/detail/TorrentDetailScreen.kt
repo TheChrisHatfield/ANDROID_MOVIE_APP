@@ -51,9 +51,11 @@ fun TorrentDetailScreen(
     var magnetLoading by remember(resultId) { mutableStateOf(false) }
     var resultExpired by remember(resultId) { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
-    val seedboxConfigured = remember(settingsRevision) {
-        container.settingsRepository.isSeedboxConfigured()
-    }
+    val settings = remember(settingsRevision) { container.settingsRepository.load() }
+    val seedboxConfigured = settings.rutorrentBaseUrl.isNotBlank() &&
+        settings.username.isNotBlank() &&
+        settings.password.isNotBlank()
+    val downloadDirConfigured = settings.downloadDirectory.trim().isNotBlank()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
     val metadata = container.movieMetadataStore.get(resultId)
@@ -162,6 +164,12 @@ fun TorrentDetailScreen(
                 modifier = Modifier.padding(top = 8.dp),
                 color = MaterialTheme.colorScheme.error,
             )
+        } else if (!downloadDirConfigured) {
+            Text(
+                "Set download folder in Settings before sending.",
+                modifier = Modifier.padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.error,
+            )
         }
         Button(
             onClick = {
@@ -195,8 +203,8 @@ fun TorrentDetailScreen(
                     }
                 }
             },
-            enabled = seedboxConfigured && !loading && !magnet.isNullOrBlank() &&
-                !duplicate && !magnetLoading && magnetError == null,
+            enabled = seedboxConfigured && downloadDirConfigured && !loading &&
+                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && magnetError == null,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
