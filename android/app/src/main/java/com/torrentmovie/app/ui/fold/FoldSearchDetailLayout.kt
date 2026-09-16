@@ -36,6 +36,7 @@ fun FoldSearchDetailLayout(
     var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
+    val settingsRevision by container.settingsRepository.revision.collectAsState()
 
     fun findRelease(id: String): TorrentResultDto? {
         val fromList = state.results.find { it.id == id }
@@ -110,6 +111,17 @@ fun FoldSearchDetailLayout(
     }
 
     var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastSettingsRevision by rememberSaveable { mutableStateOf(settingsRevision) }
+
+    LaunchedEffect(settingsRevision) {
+        if (settingsRevision != lastSettingsRevision && state.hasSearched) {
+            lastSettingsRevision = settingsRevision
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
+    }
 
     LaunchedEffect(state.query, state.lastExecutedQuery, state.hasSearched) {
         if (!state.hasSearched) return@LaunchedEffect
