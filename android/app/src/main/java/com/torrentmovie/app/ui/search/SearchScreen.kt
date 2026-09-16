@@ -60,7 +60,6 @@ fun SearchScreen(
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
     var playingTrailerGroupKey by remember { mutableStateOf<String?>(null) }
-    var lastAutoExpandKey by remember { mutableStateOf<String?>(null) }
     var highlightedReleaseId by remember { mutableStateOf<String?>(null) }
     val activeReleaseId = selectedResultId ?: highlightedReleaseId
 
@@ -70,18 +69,6 @@ fun SearchScreen(
             playingTrailerGroupKey = null
             highlightedReleaseId = null
         }
-    }
-    LaunchedEffect(state.groups, state.loading, state.hasSearched, state.query, selectedResultId) {
-        if (state.loading || !state.hasSearched || selectedResultId != null) return@LaunchedEffect
-        val expandKey = buildString {
-            append(state.query.trim())
-            append('|')
-            state.groups.forEach { append(it.groupKey).append(',') }
-        }
-        if (lastAutoExpandKey == expandKey) return@LaunchedEffect
-        lastAutoExpandKey = expandKey
-        val multi = state.groups.firstOrNull { it.releaseCount > 1 }
-        expandedGroupKey = multi?.groupKey ?: state.groups.firstOrNull()?.groupKey
     }
     LaunchedEffect(selectedResultId, state.groups) {
         val id = selectedResultId
@@ -102,10 +89,7 @@ fun SearchScreen(
 
     val pullState = rememberPullRefreshState(
         refreshing = state.loading,
-        onRefresh = {
-            lastAutoExpandKey = null
-            vm.search()
-        },
+        onRefresh = { vm.search() },
     )
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
