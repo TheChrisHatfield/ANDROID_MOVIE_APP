@@ -131,14 +131,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             val minSeeds = _state.value.minSeeds
             val maxSeeds = _state.value.maxSeeds
             val maxSize = _state.value.maxSize
-            val settingsRevision = container.settingsRepository.revision.value
+            val settingsKeyAtStart = searchSettingsKey()
             fun requestStillCurrent(): Boolean {
                 return generation == searchGeneration &&
                     _state.value.query.trim() == q &&
                     _state.value.minSeeds == minSeeds &&
                     _state.value.maxSeeds == maxSeeds &&
                     _state.value.maxSize == maxSize &&
-                    container.settingsRepository.revision.value == settingsRevision
+                    searchSettingsKey() == settingsKeyAtStart
             }
             try {
                 val sameSearch = lastSearchedQuery == q &&
