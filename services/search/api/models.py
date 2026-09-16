@@ -45,6 +45,7 @@ class SearchResponse(BaseModel):
     results: list[TorrentResult]
     failed_sites: list[str] = Field(default_factory=list)
     groups: list[MovieGroup] = Field(default_factory=list)
+    tmdb_key_rejected: bool = False
 
 
 class MagnetResponse(BaseModel):

@@ -77,7 +77,7 @@ def build_movie_groups(
     rows: list[dict],
     tmdb: TmdbClient | None = None,
     enrich_metadata: bool = True,
-    max_groups: int = 30,
+    max_groups: int = 50,
 ) -> tuple[list[dict], list[dict]]:
     """
     Return (groups, ungrouped_rows).

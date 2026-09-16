@@ -43,19 +43,19 @@ _sites_health_cache: dict[str, object] = {"checked_at": 0.0, "working": []}
 _SITES_HEALTH_TTL = 300
 
 
-def _tmdb_for_request(api_key: str | None) -> TmdbClient:
+def _tmdb_for_request(api_key: str | None) -> tuple[TmdbClient, bool]:
     user_key = (api_key or "").strip()
     if not user_key:
-        return _tmdb
+        return _tmdb, False
     if _tmdb.configured and user_key == _tmdb.api_key:
-        return _tmdb
+        return _tmdb, False
     client = _tmdb_clients.get(user_key)
     if client is None:
         client = TmdbClient(api_key=user_key)
         _tmdb_clients[user_key] = client
-    if _tmdb.configured and not client.validate_key():
-        return _tmdb
-    return client
+    if not client.validate_key():
+        return _tmdb, True
+    return client, False
 
 
 def _quality_from_result_name(name: str | None) -> str | None:
@@ -168,14 +168,19 @@ def search(
     display_results = flat_results
 
     if group and stored:
+        tmdb_client, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
         group_rows, ungrouped_rows = build_movie_groups(
             stored,
-            tmdb=_tmdb_for_request(tmdb_api_key),
+            tmdb=tmdb_client,
             enrich_metadata=enrich,
         )
         groups = [MovieGroup(**g) for g in group_rows]
         if groups:
             display_results = [TorrentResult(**row) for row in ungrouped_rows]
+    else:
+        tmdb_key_rejected = False
+        if (tmdb_api_key or "").strip():
+            _, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
 
     visible_count = sum(len(g.releases) for g in groups) + len(display_results)
     return SearchResponse(
@@ -185,6 +190,7 @@ def search(
         results=display_results,
         failed_sites=outcome.failed_sites,
         groups=groups,
+        tmdb_key_rejected=tmdb_key_rejected,
     )
 
 
