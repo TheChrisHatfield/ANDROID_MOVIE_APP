@@ -27,8 +27,9 @@ fun normalizeYoutubeVideoId(raw: String): String? {
 }
 
 /** HTML page that hosts the YouTube IFrame Player API (proven pattern from android-youtube-player). */
-private fun youtubePlayerHtml(videoId: String, autoplay: Boolean): String {
+private fun youtubePlayerHtml(videoId: String, autoplay: Boolean, muted: Boolean): String {
     val autoplayFlag = if (autoplay) 1 else 0
+    val muteFlag = if (muted) 1 else 0
     return """
         <!DOCTYPE html>
         <html>
@@ -51,7 +52,7 @@ private fun youtubePlayerHtml(videoId: String, autoplay: Boolean): String {
                 videoId: '$videoId',
                 playerVars: {
                   autoplay: $autoplayFlag,
-                  mute: 0,
+                  mute: $muteFlag,
                   controls: 1,
                   enablejsapi: 1,
                   fs: 1,
@@ -102,7 +103,7 @@ fun WebView.loadYoutubeEmbed(
     setLayerType(View.LAYER_TYPE_HARDWARE, null)
     loadDataWithBaseURL(
         YOUTUBE_APP_ORIGIN,
-        youtubePlayerHtml(videoId, autoplay),
+        youtubePlayerHtml(videoId, autoplay, muted),
         "text/html",
         "UTF-8",
         null,
