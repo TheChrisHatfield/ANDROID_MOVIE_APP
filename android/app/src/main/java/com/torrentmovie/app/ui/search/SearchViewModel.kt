@@ -181,6 +181,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (maxSeeds != null) {
                     infoMessages += "Max seeds filter may hide indexers without seed counts."
                 }
+                if (outcome.tmdbEnrichmentCapped) {
+                    infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
+                }
                 if (outcome.tmdbKeyRejected) {
                     infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
                 }
@@ -247,7 +250,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 throw e
             } catch (e: SearchException) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = shouldPreserveResultsOnError(q, minSeeds, maxSeeds, maxSize)
+                val preserveResults = shouldPreserveResultsOnError(
+                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
+                )
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -262,7 +267,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = shouldPreserveResultsOnError(q, minSeeds, maxSeeds, maxSize)
+                val preserveResults = shouldPreserveResultsOnError(
+                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
+                )
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -288,12 +295,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
+        settingsKeyAtStart: String,
     ): Boolean {
         return _state.value.hasSearched &&
             lastSearchedQuery == q &&
             lastSearchMinSeeds == minSeeds &&
             lastSearchMaxSeeds == maxSeeds &&
             lastSearchMaxSize == maxSize &&
+            lastSearchSettingsKey == settingsKeyAtStart &&
+            searchSettingsKey() == settingsKeyAtStart &&
             (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
     }
 

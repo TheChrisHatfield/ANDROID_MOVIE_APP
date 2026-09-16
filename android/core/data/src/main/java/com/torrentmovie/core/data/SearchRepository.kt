@@ -70,6 +70,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 failedSites = response.failedSites,
                 groups = response.groups,
                 tmdbKeyRejected = response.tmdbKeyRejected,
+                tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
             )
         } catch (e: HttpException) {
             throw mapHttpError(e)

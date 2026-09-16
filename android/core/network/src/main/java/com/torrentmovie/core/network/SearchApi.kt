@@ -66,9 +66,11 @@ data class SearchResponseDto(
     val failed_sites: List<String> = emptyList(),
     val groups: List<MovieGroupDto> = emptyList(),
     val tmdb_key_rejected: Boolean = false,
+    val tmdb_enrichment_capped: Boolean = false,
 ) {
     val failedSites: List<String> get() = failed_sites
     val tmdbKeyRejected: Boolean get() = tmdb_key_rejected
+    val tmdbEnrichmentCapped: Boolean get() = tmdb_enrichment_capped
 }
 
 data class MagnetResponseDto(

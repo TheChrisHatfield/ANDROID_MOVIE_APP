@@ -116,7 +116,7 @@ def test_search_passes_tmdb_api_key_override(mock_search, _mock_test, mock_group
         failed_sites=[],
     )
     _searcher.working_sites = [MagicMock(name="YTS")]
-    mock_group.return_value = ([], [])
+    mock_group.return_value = ([], [], False)
 
     with patch.object(
         __import__("metadata.tmdb_client", fromlist=["TmdbClient"]).TmdbClient,

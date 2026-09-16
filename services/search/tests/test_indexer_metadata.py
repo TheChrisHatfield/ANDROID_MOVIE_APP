@@ -19,7 +19,7 @@ def test_group_uses_yts_poster_without_tmdb():
             "poster_url": "https://yts.rs/images/superman.jpg",
         },
     ]
-    groups, ungrouped = build_movie_groups(rows, tmdb=None, enrich_metadata=True)
+    groups, ungrouped, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=True)
     assert len(groups) == 1
     assert groups[0]["poster_url"] == "https://yts.rs/images/superman.jpg"
     assert groups[0]["overview"] == "Man of steel returns."
@@ -36,7 +36,7 @@ def test_indexer_metadata_applied_when_enrich_disabled():
             "trailer_youtube_key": "dune-trailer",
         },
     ]
-    groups, ungrouped = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
+    groups, ungrouped, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
     assert groups[0]["poster_url"] == "https://yts.rs/images/dune.jpg"
     assert groups[0]["trailer_youtube_key"] == "dune-trailer"
 
@@ -46,7 +46,7 @@ def test_yts_year_from_date_groups_single_card():
         {"id": "1", "name": "Superman [1080p]", "site": "YTS", "date": "2025"},
         {"id": "2", "name": "Superman [720p]", "site": "YTS", "date": "2025"},
     ]
-    groups, ungrouped = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
+    groups, ungrouped, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
     assert len(groups) == 1
     assert groups[0]["year"] == 2025
     assert groups[0]["release_count"] == 2

@@ -46,6 +46,7 @@ class SearchResponse(BaseModel):
     failed_sites: list[str] = Field(default_factory=list)
     groups: list[MovieGroup] = Field(default_factory=list)
     tmdb_key_rejected: bool = False
+    tmdb_enrichment_capped: bool = False
 
 
 class MagnetResponse(BaseModel):

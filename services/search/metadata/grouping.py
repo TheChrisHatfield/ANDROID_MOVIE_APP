@@ -78,9 +78,9 @@ def build_movie_groups(
     tmdb: TmdbClient | None = None,
     enrich_metadata: bool = True,
     max_groups: int = 50,
-) -> tuple[list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], bool]:
     """
-    Return (groups, ungrouped_rows).
+    Return (groups, ungrouped_rows, tmdb_enrichment_capped).
     Each group dict: group_key, title, year, overview, poster_url, trailer_youtube_key,
     release_count, releases (list of row dicts with id preserved).
     """
@@ -134,4 +134,6 @@ def build_movie_groups(
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)
 
-    return groups, ungrouped
+    return groups, ungrouped, bool(
+        overflow_keys and enrich_metadata and tmdb and tmdb.configured
+    )

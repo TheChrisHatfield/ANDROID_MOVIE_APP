@@ -169,10 +169,11 @@ def search(
 
     if group and stored:
         tmdb_client, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
-        group_rows, ungrouped_rows = build_movie_groups(
+        group_rows, ungrouped_rows, enrichment_capped = build_movie_groups(
             stored,
             tmdb=tmdb_client,
             enrich_metadata=enrich,
+            max_groups=min(limit, 50),
         )
         groups = [MovieGroup(**g) for g in group_rows]
         if groups:
@@ -191,6 +192,7 @@ def search(
         failed_sites=outcome.failed_sites,
         groups=groups,
         tmdb_key_rejected=tmdb_key_rejected,
+        tmdb_enrichment_capped=enrichment_capped if group and stored else False,
     )
 
 

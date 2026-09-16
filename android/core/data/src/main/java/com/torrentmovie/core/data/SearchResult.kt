@@ -8,4 +8,5 @@ data class SearchResult(
     val failedSites: List<String> = emptyList(),
     val groups: List<MovieGroupDto> = emptyList(),
     val tmdbKeyRejected: Boolean = false,
+    val tmdbEnrichmentCapped: Boolean = false,
 )
