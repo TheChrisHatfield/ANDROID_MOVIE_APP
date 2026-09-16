@@ -36,6 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.core.data.AppContainer
@@ -57,6 +60,7 @@ fun SearchScreen(
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
     var playingTrailerGroupKey by remember { mutableStateOf<String?>(null) }
+    var lastAutoExpandKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.loading) {
         if (state.loading) {
@@ -64,16 +68,17 @@ fun SearchScreen(
             playingTrailerGroupKey = null
         }
     }
-    LaunchedEffect(state.groups, state.loading, state.hasSearched, selectedResultId) {
-        if (
-            !state.loading &&
-            state.hasSearched &&
-            expandedGroupKey == null &&
-            selectedResultId == null
-        ) {
-            val multi = state.groups.firstOrNull { it.releaseCount > 1 }
-            expandedGroupKey = multi?.groupKey ?: state.groups.firstOrNull()?.groupKey
+    LaunchedEffect(state.groups, state.loading, state.hasSearched, state.query, selectedResultId) {
+        if (state.loading || !state.hasSearched || selectedResultId != null) return@LaunchedEffect
+        val expandKey = buildString {
+            append(state.query.trim())
+            append('|')
+            state.groups.forEach { append(it.groupKey).append(',') }
         }
+        if (lastAutoExpandKey == expandKey) return@LaunchedEffect
+        lastAutoExpandKey = expandKey
+        val multi = state.groups.firstOrNull { it.releaseCount > 1 }
+        expandedGroupKey = multi?.groupKey ?: state.groups.firstOrNull()?.groupKey
     }
     LaunchedEffect(selectedResultId, state.groups) {
         val id = selectedResultId
@@ -94,7 +99,10 @@ fun SearchScreen(
 
     val pullState = rememberPullRefreshState(
         refreshing = state.loading,
-        onRefresh = { vm.search() },
+        onRefresh = {
+            lastAutoExpandKey = null
+            vm.search()
+        },
     )
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
@@ -159,6 +167,9 @@ fun SearchScreen(
             value = state.query,
             onValueChange = vm::setQuery,
             label = { Text("Search movies") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { vm.search() }),
             trailingIcon = {
                 IconButton(onClick = { showFilters = true }) {
                     Icon(Icons.Default.FilterList, contentDescription = "Filters")
