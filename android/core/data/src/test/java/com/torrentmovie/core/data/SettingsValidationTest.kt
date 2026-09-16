@@ -33,6 +33,11 @@ class SettingsValidationTest {
     }
 
     @Test
+    fun allowsBlankDownloadDirectoryUntilConfigured() {
+        assertNull(validateAppSettings(validSettings().copy(downloadDirectory = "")))
+    }
+
+    @Test
     fun clampsInvalidLoadedAuthScheme() {
         assertEquals("basic", SettingsRepository.normalizeLoadedAuthScheme("diges"))
         assertEquals("digest", SettingsRepository.normalizeLoadedAuthScheme("DIGEST"))

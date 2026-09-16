@@ -27,7 +27,7 @@ data class AppSettings(
     companion object {
         const val EMULATOR_SEARCH_API = "http://10.0.2.2:8765"
         const val DEFAULT_SEARCH_API = EMULATOR_SEARCH_API
-        const val DEFAULT_DOWNLOAD_DIR = "/home5/chris82/downloads/MOVIES/"
+        const val DEFAULT_DOWNLOAD_DIR = ""
         const val DEFAULT_SEARCH_PAGES = 2
     }
 }
@@ -134,10 +134,7 @@ internal fun validateAppSettings(settings: AppSettings): String? {
         return "Invalid search API URL"
     }
     val downloadDir = settings.downloadDirectory.trim()
-    if (downloadDir.isBlank()) {
-        return "Download folder cannot be empty"
-    }
-    if (!downloadDir.startsWith("/")) {
+    if (downloadDir.isNotBlank() && !downloadDir.startsWith("/")) {
         return "Download folder must be an absolute path (start with /)"
     }
     val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)

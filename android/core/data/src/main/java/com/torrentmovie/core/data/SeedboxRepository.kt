@@ -52,6 +52,9 @@ class SeedboxRepository(
         if (!settingsRepository.isSeedboxConfigured()) {
             return SeedboxResult.Failure("Configure seedbox URL and credentials in Settings")
         }
+        if (settings.downloadDirectory.trim().isBlank()) {
+            return SeedboxResult.Failure("Set download folder in Settings before sending")
+        }
         if (key in sentWithoutPersist) {
             return persistUploadedMagnet(
                 key = key,
