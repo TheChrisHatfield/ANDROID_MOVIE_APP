@@ -6,9 +6,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 @Composable
 fun InlineYoutubePlayer(
@@ -27,6 +34,23 @@ fun InlineYoutubePlayer(
         return
     }
     val embedUrl = remember(videoId, autoplay) { youtubeEmbedUrl(videoId, autoplay) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> webViewRef?.onPause()
+                Lifecycle.Event.ON_RESUME -> webViewRef?.onResume()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     AndroidView(
         modifier = modifier
             .fillMaxWidth()
@@ -34,17 +58,24 @@ fun InlineYoutubePlayer(
         factory = { context ->
             WebView(context).apply {
                 configureForYoutubeEmbed()
+                tag = videoId
                 loadUrl(embedUrl)
             }
         },
         update = { webView ->
-            if (webView.url != embedUrl) {
+            webViewRef = webView
+            if (webView.tag != videoId) {
+                webView.tag = videoId
                 webView.loadUrl(embedUrl)
             }
         },
         onRelease = { webView ->
             webView.stopLoading()
+            webView.onPause()
             webView.destroy()
+            if (webViewRef === webView) {
+                webViewRef = null
+            }
         },
     )
 }
