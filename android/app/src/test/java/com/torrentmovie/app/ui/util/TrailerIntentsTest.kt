@@ -22,4 +22,12 @@ class TrailerIntentsTest {
     fun blankReturnsNull() {
         assertNull(normalizeYoutubeVideoId("   "))
     }
+
+    @Test
+    fun embedUrlUsesVideoId() {
+        assertEquals(
+            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1",
+            youtubeEmbedUrl("abc123"),
+        )
+    }
 }

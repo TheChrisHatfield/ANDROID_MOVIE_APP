@@ -4,7 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
+import com.torrentmovie.app.TrailerActivity
 
 private const val YOUTUBE_PACKAGE = "com.google.android.youtube"
 
@@ -18,26 +18,30 @@ internal fun normalizeYoutubeVideoId(raw: String): String? {
     return null
 }
 
+internal fun youtubeEmbedUrl(videoId: String): String {
+    return "https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1"
+}
+
 fun openYoutubeTrailer(context: Context, youtubeKey: String) {
     val key = normalizeYoutubeVideoId(youtubeKey) ?: return
 
-    val youtubeApp = Intent(
-        Intent.ACTION_VIEW,
-        Uri.parse("vnd.youtube:$key"),
-    ).setPackage(YOUTUBE_PACKAGE)
-
-    val web = Intent(
-        Intent.ACTION_VIEW,
-        Uri.parse("https://www.youtube.com/watch?v=$key"),
+    val externalIntents = listOf(
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$key")).setPackage(YOUTUBE_PACKAGE),
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$key")),
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://youtu.be/$key")),
     )
-
-    try {
-        context.startActivity(youtubeApp)
-    } catch (_: ActivityNotFoundException) {
+    for (intent in externalIntents) {
         try {
-            context.startActivity(web)
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, "No app available to play trailer", Toast.LENGTH_SHORT).show()
+            continue
         }
     }
+
+    context.startActivity(
+        Intent(context, TrailerActivity::class.java)
+            .putExtra(TrailerActivity.EXTRA_VIDEO_ID, key)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
 }
