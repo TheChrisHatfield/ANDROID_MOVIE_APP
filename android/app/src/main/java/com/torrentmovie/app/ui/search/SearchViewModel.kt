@@ -28,6 +28,7 @@ data class SearchUiState(
     val maxSize: String? = null,
     val hasSearched: Boolean = false,
     val showTmdbSetupHint: Boolean = false,
+    val lastExecutedQuery: String = "",
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
@@ -173,7 +174,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     maxSize = maxSize,
                 )
                 if (!requestStillCurrent()) return@launch
-                container.movieMetadataStore.clear()
                 val infoMessages = mutableListOf<String>()
                 if (minSeeds != null) {
                     infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
@@ -191,7 +191,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val settings = container.settingsRepository.load()
                 val needsTmdbSetup = settings.fetchMovieMetadata &&
                     display.groups.isNotEmpty() &&
-                    display.groups.none { !it.posterUrl.isNullOrBlank() } &&
+                    display.groups.none { group ->
+                        !group.posterUrl.isNullOrBlank() ||
+                            group.releases.any { !it.posterUrl.isNullOrBlank() }
+                    } &&
                     settings.tmdbApiKey.isBlank() &&
                     !try {
                         container.searchRepository.isTmdbConfigured()
@@ -214,6 +217,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                         container.movieMetadataStore.put(release.id, metadata)
                     }
                 }
+                container.movieMetadataStore.bumpRevision()
 
                 val hasAnyResults = display.groups.isNotEmpty()
                 val emptyMessage = if (!hasAnyResults && info == null) {
@@ -237,34 +241,43 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     error = inlineError,
                     errorCode = null,
                     showTmdbSetupHint = needsTmdbSetup,
+                    lastExecutedQuery = q,
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SearchException) {
                 if (!requestStillCurrent()) return@launch
+                val preserveResults = _state.value.hasSearched &&
+                    lastSearchedQuery == q &&
+                    (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Search failed",
                     errorCode = e.httpCode,
-                    results = emptyList(),
-                    groups = emptyList(),
+                    results = if (preserveResults) _state.value.results else emptyList(),
+                    groups = if (preserveResults) _state.value.groups else emptyList(),
                     info = null,
                     hasSearched = true,
                     showTmdbSetupHint = false,
+                    lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
+                val preserveResults = _state.value.hasSearched &&
+                    lastSearchedQuery == q &&
+                    (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
                     error = e.message ?: "Search failed",
                     errorCode = null,
-                    results = emptyList(),
-                    groups = emptyList(),
+                    results = if (preserveResults) _state.value.results else emptyList(),
+                    groups = if (preserveResults) _state.value.groups else emptyList(),
                     info = null,
                     hasSearched = true,
                     showTmdbSetupHint = false,
+                    lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {

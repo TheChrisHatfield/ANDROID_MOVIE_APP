@@ -1,5 +1,9 @@
 package com.torrentmovie.core.data
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 data class MovieMetadata(
     val title: String,
     val year: Int? = null,
@@ -11,6 +15,12 @@ data class MovieMetadata(
 class MovieMetadataStore {
     private val byResultId = object : LinkedHashMap<String, MovieMetadata>(16, 0.75f, true) {}
     private val maxEntries = 500
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    fun bumpRevision() {
+        _revision.value++
+    }
 
     fun put(resultId: String, metadata: MovieMetadata) {
         synchronized(this) {
