@@ -3,6 +3,8 @@ package com.torrentmovie.app.ui
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -23,6 +25,7 @@ import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
+import com.torrentmovie.core.network.TorrentResultDto
 
 object Routes {
     const val SEARCH = "search"
@@ -43,6 +46,8 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
+    val searchState by searchViewModel.state.collectAsState()
     val foldTwoPaneDevice = remember {
         FoldDeviceProfile.twoPaneSearchDetailEnabled(context)
     }
@@ -51,22 +56,41 @@ fun AppNavGraph(
         screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
+    fun allReleases(): List<TorrentResultDto> {
+        return searchState.results + searchState.groups.flatMap { it.releases }
+    }
+
+    fun rematchRelease(resultId: String, name: String, site: String): TorrentResultDto? {
+        val releases = allReleases()
+        releases.find { it.id == resultId }?.let { return it }
+        if (name.isBlank()) return null
+        return releases.find { release ->
+            release.name.equals(name, ignoreCase = true) &&
+                (site.isBlank() || release.site == site)
+        }
+    }
+
     fun restoreFoldSelectionOnPhone(requireSearchRoute: Boolean) {
         if (useFoldTwoPane) return
         val pending = container.foldActiveSelection ?: return
         if (requireSearchRoute && currentRoute != Routes.SEARCH) return
         container.foldActiveSelection = null
-        val cached = container.searchResultStore.get(pending.resultId)
-        val name = cached?.name?.takeIf { it.isNotBlank() } ?: pending.name
-        val site = cached?.site?.takeIf { it.isNotBlank() } ?: pending.site
-        navController.navigate(Routes.detail(pending.resultId, name, site)) {
+        val matched = rematchRelease(pending.resultId, pending.name, pending.site)
+            ?: container.searchResultStore.get(pending.resultId)?.let { stored ->
+                rematchRelease(stored.id, stored.name, stored.site)
+            }
+        if (matched == null) return
+        container.searchResultStore.put(matched)
+        navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
             launchSingleTop = true
             popUpTo(Routes.SEARCH) { inclusive = false }
         }
     }
 
-    LaunchedEffect(useFoldTwoPane, currentRoute) {
-        restoreFoldSelectionOnPhone(requireSearchRoute = true)
+    LaunchedEffect(useFoldTwoPane, currentRoute, searchState.hasSearched, searchState.loading) {
+        if (!searchState.loading && searchState.hasSearched) {
+            restoreFoldSelectionOnPhone(requireSearchRoute = true)
+        }
     }
 
     LaunchedEffect(useFoldTwoPane) {
@@ -89,7 +113,6 @@ fun AppNavGraph(
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
-            val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
             if (useFoldTwoPane) {
                 FoldSearchDetailLayout(
                     container = container,
@@ -110,12 +133,12 @@ fun AppNavGraph(
                         }
                     },
                     onOpenDetail = { r ->
-                    container.searchResultStore.put(r)
-                    navController.navigate(Routes.detail(r.id, r.name, r.site)) {
-                        launchSingleTop = true
-                        popUpTo(Routes.SEARCH) { inclusive = false }
-                    }
-                },
+                        container.searchResultStore.put(r)
+                        navController.navigate(Routes.detail(r.id, r.name, r.site)) {
+                            launchSingleTop = true
+                            popUpTo(Routes.SEARCH) { inclusive = false }
+                        }
+                    },
                 )
             }
         }
@@ -136,6 +159,27 @@ fun AppNavGraph(
             val resultId = entry.arguments?.getString("resultId") ?: ""
             val navName = entry.arguments?.getString("name") ?: ""
             val navSite = entry.arguments?.getString("site") ?: ""
+
+            LaunchedEffect(
+                searchState.groups,
+                searchState.results.map { it.id },
+                searchState.hasSearched,
+                searchState.loading,
+                resultId,
+            ) {
+                if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
+                val matched = rematchRelease(resultId, navName, navSite) ?: return@LaunchedEffect
+                if (matched.id == resultId) return@LaunchedEffect
+                container.searchResultStore.put(matched)
+                container.movieMetadataStore.get(resultId)?.let { meta ->
+                    container.movieMetadataStore.put(matched.id, meta)
+                }
+                navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
+                    launchSingleTop = true
+                    popUpTo(Routes.SEARCH) { inclusive = false }
+                }
+            }
+
             val cached = container.searchResultStore.get(resultId)
             TorrentDetailScreen(
                 container = container,
