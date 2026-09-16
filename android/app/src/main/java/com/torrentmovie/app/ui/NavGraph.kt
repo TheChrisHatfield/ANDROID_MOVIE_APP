@@ -174,7 +174,7 @@ fun AppNavGraph(
                 if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
                 val releases = allReleases()
                 if (resultId in releases.map { it.id }) return@LaunchedEffect
-                if (searchState.error != null && container.searchResultStore.get(resultId) != null) {
+                if (container.searchResultStore.get(resultId) != null) {
                     return@LaunchedEffect
                 }
                 val matched = rematchRelease(resultId, navName, navSite)
