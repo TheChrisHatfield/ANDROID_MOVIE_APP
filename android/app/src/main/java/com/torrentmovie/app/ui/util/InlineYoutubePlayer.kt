@@ -22,6 +22,7 @@ fun InlineYoutubePlayer(
     youtubeKey: String,
     modifier: Modifier = Modifier,
     autoplay: Boolean = true,
+    fixedAspectRatio: Boolean = true,
 ) {
     val videoId = remember(youtubeKey) { normalizeYoutubeVideoId(youtubeKey) }
     if (videoId == null) {
@@ -36,11 +37,15 @@ fun InlineYoutubePlayer(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, webViewRef) {
+        val webView = webViewRef
+        if (webView == null) {
+            return@DisposableEffect onDispose {}
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_PAUSE -> webViewRef?.onPause()
-                Lifecycle.Event.ON_RESUME -> webViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> webView.onPause()
+                Lifecycle.Event.ON_RESUME -> webView.onResume()
                 else -> Unit
             }
         }
@@ -50,10 +55,14 @@ fun InlineYoutubePlayer(
         }
     }
 
+    val playerModifier = if (fixedAspectRatio) {
+        modifier.fillMaxWidth().aspectRatio(16f / 9f)
+    } else {
+        modifier
+    }
+
     AndroidView(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f),
+        modifier = playerModifier,
         factory = { context ->
             WebView(context).apply {
                 tag = videoId
