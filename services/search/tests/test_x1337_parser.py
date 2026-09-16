@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 from torrtux_core.sites.providers import X1337
 
 SAMPLE_HTML = """
@@ -31,3 +33,16 @@ def test_x1337_parse_results_extracts_torrent_row():
 def test_x1337_mirror_list_prioritizes_working_domains():
     site = X1337()
     assert site.base_urls[0] == "https://1337xx.to"
+
+
+def test_x1337_magnet_parser_finds_detail_page_link():
+    site = X1337()
+    site.working_url = "https://1337xx.to"
+    html = """
+    <html><body>
+    <a class="download-torrent" href="magnet:?xt=urn:btih:abc123">Magnet</a>
+    </body></html>
+    """
+    mock_response = MagicMock(status_code=200, content=html.encode())
+    with patch("torrtux_core.http_client.http_get", return_value=mock_response):
+        assert site.get_magnet_link("https://1337xx.to/torrent/1/test/") == "magnet:?xt=urn:btih:abc123"

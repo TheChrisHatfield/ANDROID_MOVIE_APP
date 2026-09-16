@@ -232,6 +232,30 @@ class X1337(TorrentSite):
                 continue
         return results
 
+    def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
+        detail_url = self.absolute_detail_url(detail_url)
+        if not detail_url:
+            return None
+        try:
+            from torrtux_core.http_client import http_get
+
+            response = http_get(detail_url, timeout=15)
+            if response.status_code != 200:
+                return None
+            soup = BeautifulSoup(response.content, "lxml")
+            for selector in (
+                "a[href^='magnet:']",
+                ".download-box a[href^='magnet:']",
+                "a.download-torrent[href^='magnet:']",
+                "a[href*='magnet:']",
+            ):
+                anchor = soup.select_one(selector)
+                if anchor and anchor.get("href", "").startswith("magnet:"):
+                    return anchor["href"]
+        except Exception:
+            return None
+        return super().get_magnet_link(detail_url, quality=quality)
+
 class YTS(TorrentSite):
     def __init__(self):
         super().__init__(
