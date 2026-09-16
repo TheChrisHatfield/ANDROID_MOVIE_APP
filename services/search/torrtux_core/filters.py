@@ -92,8 +92,10 @@ def apply_filters(
             r
             for r in filtered
             if (r.get("site") == "YTS" and r.get("seeds") in (None, "-"))
-            or seed_count(r.get("seeds", "-")) is None
-            or seed_count(r["seeds"]) <= max_seeds
+            or (
+                seed_count(r.get("seeds", "-")) is not None
+                and seed_count(r["seeds"]) <= max_seeds
+            )
         ]
     if min_size is not None:
         min_bytes = filter_size_bytes(min_size)
