@@ -127,7 +127,7 @@ fun MovieGroupCard(
                 }
             }
         }
-        if (expanded) {
+        if (expanded || singleRelease) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
                 group.releases.forEach { release ->
                     CompactReleaseRow(

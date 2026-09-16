@@ -60,8 +60,13 @@ fun SearchScreen(
     LaunchedEffect(state.loading) {
         if (state.loading) expandedGroupKey = null
     }
-    LaunchedEffect(state.groups, state.loading, state.hasSearched) {
-        if (!state.loading && state.hasSearched && expandedGroupKey == null) {
+    LaunchedEffect(state.groups, state.loading, state.hasSearched, selectedResultId) {
+        if (
+            !state.loading &&
+            state.hasSearched &&
+            expandedGroupKey == null &&
+            selectedResultId == null
+        ) {
             val multi = state.groups.firstOrNull { it.releaseCount > 1 }
             expandedGroupKey = multi?.groupKey ?: state.groups.firstOrNull()?.groupKey
         }
