@@ -45,6 +45,13 @@ def main() -> int:
     for group in search.get("groups", []):
         flat.extend(group.get("releases", []))
     print(f"search: {search.get('count', 0)} visible ({len(flat)} releases)")
+    groups = search.get("groups", [])
+    if groups:
+        has_group_metadata = any(
+            group.get("poster_url") or group.get("trailer_youtube_key") for group in groups
+        )
+        if health.get("tmdb_configured"):
+            print(f"group metadata: {'present' if has_group_metadata else 'none'}")
     for row in flat:
         assert row.get("site") != "EZTV", "EZTV must not appear in movie profile results"
     if not flat:
