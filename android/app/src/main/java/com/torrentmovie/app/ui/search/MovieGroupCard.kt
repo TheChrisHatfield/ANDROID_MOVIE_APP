@@ -19,11 +19,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.torrentmovie.app.ui.util.InlineYoutubePlayer
+import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 
@@ -38,6 +40,7 @@ fun MovieGroupCard(
     onToggleTrailer: () -> Unit,
     onOpenRelease: (TorrentResultDto) -> Unit,
 ) {
+    val context = LocalContext.current
     val singleRelease = group.releaseCount == 1 && group.releases.size == 1
     Card(
         modifier = Modifier
@@ -156,8 +159,14 @@ fun MovieGroupCard(
         if (trailerPlaying && !group.trailerYoutubeKey.isNullOrBlank()) {
             InlineYoutubePlayer(
                 youtubeKey = group.trailerYoutubeKey!!,
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
             )
+            TextButton(
+                onClick = { openYoutubeTrailerFullscreen(context, group.trailerYoutubeKey!!) },
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            ) {
+                Text("Fullscreen")
+            }
         }
         if (expanded && !singleRelease) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
