@@ -24,10 +24,15 @@ class TrailerIntentsTest {
     }
 
     @Test
-    fun embedUrlUsesVideoId() {
+    fun embedUrlUsesVideoIdAndOrigin() {
         assertEquals(
-            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1&rel=0",
+            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=https%3A%2F%2Fcom.torrentmovie.app",
             youtubeEmbedUrl("abc123"),
         )
+    }
+
+    @Test
+    fun embedHtmlIncludesReferrerPolicy() {
+        assert(youtubeEmbedHtml("abc123").contains("referrerpolicy=\"strict-origin-when-cross-origin\""))
     }
 }

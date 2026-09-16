@@ -33,7 +33,6 @@ fun InlineYoutubePlayer(
         )
         return
     }
-    val embedUrl = remember(videoId, autoplay) { youtubeEmbedUrl(videoId, autoplay) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -57,16 +56,15 @@ fun InlineYoutubePlayer(
             .aspectRatio(16f / 9f),
         factory = { context ->
             WebView(context).apply {
-                configureForYoutubeEmbed()
                 tag = videoId
-                loadUrl(embedUrl)
+                loadYoutubeEmbed(videoId, autoplay)
             }
         },
         update = { webView ->
             webViewRef = webView
             if (webView.tag != videoId) {
                 webView.tag = videoId
-                webView.loadUrl(embedUrl)
+                webView.loadYoutubeEmbed(videoId, autoplay)
             }
         },
         onRelease = { webView ->
