@@ -8,4 +8,5 @@ sealed class SeedboxResult {
 interface SeedboxClient {
     suspend fun addMagnet(magnet: String, downloadDirectory: String): SeedboxResult
     suspend fun ping(): Boolean
+    suspend fun listTorrentStatuses(): SeedboxListResult
 }

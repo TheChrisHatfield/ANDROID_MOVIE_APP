@@ -3,7 +3,9 @@ package com.torrentmovie.core.data
 import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.db.UploadedMagnet
 import com.torrentmovie.core.data.seedbox.RuTorrentClient
+import com.torrentmovie.core.data.seedbox.SeedboxListResult
 import com.torrentmovie.core.data.seedbox.SeedboxResult
+import com.torrentmovie.core.data.seedbox.SeedboxTorrentStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -127,6 +129,35 @@ class SeedboxRepository(
             client().ping()
         } catch (_: Exception) {
             false
+        }
+    }
+
+    suspend fun fetchTorrentStatuses(): SeedboxListResult {
+        if (!settingsRepository.isSeedboxConfigured()) {
+            return SeedboxListResult.Failure("Configure seedbox in Settings to see live status")
+        }
+        return try {
+            client().listTorrentStatuses()
+        } catch (e: Exception) {
+            SeedboxListResult.Failure(e.message ?: "Could not load seedbox status")
+        }
+    }
+
+    suspend fun statusesForUploaded(
+        entries: List<UploadedMagnet>,
+    ): Pair<Map<String, SeedboxTorrentStatus>, String?> {
+        if (entries.isEmpty()) return emptyMap<String, SeedboxTorrentStatus>() to null
+        val trackable = entries.filter { SeedboxTorrentStatus.isTrackableInfoHash(it.infoHash) }
+        if (trackable.isEmpty()) {
+            return emptyMap<String, SeedboxTorrentStatus>() to null
+        }
+        return when (val result = fetchTorrentStatuses()) {
+            is SeedboxListResult.Success -> {
+                val wanted = trackable.map { it.infoHash.uppercase() }.toSet()
+                val matched = result.statuses.filterKeys { it in wanted }
+                matched to null
+            }
+            is SeedboxListResult.Failure -> emptyMap<String, SeedboxTorrentStatus>() to result.message
         }
     }
 }

@@ -53,3 +53,7 @@ internal fun normalizeSeedboxUrl(raw: String): String {
 internal fun seedboxAddTorrentUrl(baseUrl: String): String {
     return "${normalizeSeedboxUrl(baseUrl)}php/addtorrent.php"
 }
+
+internal fun seedboxHttprpcUrl(baseUrl: String): String {
+    return "${normalizeSeedboxUrl(baseUrl)}plugins/httprpc/action.php"
+}

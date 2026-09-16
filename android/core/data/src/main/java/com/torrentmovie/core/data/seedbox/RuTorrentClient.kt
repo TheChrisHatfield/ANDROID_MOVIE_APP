@@ -2,8 +2,10 @@ package com.torrentmovie.core.data.seedbox
 
 import okhttp3.Credentials
 import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
@@ -46,6 +48,40 @@ class RuTorrentClient(
             }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    override suspend fun listTorrentStatuses(): SeedboxListResult {
+        return try {
+            val body = "mode=list".toRequestBody("application/x-www-form-urlencoded".toMediaType())
+            val request = Request.Builder()
+                .url(seedboxHttprpcUrl(baseUrl))
+                .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
+                .post(body)
+                .build()
+            executeWithAuth(request).use { response ->
+                val text = response.body?.string().orEmpty()
+                when {
+                    !response.isSuccessful -> {
+                        val msg = when (response.code) {
+                            401 -> "Authentication failed — check seedbox credentials"
+                            403 -> "ruTorrent rejected status request"
+                            404 -> "HTTPRPC plugin not found — check ruTorrent base URL"
+                            else -> "Seedbox status HTTP ${response.code}"
+                        }
+                        SeedboxListResult.Failure(msg)
+                    }
+                    text.isBlank() || !text.trimStart().startsWith("{") ->
+                        SeedboxListResult.Failure("Unexpected ruTorrent status response")
+                    else -> {
+                        val statuses = HttprpcTorrentParser.parseListResponse(text)
+                            .associateBy { it.infoHash.uppercase() }
+                        SeedboxListResult.Success(statuses)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            SeedboxListResult.Failure(e.message ?: "Could not load seedbox status")
         }
     }
 

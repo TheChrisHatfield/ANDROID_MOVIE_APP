@@ -67,6 +67,21 @@ Treat add as **successful** only when:
 1. HTTP response is **2xx**, AND
 2. Response body or redirect query indicates `status=Success` for the submitted URL (ruTorrent redirects to `addtorrent.php?` with status in query for browser uploads; Android client MUST parse JSON/HTML response per ruTorrent version).
 
+## Torrent status (Uploaded screen)
+
+Poll ruTorrent via the **HTTPRPC** plugin:
+
+| Field | Value |
+|-------|--------|
+| Method | `POST` |
+| URL | `{base_url}plugins/httprpc/action.php` |
+| Body | `mode=list` |
+| Auth | Same HTTP Basic/Digest as add magnet |
+
+Response JSON shape: `{ "t": { "<INFO_HASH>": [ ...fields... ] }, "cid": "..." } }`. Match `<INFO_HASH>` (40-char hex, case-insensitive) to local **Uploaded** entries. Display progress from `d.get_bytes_done`, `d.get_size_bytes`, `d.get_left_bytes`, `d.get_down_rate`, and state flags.
+
+If HTTPRPC returns 404 or the hash is absent from `t`, show **Not on seedbox** for that row (torrent removed remotely or never added).
+
 Treat as **failed** when:
 
 - HTTP 401/403 → bad credentials or auth scheme mismatch

@@ -206,6 +206,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-012**: Each uploaded entry MUST store at minimum: `info_hash` (from magnet `btih`), `display_name`, `site`, `sent_at` (timestamp), and full `magnet_uri` for reference.
 - **FR-013**: Before sending to seedbox, app MUST check `info_hash` against the uploaded list; if present, MUST block send and show duplicate warning (user may remove entry to allow re-send).
 - **FR-014**: Uploaded screen MUST allow the user to **delete/remove** individual entries; removal is immediate and persisted locally.
+- **FR-014a**: When seedbox is configured, **Uploaded** MUST show live ruTorrent status per entry (download progress, seeding, paused, or not on seedbox) by matching stored `info_hash` via ruTorrent HTTPRPC `mode=list`; refresh on screen open and pull-to-refresh.
 - **FR-015**: Android UI MUST follow Yatse-inspired information architecture per [`contracts/ui-yatse-reference.md`](./contracts/ui-yatse-reference.md): navigation drawer, categorized sections, card lists, detail-with-primary-action.
 - **FR-016**: App MUST use **Material Design 3** (Jetpack Compose Material3) for visual consistency with modern Android media apps.
 - **FR-017**: App bar MUST include a **seedbox status indicator** (connected / error / unknown) when seedbox is configured.
