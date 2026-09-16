@@ -7,7 +7,13 @@ import org.junit.Test
 class TrailerIntentsTest {
     @Test
     fun keepsBareVideoId() {
-        assertEquals("abc123", normalizeYoutubeVideoId("abc123"))
+        assertEquals("dQw4w9WgXcQ", normalizeYoutubeVideoId("dQw4w9WgXcQ"))
+    }
+
+    @Test
+    fun rejectsShortOrOpaqueSlugs() {
+        assertNull(normalizeYoutubeVideoId("abc123"))
+        assertNull(normalizeYoutubeVideoId("yt_trailer_code"))
     }
 
     @Test
@@ -26,13 +32,13 @@ class TrailerIntentsTest {
     @Test
     fun embedUrlUsesVideoIdAndOrigin() {
         assertEquals(
-            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=https%3A%2F%2Fcom.torrentmovie.app",
-            youtubeEmbedUrl("abc123"),
+            "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=https%3A%2F%2Fcom.torrentmovie.app",
+            youtubeEmbedUrl("dQw4w9WgXcQ"),
         )
     }
 
     @Test
     fun embedHtmlIncludesReferrerPolicy() {
-        assert(youtubeEmbedHtml("abc123").contains("referrerpolicy=\"strict-origin-when-cross-origin\""))
+        assert(youtubeEmbedHtml("dQw4w9WgXcQ").contains("referrerpolicy=\"strict-origin-when-cross-origin\""))
     }
 }

@@ -10,13 +10,18 @@ import java.nio.charset.StandardCharsets
 /** Origin YouTube expects for embedded playback (app package as https origin). */
 const val YOUTUBE_EMBED_ORIGIN = "https://com.torrentmovie.app"
 
-private val YOUTUBE_ID_IN_URL = Regex("""(?:[?&]v=|youtu\.be/|/embed/)([\w-]{6,})""")
+private val YOUTUBE_ID_IN_URL = Regex("""(?:[?&]v=|youtu\.be/|/embed/)([\w-]{11})""")
+private val YOUTUBE_VIDEO_ID = Regex("""^[\w-]{11}$""")
 
 fun normalizeYoutubeVideoId(raw: String): String? {
     val trimmed = raw.trim()
     if (trimmed.isBlank()) return null
-    YOUTUBE_ID_IN_URL.find(trimmed)?.groupValues?.getOrNull(1)?.let { return it }
-    if (!trimmed.contains("/") && !trimmed.contains("?")) return trimmed
+    YOUTUBE_ID_IN_URL.find(trimmed)?.groupValues?.getOrNull(1)?.let { candidate ->
+        return candidate.takeIf { YOUTUBE_VIDEO_ID.matches(it) }
+    }
+    if (!trimmed.contains("/") && !trimmed.contains("?")) {
+        return trimmed.takeIf { YOUTUBE_VIDEO_ID.matches(it) }
+    }
     return null
 }
 
