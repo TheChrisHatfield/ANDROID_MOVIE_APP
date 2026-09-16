@@ -144,11 +144,17 @@ class TmdbClient:
                 timeout=self.timeout,
             )
             resp.raise_for_status()
-            for video in resp.json().get("results") or []:
-                if video.get("site") == "YouTube" and video.get("type") == "Trailer":
-                    key = video.get("key")
-                    if key:
-                        return str(key)
+            videos = [
+                video
+                for video in resp.json().get("results") or []
+                if video.get("site") == "YouTube" and video.get("key")
+            ]
+            for preferred_type in ("Trailer", "Teaser", "Clip"):
+                for video in videos:
+                    if video.get("type") == preferred_type:
+                        return str(video["key"])
+            if videos:
+                return str(videos[0]["key"])
             return None
         except Exception:
             return None
