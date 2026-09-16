@@ -180,12 +180,13 @@ class X1337(TorrentSite):
         super().__init__(
             "1337x",
             [
+                # 1337x.to often returns 403 (bot protection); working mirrors vary by region.
+                "https://1337xx.to",
+                "https://www.1337xx.to",
                 "https://1337x.to",
                 "https://1337x.st",
                 "https://x1337x.ws",
-                "https://1337x.gd",
                 "https://1337x.is",
-                "https://1337x.unblockit.boo"
             ]
         )
     def build_search_url(self, query, page=0):
