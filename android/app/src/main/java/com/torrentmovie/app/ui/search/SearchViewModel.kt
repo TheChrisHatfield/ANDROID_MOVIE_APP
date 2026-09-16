@@ -247,9 +247,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 throw e
             } catch (e: SearchException) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = _state.value.hasSearched &&
-                    lastSearchedQuery == q &&
-                    (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
+                val preserveResults = shouldPreserveResultsOnError(q, minSeeds, maxSeeds, maxSize)
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -264,9 +262,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = _state.value.hasSearched &&
-                    lastSearchedQuery == q &&
-                    (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
+                val preserveResults = shouldPreserveResultsOnError(q, minSeeds, maxSeeds, maxSize)
                 lastSearchedQuery = q
                 _state.value = _state.value.copy(
                     loading = false,
@@ -285,6 +281,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun shouldPreserveResultsOnError(
+        q: String,
+        minSeeds: Int?,
+        maxSeeds: Int?,
+        maxSize: String?,
+    ): Boolean {
+        return _state.value.hasSearched &&
+            lastSearchedQuery == q &&
+            lastSearchMinSeeds == minSeeds &&
+            lastSearchMaxSeeds == maxSeeds &&
+            lastSearchMaxSize == maxSize &&
+            (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
     }
 
     private data class DisplaySearchOutcome(
