@@ -58,7 +58,16 @@ fun TorrentDetailScreen(
     val downloadDirConfigured = settings.downloadDirectory.trim().isNotBlank()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
+    var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
     val metadata = container.movieMetadataStore.get(resultId)
+
+    LaunchedEffect(settingsRevision) {
+        val apiUrl = container.settingsRepository.load().searchApiBaseUrl
+        if (apiUrl != lastSearchApiUrl) {
+            lastSearchApiUrl = apiUrl
+            resolveRequest++
+        }
+    }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
         if (magnetValue.isNullOrBlank()) return false
