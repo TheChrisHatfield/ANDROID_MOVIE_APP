@@ -38,7 +38,7 @@ fun youtubeEmbedUrl(
     val origin = URLEncoder.encode(YOUTUBE_APP_REFERER, StandardCharsets.UTF_8)
     return "https://www.youtube.com/embed/$videoId" +
         "?autoplay=$autoplayFlag&mute=$muteFlag&playsinline=1&rel=0&modestbranding=1" +
-        "&controls=1&enablejsapi=1&fs=1&origin=$origin"
+        "&controls=1&enablejsapi=1&fs=1&widget_referrer=$origin&origin=$origin"
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -51,6 +51,8 @@ fun WebView.configureForYoutubeEmbed() {
     settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
     settings.userAgentString = settings.userAgentString.replace("; wv)", ")")
     setBackgroundColor(Color.BLACK)
+    isFocusable = true
+    isFocusableInTouchMode = true
     webViewClient = WebViewClient()
     webChromeClient = WebChromeClient()
 }
