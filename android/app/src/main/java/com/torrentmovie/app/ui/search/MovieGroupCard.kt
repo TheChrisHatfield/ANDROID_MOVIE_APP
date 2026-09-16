@@ -1,6 +1,5 @@
 package com.torrentmovie.app.ui.search
 
-import com.torrentmovie.app.ui.util.openYoutubeTrailer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,10 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.torrentmovie.app.ui.util.InlineYoutubePlayer
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 
@@ -33,11 +32,12 @@ fun MovieGroupCard(
     group: MovieGroupDto,
     expanded: Boolean,
     selectedResultId: String?,
+    trailerPlaying: Boolean,
     isAlreadyUploaded: (TorrentResultDto) -> Boolean,
     onToggleExpand: () -> Unit,
+    onToggleTrailer: () -> Unit,
     onOpenRelease: (TorrentResultDto) -> Unit,
 ) {
-    val context = LocalContext.current
     val singleRelease = group.releaseCount == 1 && group.releases.size == 1
     Card(
         modifier = Modifier
@@ -126,14 +126,30 @@ fun MovieGroupCard(
                         }
                     }
                     group.trailerYoutubeKey?.let { key ->
-                        IconButton(
-                            onClick = { openYoutubeTrailer(context, key) },
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Watch trailer")
+                        IconButton(onClick = onToggleTrailer) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = if (trailerPlaying) {
+                                    "Hide trailer"
+                                } else {
+                                    "Play trailer"
+                                },
+                                tint = if (trailerPlaying) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
                         }
                     }
                 }
             }
+        }
+        if (trailerPlaying && !group.trailerYoutubeKey.isNullOrBlank()) {
+            InlineYoutubePlayer(
+                youtubeKey = group.trailerYoutubeKey!!,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+            )
         }
         if (expanded && !singleRelease) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {

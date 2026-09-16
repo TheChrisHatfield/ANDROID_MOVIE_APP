@@ -2,9 +2,7 @@ package com.torrentmovie.app
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.webkit.WebChromeClient
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,15 +16,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import com.torrentmovie.app.ui.theme.TorrentMovieTheme
-import com.torrentmovie.app.ui.util.youtubeEmbedUrl
+import com.torrentmovie.app.ui.util.InlineYoutubePlayer
 
 class TrailerActivity : ComponentActivity() {
-    private var webView: WebView? = null
-
     @OptIn(ExperimentalMaterial3Api::class)
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val videoId = intent.getStringExtra(EXTRA_VIDEO_ID)
@@ -51,48 +45,18 @@ class TrailerActivity : ComponentActivity() {
                         )
                     },
                 ) { padding ->
-                    AndroidView(
+                    InlineYoutubePlayer(
+                        youtubeKey = videoId,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding),
-                        factory = { context ->
-                            WebView(context).apply {
-                                configureForYoutubeEmbed()
-                                if (savedInstanceState == null) {
-                                    loadUrl(youtubeEmbedUrl(videoId))
-                                }
-                                webView = this
-                            }
-                        },
-                        update = { view ->
-                            if (view.url.isNullOrBlank()) {
-                                view.loadUrl(youtubeEmbedUrl(videoId))
-                            }
-                        },
                     )
                 }
             }
         }
     }
 
-    override fun onDestroy() {
-        webView?.destroy()
-        webView = null
-        super.onDestroy()
-    }
-
     companion object {
         const val EXTRA_VIDEO_ID = "video_id"
     }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-private fun WebView.configureForYoutubeEmbed() {
-    settings.javaScriptEnabled = true
-    settings.domStorageEnabled = true
-    settings.mediaPlaybackRequiresUserGesture = false
-    settings.loadWithOverviewMode = true
-    settings.useWideViewPort = true
-    webViewClient = WebViewClient()
-    webChromeClient = WebChromeClient()
 }

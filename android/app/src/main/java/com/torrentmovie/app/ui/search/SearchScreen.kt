@@ -56,9 +56,13 @@ fun SearchScreen(
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
+    var playingTrailerGroupKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.loading) {
-        if (state.loading) expandedGroupKey = null
+        if (state.loading) {
+            expandedGroupKey = null
+            playingTrailerGroupKey = null
+        }
     }
     LaunchedEffect(state.groups, state.loading, state.hasSearched, selectedResultId) {
         if (
@@ -234,9 +238,17 @@ fun SearchScreen(
                                 group = group,
                                 expanded = expandedGroupKey == group.groupKey,
                                 selectedResultId = selectedResultId,
+                                trailerPlaying = playingTrailerGroupKey == group.groupKey,
                                 isAlreadyUploaded = ::isAlreadyUploaded,
                                 onToggleExpand = {
                                     expandedGroupKey = if (expandedGroupKey == group.groupKey) {
+                                        null
+                                    } else {
+                                        group.groupKey
+                                    }
+                                },
+                                onToggleTrailer = {
+                                    playingTrailerGroupKey = if (playingTrailerGroupKey == group.groupKey) {
                                         null
                                     } else {
                                         group.groupKey

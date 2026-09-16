@@ -26,7 +26,7 @@ class TrailerIntentsTest {
     @Test
     fun embedUrlUsesVideoId() {
         assertEquals(
-            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1",
+            "https://www.youtube.com/embed/abc123?autoplay=1&playsinline=1&rel=0",
             youtubeEmbedUrl("abc123"),
         )
     }
