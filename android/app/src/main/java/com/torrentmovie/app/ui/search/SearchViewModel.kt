@@ -349,6 +349,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         if (maxSize != null && activeBrowseFeed != null) {
             infoMessages += "Max size filter may hide larger releases in this list."
         }
+        if (
+            activeBrowseFeed != null &&
+            (minSeeds != null || maxSeeds != null || maxSize != null)
+        ) {
+            infoMessages += "If the list is empty, relax filters — they may hide all browse results."
+        }
         if (outcome.tmdbEnrichmentCapped) {
             infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
         }
