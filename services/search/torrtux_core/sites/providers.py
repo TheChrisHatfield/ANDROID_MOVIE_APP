@@ -182,6 +182,10 @@ class X1337(TorrentSite):
         "top-100-movies": "top-100-movies",
         "top-100-television": "top-100-television",
     }
+    # Some mirrors return an empty table for top-100-movies; category browse still lists movies.
+    BROWSE_FALLBACKS: dict[str, str] = {
+        "top-100-movies": "cat/Movies",
+    }
 
     def __init__(self):
         super().__init__(
@@ -199,7 +203,13 @@ class X1337(TorrentSite):
     def build_search_url(self, query, page=0):
         return f"{self.working_url}/search/{quote(query)}/{page+1}/"
 
-    def build_browse_url(self, feed: str, page: int = 0) -> str:
+    def build_browse_url(self, feed: str, page: int = 0, *, use_fallback: bool = False) -> str:
+        if use_fallback:
+            path = self.BROWSE_FALLBACKS.get(feed)
+            if not path:
+                raise ValueError(f"No browse fallback for feed: {feed}")
+            page_num = max(page + 1, 1)
+            return f"{self.working_url}/{path}/{page_num}/"
         path = self.BROWSE_FEEDS.get(feed)
         if not path:
             raise ValueError(f"Unknown 1337x browse feed: {feed}")

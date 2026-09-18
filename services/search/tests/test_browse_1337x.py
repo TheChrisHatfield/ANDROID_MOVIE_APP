@@ -15,6 +15,7 @@ def test_x1337_build_browse_urls():
     site.working_url = "https://1337xx.to"
     assert site.build_browse_url("trending") == "https://1337xx.to/trending/"
     assert site.build_browse_url("top-100-movies") == "https://1337xx.to/top-100-movies/"
+    assert site.build_browse_url("top-100-movies", use_fallback=True) == "https://1337xx.to/cat/Movies/1/"
     assert site.build_browse_url("top-100-television", 1) == "https://1337xx.to/top-100-television/2/"
 
 

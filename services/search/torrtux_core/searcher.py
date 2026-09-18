@@ -145,12 +145,32 @@ class TorrentSearcher:
         return all_results, failed_sites
 
     def _browse_site(self, site, feed: str, page_limit: int) -> tuple[list[dict], bool]:
+        from torrtux_core.sites.providers import X1337
+
+        results, errored = self._browse_site_pages(site, feed, page_limit, use_fallback=False)
+        if not results and isinstance(site, X1337) and feed in site.BROWSE_FALLBACKS:
+            fallback_results, fallback_errored = self._browse_site_pages(
+                site, feed, page_limit, use_fallback=True,
+            )
+            if fallback_results:
+                return fallback_results, False
+            errored = errored or fallback_errored
+        return results, errored
+
+    def _browse_site_pages(
+        self,
+        site,
+        feed: str,
+        page_limit: int,
+        *,
+        use_fallback: bool,
+    ) -> tuple[list[dict], bool]:
         results: list[dict] = []
         errored = False
         prev_url: str | None = None
         for page in range(page_limit):
             try:
-                browse_url = site.build_browse_url(feed, page)
+                browse_url = site.build_browse_url(feed, page, use_fallback=use_fallback)
             except Exception as exc:
                 logger.debug("build_browse_url failed %s: %s", site.name, exc)
                 errored = page == 0 and not results
