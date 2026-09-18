@@ -156,6 +156,19 @@ fun FoldSearchDetailLayout(
         }
     }
 
+    LaunchedEffect(
+        state.activeGenre,
+        state.activeBrowseFeed,
+        state.genrePanelExpanded,
+        state.lastExecutedQuery,
+    ) {
+        if (!state.hasSearched && state.lastExecutedQuery.isBlank()) return@LaunchedEffect
+        selectedId = null
+        restoredName = null
+        restoredSite = null
+        syncFoldSelection(null, "", "")
+    }
+
     LaunchedEffect(state.query, state.hasSearched) {
         if (!state.hasSearched) return@LaunchedEffect
         if (state.query.trim().isBlank()) {
@@ -239,7 +252,6 @@ fun FoldSearchDetailLayout(
                 return@LaunchedEffect
             }
         }
-        if (container.searchResultStore.get(id) != null) return@LaunchedEffect
         selectedId = null
         restoredName = null
         restoredSite = null
