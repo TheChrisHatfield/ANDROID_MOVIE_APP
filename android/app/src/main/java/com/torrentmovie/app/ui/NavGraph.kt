@@ -54,7 +54,6 @@ fun AppNavGraph(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val useFoldTwoPane = foldTwoPaneDevice &&
         screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
-    val currentRoute = navController.currentBackStackEntry?.destination?.route
 
     fun allReleases(): List<TorrentResultDto> {
         return searchState.results + searchState.groups.flatMap { it.releases }
@@ -67,29 +66,6 @@ fun AppNavGraph(
         return releases.find { release ->
             release.name.equals(name, ignoreCase = true) &&
                 (site.isBlank() || release.site == site)
-        }
-    }
-
-    fun restoreFoldSelectionOnPhone(requireSearchRoute: Boolean) {
-        if (useFoldTwoPane) return
-        val pending = container.foldActiveSelection ?: return
-        if (requireSearchRoute && currentRoute != Routes.SEARCH) return
-        val matched = rematchRelease(pending.resultId, pending.name, pending.site)
-            ?: container.searchResultStore.get(pending.resultId)?.let { stored ->
-                rematchRelease(stored.id, stored.name, stored.site)
-            }
-        if (matched == null) return
-        container.foldActiveSelection = null
-        container.searchResultStore.put(matched)
-        navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
-            launchSingleTop = true
-            popUpTo(Routes.SEARCH) { inclusive = false }
-        }
-    }
-
-    LaunchedEffect(useFoldTwoPane, currentRoute, searchState.hasSearched, searchState.loading) {
-        if (!searchState.loading && searchState.hasSearched) {
-            restoreFoldSelectionOnPhone(requireSearchRoute = true)
         }
     }
 
@@ -179,7 +155,13 @@ fun AppNavGraph(
                 }
                 val matched = rematchRelease(resultId, navName, navSite)
                 if (matched != null) {
-                    container.searchResultStore.put(matched)
+                    val oldMagnet = container.searchResultStore.get(resultId)?.magnet?.takeIf { it.isNotBlank() }
+                    val merged = if (!oldMagnet.isNullOrBlank() && matched.magnet.isNullOrBlank()) {
+                        matched.copy(magnet = oldMagnet)
+                    } else {
+                        matched
+                    }
+                    container.searchResultStore.put(merged)
                     if (matched.id != resultId) {
                         container.movieMetadataStore.get(resultId)?.let { meta ->
                             container.movieMetadataStore.put(matched.id, meta)
