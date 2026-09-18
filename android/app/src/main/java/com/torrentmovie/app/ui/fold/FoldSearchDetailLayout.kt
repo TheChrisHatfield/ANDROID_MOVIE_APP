@@ -67,7 +67,11 @@ fun FoldSearchDetailLayout(
                 TorrentResultDto(
                     id = id,
                     name = name,
-                    site = restoredSite ?: "",
+                    site = restoredSite?.takeIf { it.isNotBlank() }
+                        ?: container.foldActiveSelection
+                            ?.takeIf { it.resultId == id }
+                            ?.site
+                            .orEmpty(),
                 )
             }
     }
