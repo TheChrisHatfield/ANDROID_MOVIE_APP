@@ -388,15 +388,14 @@ class TorrentSearcher:
             parallel=parallel,
             sites=selected,
         )
+        profiled = filter_movie_profile(raw) if movie_profile else raw
         filtered = apply_filters(
-            raw,
+            profiled,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             min_size=min_size,
             max_size=max_size,
         )
-        if movie_profile:
-            filtered = filter_movie_profile(filtered)
         sorted_results = sort_by_seeds_desc(filtered)
         if limit is not None:
             sorted_results = sorted_results[:limit]

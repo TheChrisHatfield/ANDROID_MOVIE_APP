@@ -3,6 +3,35 @@ from unittest.mock import MagicMock, patch
 from torrtux_core.searcher import TorrentSearcher
 
 
+def test_search_applies_movie_profile_before_seed_filters():
+    from torrtux_core.filters import filter_movie_profile
+
+    class FakeSite:
+        name = "YTS"
+
+    searcher = TorrentSearcher(site_classes=[])
+    searcher.working_sites = [FakeSite()]
+    tv_row = {
+        "name": "Some Show S01E01 1080p",
+        "seeds": "-",
+        "size": "1 GB",
+        "site": "YTS",
+    }
+    movie_row = {
+        "name": "Movie Title 2024 1080p",
+        "seeds": "100",
+        "size": "2 GB",
+        "site": "YTS",
+    }
+    raw_rows = [tv_row, movie_row]
+
+    with patch.object(searcher, "search_all_sites", return_value=(raw_rows, [])):
+        out = searcher.search("test", min_seeds=50, movie_profile=True)
+
+    assert [row["name"] for row in out.results] == [movie_row["name"]]
+    assert tv_row not in filter_movie_profile(raw_rows)
+
+
 def test_browse_1337x_applies_movie_profile_except_tv_feed():
     from torrtux_core.sites.providers import X1337
 
