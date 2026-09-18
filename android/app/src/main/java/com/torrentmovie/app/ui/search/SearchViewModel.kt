@@ -43,6 +43,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private var lastSearchMaxSeeds: Int? = null
     private var lastSearchMaxSize: String? = null
     private var lastSearchSettingsKey: String? = null
+    private var lastSearchActiveBrowseFeed: String? = null
 
     private fun searchSettingsKey(): String {
         val settings = container.settingsRepository.load()
@@ -84,7 +85,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value.results.isEmpty() &&
             _state.value.groups.isEmpty() &&
             !_state.value.loading
-        val clearingBrowse = _state.value.activeBrowseFeed != null && q != _state.value.query
+        val clearingBrowse = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)?.let { feed ->
+            trimmed != feed.label
+        } == true
         _state.value = _state.value.copy(
             query = q,
             loading = if (stale) false else _state.value.loading,
@@ -132,6 +135,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val settings = container.settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) {
             _state.value = _state.value.copy(
+                query = feed.label,
                 loading = false,
                 error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
                 errorCode = null,
@@ -140,7 +144,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 info = null,
                 hasSearched = false,
                 showTmdbSetupHint = false,
-                activeBrowseFeed = null,
+                activeBrowseFeed = feed.id,
             )
             return
         }
@@ -208,9 +212,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun search() {
         val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
-            ?: X1337BrowseFeed.entriesList.find {
-                it.label.equals(_state.value.query.trim(), ignoreCase = true)
-            }
         if (activeFeed != null) {
             loadBrowse1337x(activeFeed)
             return
@@ -244,6 +245,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 info = null,
                 hasSearched = false,
                 showTmdbSetupHint = false,
+                activeBrowseFeed = _state.value.activeBrowseFeed,
             )
             return
         }
@@ -372,6 +374,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchMaxSeeds = maxSeeds
         lastSearchMaxSize = maxSize
         lastSearchSettingsKey = searchSettingsKey()
+        lastSearchActiveBrowseFeed = activeBrowseFeed
         _state.value = _state.value.copy(
             loading = false,
             results = display.results,
@@ -427,6 +430,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastSearchMaxSeeds == maxSeeds &&
             lastSearchMaxSize == maxSize &&
             lastSearchSettingsKey == settingsKeyAtStart &&
+            lastSearchActiveBrowseFeed == _state.value.activeBrowseFeed &&
             searchSettingsKey() == settingsKeyAtStart &&
             (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
     }
