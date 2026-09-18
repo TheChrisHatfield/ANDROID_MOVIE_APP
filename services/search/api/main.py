@@ -201,7 +201,7 @@ def search(
     outcome = _searcher.search(
         q,
         sites=site_list,
-        movie_profile=movie_profile and not site_list,
+        movie_profile=movie_profile,
         page_limit=pages,
         parallel=parallel,
         min_seeds=min_seeds,
