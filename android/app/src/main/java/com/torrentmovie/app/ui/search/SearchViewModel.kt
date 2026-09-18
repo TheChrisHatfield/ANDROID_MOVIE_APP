@@ -65,6 +65,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             container.settingsRepository.revision.drop(1).collect {
                 val key = searchSettingsKey()
                 if (key != lastSearchSettingsKey && _state.value.hasSearched) {
+                    lastSearchSettingsKey = key
                     _state.value = _state.value.copy(
                         loading = true,
                         error = null,
