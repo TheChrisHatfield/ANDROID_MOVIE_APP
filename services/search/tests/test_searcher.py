@@ -3,6 +3,15 @@ from unittest.mock import MagicMock, patch
 from torrtux_core.searcher import TorrentSearcher
 
 
+def test_site_for_name_is_case_insensitive():
+    searcher = TorrentSearcher(site_classes=[])
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    searcher.working_sites = [mock_site]
+    assert searcher.site_for_name("1337X") is mock_site
+    assert searcher.site_for_name("1337x") is mock_site
+
+
 def test_search_sorts_before_limit():
     searcher = TorrentSearcher(site_classes=[])
     searcher.working_sites = [MagicMock(name="MockSite")]

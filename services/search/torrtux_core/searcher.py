@@ -61,9 +61,10 @@ class TorrentSearcher:
         with self._lock:
             working = list(self.working_sites)
             all_sites = list(self.sites)
-        site = next((s for s in working if s.name == site_name), None)
+        lowered = site_name.casefold()
+        site = next((s for s in working if s.name.casefold() == lowered), None)
         if site is None:
-            site = next((s for s in all_sites if s.name == site_name), None)
+            site = next((s for s in all_sites if s.name.casefold() == lowered), None)
         return site
 
     def _search_site(self, site, query: str, page_limit: int) -> tuple[list[dict], bool]:
@@ -228,9 +229,12 @@ class TorrentSearcher:
         if feed not in X1337.BROWSE_FEEDS:
             return SearchOutcome([], [], indexers_unavailable=True)
 
+        from torrtux_core.filters import filter_movie_profile
+
         raw, errored = self._browse_site(site, feed, page_limit)
+        profiled = raw if feed == "top-100-television" else filter_movie_profile(raw)
         filtered = apply_filters(
-            raw,
+            profiled,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             max_size=max_size,
