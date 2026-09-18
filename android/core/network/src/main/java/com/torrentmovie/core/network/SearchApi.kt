@@ -38,6 +38,14 @@ interface SearchApi {
 
     @GET("/v1/results/{id}/magnet")
     suspend fun getMagnet(@Path("id") resultId: String): MagnetResponseDto
+
+    @GET("/v1/magnet/resolve")
+    suspend fun resolveMagnetByDetail(
+        @Query("site") site: String,
+        @Query("detail_url") detailUrl: String,
+        @Query("result_id") resultId: String? = null,
+        @Query("name") name: String? = null,
+    ): MagnetResponseDto
 }
 
 data class TorrentResultDto(

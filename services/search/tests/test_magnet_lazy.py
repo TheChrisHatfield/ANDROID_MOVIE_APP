@@ -83,3 +83,26 @@ def test_magnet_endpoint_unknown_id_returns_not_found_or_expired():
     response = client.get(f"/v1/results/{uuid4()}/magnet")
     assert response.status_code == 404
     assert response.json()["detail"] == "Result not found or expired"
+
+
+def test_magnet_resolve_by_detail_url_without_cache():
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    mock_site.get_magnet_link.return_value = "magnet:?xt=urn:btih:deadbeef"
+
+    with patch.object(_searcher, "sites", [mock_site]):
+        response = client.get(
+            "/v1/magnet/resolve",
+            params={
+                "site": "1337x",
+                "detail_url": "https://1337x.to/torrent/999/cache-miss/",
+                "name": "Cache Miss",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["magnet"].startswith("magnet:")
+    mock_site.get_magnet_link.assert_called_once_with(
+        "https://1337x.to/torrent/999/cache-miss/",
+        quality=None,
+    )

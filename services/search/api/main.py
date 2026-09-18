@@ -279,36 +279,66 @@ def browse_1337x(
     )
 
 
+def _fetch_magnet_for_row(row: dict) -> str | None:
+    magnet = row.get("magnet")
+    if magnet and str(magnet).strip():
+        return str(magnet).strip()
+    site_name = row.get("site")
+    detail_url = row.get("detail_url")
+    site = _searcher.site_for_name(site_name)
+    if not site or not detail_url:
+        return None
+    quality = _quality_from_result_name(row.get("name"))
+    try:
+        if hasattr(site, "get_magnet_link"):
+            try:
+                magnet = site.get_magnet_link(detail_url, quality=quality)
+            except TypeError:
+                magnet = site.get_magnet_link(detail_url)
+        else:
+            magnet = site.get_magnet_link(detail_url)
+    except Exception as exc:
+        logger.warning("Magnet fetch failed for %s: %s", detail_url, exc)
+        magnet = None
+    if magnet and str(magnet).strip():
+        return str(magnet).strip()
+    return None
+
+
 @app.get("/v1/results/{result_id}/magnet", response_model=MagnetResponse)
 def get_magnet(result_id: UUID) -> MagnetResponse:
     row = _result_cache.get(result_id)
     if not row:
         raise HTTPException(status_code=404, detail="Result not found or expired")
 
-    magnet = row.get("magnet")
-    if not magnet or not str(magnet).strip():
-        magnet = None
-    if not magnet:
-        site_name = row.get("site")
-        detail_url = row.get("detail_url")
-        site = _searcher.site_for_name(site_name)
-        if site and detail_url:
-            quality = _quality_from_result_name(row.get("name"))
-            try:
-                if hasattr(site, "get_magnet_link"):
-                    try:
-                        magnet = site.get_magnet_link(detail_url, quality=quality)
-                    except TypeError:
-                        magnet = site.get_magnet_link(detail_url)
-                else:
-                    magnet = site.get_magnet_link(detail_url)
-            except Exception as exc:
-                logger.warning("Magnet fetch failed for %s: %s", result_id, exc)
-                magnet = None
-        if magnet:
-            _result_cache.resolve_magnet(result_id, magnet)
+    magnet = _fetch_magnet_for_row(row)
+    if magnet and (not row.get("magnet") or not str(row.get("magnet")).strip()):
+        _result_cache.resolve_magnet(result_id, magnet)
 
-    if not magnet or not str(magnet).strip():
+    if not magnet:
         raise HTTPException(status_code=404, detail="Magnet unavailable")
 
     return MagnetResponse(id=str(result_id), magnet=magnet)
+
+
+@app.get("/v1/magnet/resolve", response_model=MagnetResponse)
+def resolve_magnet_by_detail(
+    site: str = Query(..., min_length=1),
+    detail_url: str = Query(..., min_length=1),
+    result_id: UUID | None = None,
+    name: str | None = None,
+) -> MagnetResponse:
+    row = {
+        "site": site,
+        "detail_url": detail_url,
+        "name": name or "",
+        "magnet": None,
+    }
+    magnet = _fetch_magnet_for_row(row)
+    if not magnet:
+        raise HTTPException(status_code=404, detail="Magnet unavailable")
+    stored = _result_cache.put_many([{**row, "magnet": magnet}])
+    if not stored:
+        raise HTTPException(status_code=404, detail="Magnet unavailable")
+    resolved_id = result_id or UUID(stored[0]["id"])
+    return MagnetResponse(id=str(resolved_id), magnet=magnet)

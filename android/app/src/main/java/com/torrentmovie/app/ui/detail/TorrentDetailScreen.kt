@@ -106,9 +106,15 @@ fun TorrentDetailScreen(
         }
         magnetLoading = true
         magnetError = null
+        val cachedBeforeResolve = container.searchResultStore.get(resultId)
         try {
             val resolved = withContext(Dispatchers.IO) {
-                container.searchRepository.resolveMagnet(resultId)
+                container.searchRepository.resolveMagnet(
+                    resultId = resultId,
+                    detailUrl = cachedBeforeResolve?.detail_url,
+                    site = cachedBeforeResolve?.site?.takeIf { it.isNotBlank() } ?: site,
+                    name = cachedBeforeResolve?.name?.takeIf { it.isNotBlank() } ?: name,
+                )
             }
             magnet = resolved.magnet.takeIf { it.isNotBlank() }
             if (!magnet.isNullOrBlank()) {
