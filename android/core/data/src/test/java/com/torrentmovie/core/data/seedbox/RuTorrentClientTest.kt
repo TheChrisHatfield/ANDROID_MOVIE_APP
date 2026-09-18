@@ -108,6 +108,28 @@ class RuTorrentClientTest {
     }
 
     @Test
+    fun addMagnetFailsOnFailedRedirectLocation() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(302)
+                .addHeader("Location", "/rutorrent/php/addtorrent.php?result[]=Failed&json=1"),
+        )
+        server.start()
+        val client = RuTorrentClient(
+            baseUrl = server.url("/rutorrent/").toString(),
+            username = "u",
+            password = "p",
+        )
+        val result = client.addMagnet(
+            "magnet:?xt=urn:btih:ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            "/movies/",
+        )
+        server.shutdown()
+        assertTrue(result is SeedboxResult.Failure)
+    }
+
+    @Test
     fun pingDoesNotCrashWithoutUrlScheme() = runBlocking {
         val client = RuTorrentClient(
             baseUrl = "seedbox.example.com/rutorrent",

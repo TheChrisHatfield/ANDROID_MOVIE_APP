@@ -98,28 +98,36 @@ class RuTorrentClient(
                 .post(body)
                 .build()
             return executeWithAuth(request, addTorrentClient).use { response ->
-                handleAddMagnetResponse(response)
+                handleAddMagnetResponse(response, redirectDepth = 0)
             }
         } catch (e: Exception) {
             SeedboxResult.Failure(e.message ?: "Connection failed")
         }
     }
 
-    private fun handleAddMagnetResponse(response: okhttp3.Response): SeedboxResult {
+    private fun handleAddMagnetResponse(response: okhttp3.Response, redirectDepth: Int): SeedboxResult {
         val text = response.body?.string() ?: ""
+        val location = response.header("Location").orEmpty()
+        if (isAddTorrentFailure(text, location)) {
+            return when {
+                text.contains("FailedDirectory", ignoreCase = true) ||
+                    location.contains("FailedDirectory", ignoreCase = true) ->
+                    SeedboxResult.Failure("Invalid download directory")
+                else -> SeedboxResult.Failure("ruTorrent rejected magnet")
+            }
+        }
         if (response.code in 300..399) {
             if (isAddTorrentSuccess(response, text)) {
                 return SeedboxResult.Success()
             }
-            val location = response.header("Location")
-            if (!location.isNullOrBlank()) {
+            if (location.isNotBlank() && redirectDepth < 3) {
                 val followRequest = Request.Builder()
                     .url(resolveSeedboxRedirect(baseUrl, location))
                     .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
                     .get()
                     .build()
                 return executeWithAuth(followRequest, addTorrentClient).use { follow ->
-                    handleAddMagnetResponse(follow)
+                    handleAddMagnetResponse(follow, redirectDepth + 1)
                 }
             }
         }
@@ -174,6 +182,21 @@ class RuTorrentClient(
             return true
         }
         return false
+    }
+
+    private fun isAddTorrentFailure(text: String, location: String = ""): Boolean {
+        val combined = "$text $location"
+        if (combined.contains("FailedDirectory", ignoreCase = true)) return true
+        if (combined.contains("FailedURL", ignoreCase = true)) return true
+        if (combined.contains("FailedFile", ignoreCase = true)) return true
+        if (Regex("""result(\[\])?=Failed""", RegexOption.IGNORE_CASE).containsMatchIn(combined)) {
+            return true
+        }
+        if (Regex(""""result"\s*:\s*"Failed"""", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+            return true
+        }
+        return combined.contains("Failed", ignoreCase = true) &&
+            !combined.contains("Success", ignoreCase = true)
     }
 
     private fun executeWithAuth(
