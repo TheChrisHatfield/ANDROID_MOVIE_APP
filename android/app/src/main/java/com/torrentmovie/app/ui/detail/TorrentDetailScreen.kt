@@ -48,6 +48,7 @@ fun TorrentDetailScreen(
     var magnet by remember(resultId) { mutableStateOf(initialMagnet?.takeIf { it.isNotBlank() }) }
     var loading by remember(resultId) { mutableStateOf(false) }
     var duplicate by remember(resultId) { mutableStateOf(false) }
+    var justSentStorageKey by remember(resultId) { mutableStateOf<String?>(null) }
     var magnetError by remember(resultId) { mutableStateOf<String?>(null) }
     var magnetLoading by remember(resultId) { mutableStateOf(false) }
     var resultExpired by remember(resultId) { mutableStateOf(false) }
@@ -85,13 +86,6 @@ fun TorrentDetailScreen(
         return uploaded.find { it.displayName == name && it.site == site }?.infoHash
     }
 
-    fun viewInUploadedKey(): String? {
-        resolveUploadedKey()?.let { return it }
-        if (!duplicate) return null
-        val magnetUri = magnet?.takeIf { it.isNotBlank() } ?: return null
-        return MagnetHashUtil.storageKey(magnetUri, name, site)
-    }
-
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
         return resolveUploadedKey(magnetValue) != null
     }
@@ -102,6 +96,14 @@ fun TorrentDetailScreen(
             return@LaunchedEffect
         }
         duplicate = isAlreadyUploaded(magnet)
+        if (duplicate) {
+            justSentStorageKey = null
+        }
+    }
+
+    fun uploadedNavigationKey(): String? {
+        resolveUploadedKey()?.let { return it }
+        return justSentStorageKey
     }
 
     LaunchedEffect(resultId, resolveRequest, settingsRevision) {
@@ -241,6 +243,9 @@ fun TorrentDetailScreen(
                         when (result) {
                             is SeedboxResult.Success -> {
                                 duplicate = true
+                                if (!result.message.contains("history save failed")) {
+                                    justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
+                                }
                                 val length = if (result.message.contains("history save failed")) {
                                     Toast.LENGTH_LONG
                                 } else {
@@ -268,10 +273,10 @@ fun TorrentDetailScreen(
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
         }
-        if (duplicate && onOpenUploaded != null) {
+        if (duplicate && onOpenUploaded != null && uploadedNavigationKey() != null) {
             TextButton(
                 onClick = {
-                    viewInUploadedKey()?.let { key -> onOpenUploaded(key) }
+                    uploadedNavigationKey()?.let { key -> onOpenUploaded(key) }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
