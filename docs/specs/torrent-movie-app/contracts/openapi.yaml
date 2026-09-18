@@ -125,6 +125,79 @@ paths:
         '503':
           description: No working indexers (detail No working indexers — Android maps to No sources available)
 
+  /v1/browse/1337x/{feed}:
+    get:
+      summary: Browse 1337x trending and top lists
+      operationId: browse1337x
+      parameters:
+        - name: feed
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [trending, top-100, top-100-movies, top-100-television]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: pages
+          in: query
+          schema:
+            type: integer
+            default: 1
+            maximum: 5
+        - name: min_seeds
+          in: query
+          schema:
+            type: integer
+        - name: max_seeds
+          in: query
+          schema:
+            type: integer
+        - name: max_size
+          in: query
+          schema:
+            type: string
+        - name: group
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: enrich
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: tmdb_api_key
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Browse feed results (same shape as search)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TorrentResult'
+                  failed_sites:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid feed or filter parameters
+        '503':
+          description: 1337x unavailable
+
   /v1/results/{resultId}/magnet:
     get:
       summary: Resolve magnet link for a cached result
