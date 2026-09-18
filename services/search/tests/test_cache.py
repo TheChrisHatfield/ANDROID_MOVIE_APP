@@ -96,3 +96,14 @@ def test_put_many_reuses_stable_id_for_same_release():
     third = cache.put_many([dict(row)])[0]
     assert third["id"] == first["id"]
     assert cache.get(UUID(first["id"]))["magnet"] == "magnet:?xt=urn:btih:abc"
+
+
+def test_stable_id_differs_for_same_name_different_size():
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    first = cache.put_many(
+        [{"name": "Release", "site": "1337x", "size": "1 GB", "seeds": "10"}]
+    )[0]
+    second = cache.put_many(
+        [{"name": "Release", "site": "1337x", "size": "2 GB", "seeds": "5"}]
+    )[0]
+    assert first["id"] != second["id"]
