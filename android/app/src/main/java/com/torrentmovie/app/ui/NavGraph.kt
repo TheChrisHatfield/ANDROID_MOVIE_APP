@@ -87,7 +87,7 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
-        } else if (wasTwoPane) {
+        } else if (wasTwoPane && !searchState.loading) {
             container.foldActiveSelection?.let { active ->
                 val route = navController.currentBackStackEntry?.destination?.route
                 if (route == null || !route.startsWith("detail/")) {
