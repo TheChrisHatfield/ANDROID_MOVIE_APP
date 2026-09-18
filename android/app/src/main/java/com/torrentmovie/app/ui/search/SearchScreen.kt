@@ -1,10 +1,10 @@
 package com.torrentmovie.app.ui.search
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -185,45 +185,16 @@ fun SearchScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 16.dp),
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (state.genrePanelExpanded) {
-                FilterChip(
-                    selected = false,
-                    onClick = { vm.collapseGenrePanel() },
-                    label = { Text("Lists") },
-                    enabled = !state.loading,
-                )
-                X1337MovieGenre.entriesList.forEach { genre ->
-                    FilterChip(
-                        selected = state.activeGenre == genre.id,
-                        onClick = { vm.loadGenreBrowse(genre) },
-                        label = { Text(genre.buttonLabel) },
-                        enabled = !state.loading,
-                    )
-                }
-            } else {
-                X1337BrowseFeed.entriesList.forEach { feed ->
-                    FilterChip(
-                        selected = state.activeBrowseFeed == feed.id,
-                        onClick = { vm.loadBrowse1337x(feed) },
-                        label = { Text(feed.buttonLabel) },
-                        enabled = !state.loading,
-                    )
-                }
-                FilterChip(
-                    selected = false,
-                    onClick = { vm.expandGenrePanel() },
-                    label = { Text("By Genre") },
-                    enabled = !state.loading,
-                )
-            }
-        }
+        BrowseGenreChipRow(
+            genrePanelExpanded = state.genrePanelExpanded,
+            activeGenre = state.activeGenre,
+            activeBrowseFeed = state.activeBrowseFeed,
+            loading = state.loading,
+            onCollapseGenrePanel = vm::collapseGenrePanel,
+            onExpandGenrePanel = vm::expandGenrePanel,
+            onLoadGenre = vm::loadGenreBrowse,
+            onLoadBrowse = vm::loadBrowse1337x,
+        )
         if (state.activeBrowseFeed == null && state.activeGenre == null) {
             Button(
                 onClick = { vm.search() },
@@ -369,6 +340,59 @@ fun SearchScreen(
                 refreshing = state.loading,
                 state = pullState,
                 modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BrowseGenreChipRow(
+    genrePanelExpanded: Boolean,
+    activeGenre: String?,
+    activeBrowseFeed: String?,
+    loading: Boolean,
+    onCollapseGenrePanel: () -> Unit,
+    onExpandGenrePanel: () -> Unit,
+    onLoadGenre: (X1337MovieGenre) -> Unit,
+    onLoadBrowse: (X1337BrowseFeed) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (genrePanelExpanded) {
+            FilterChip(
+                selected = false,
+                onClick = onCollapseGenrePanel,
+                label = { Text("Lists") },
+                enabled = !loading,
+            )
+            X1337MovieGenre.entriesList.forEach { genre ->
+                FilterChip(
+                    selected = activeGenre == genre.id,
+                    onClick = { onLoadGenre(genre) },
+                    label = { Text(genre.buttonLabel) },
+                    enabled = !loading,
+                )
+            }
+        } else {
+            X1337BrowseFeed.entriesList.forEach { feed ->
+                FilterChip(
+                    selected = activeBrowseFeed == feed.id,
+                    onClick = { onLoadBrowse(feed) },
+                    label = { Text(feed.buttonLabel) },
+                    enabled = !loading,
+                )
+            }
+            FilterChip(
+                selected = false,
+                onClick = onExpandGenrePanel,
+                label = { Text("By Genre") },
+                enabled = !loading,
             )
         }
     }
