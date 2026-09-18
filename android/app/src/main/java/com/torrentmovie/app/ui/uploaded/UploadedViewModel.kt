@@ -34,6 +34,10 @@ data class UploadedUiState(
 )
 
 class UploadedViewModel(private val container: AppContainer) : ViewModel() {
+    private companion object {
+        const val ADDING_GRACE_MS = 120_000L
+    }
+
     private val _refreshing = MutableStateFlow(false)
     private val _statusError = MutableStateFlow<String?>(null)
     private val _remoteByHash = MutableStateFlow<Map<String, SeedboxTorrentStatus>>(emptyMap())
@@ -128,7 +132,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     ): UploadedRowUi {
         val lookupHash = lookupHash(entry)
         val remote = lookupHash?.let { remoteByHash[it] }
-        val recentlySent = System.currentTimeMillis() - entry.sentAt < 30_000L
+        val recentlySent = System.currentTimeMillis() - entry.sentAt < ADDING_GRACE_MS
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
@@ -136,8 +140,8 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 append(remote.statusLabel())
                 remote.rateSummary()?.let { append(" · ").append(it) }
             }
+            recentlySent && lookupHash != null -> "Adding to seedbox…"
             statusError != null -> "Status unavailable"
-            pollSucceeded && recentlySent -> "Adding to seedbox…"
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"
         }
