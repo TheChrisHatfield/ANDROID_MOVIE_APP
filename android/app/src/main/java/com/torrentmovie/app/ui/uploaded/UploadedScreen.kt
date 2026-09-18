@@ -94,20 +94,20 @@ fun UploadedScreen(
 
     LaunchedEffect(highlightKey, state.rows) {
         val key = highlightKey ?: return@LaunchedEffect
-        val index = state.rows.indexOfFirst { it.entry.infoHash.equals(key, ignoreCase = true) }
-        if (index >= 0) {
-            listState.animateScrollToItem(index + 1)
-            delay(2500)
-            highlightKey = null
-            container.pendingUploadedHighlight = null
-        } else if (!state.refreshing) {
-            delay(750)
-            val retryIndex = state.rows.indexOfFirst { it.entry.infoHash.equals(key, ignoreCase = true) }
-            if (retryIndex < 0) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < deadline) {
+            val index = state.rows.indexOfFirst { it.entry.infoHash.equals(key, ignoreCase = true) }
+            if (index >= 0) {
+                listState.animateScrollToItem(index + 1)
+                delay(2500)
                 highlightKey = null
                 container.pendingUploadedHighlight = null
+                return@LaunchedEffect
             }
+            delay(250)
         }
+        highlightKey = null
+        container.pendingUploadedHighlight = null
     }
 
     LaunchedEffect(resumeTick, state.seedboxConfigured) {
