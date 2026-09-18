@@ -148,6 +148,9 @@ class RuTorrentClient(
                 !text.contains("Success", ignoreCase = true) ->
                 return SeedboxResult.Failure("ruTorrent rejected magnet")
             isAddTorrentSuccess(response, text) -> return SeedboxResult.Success()
+            text.contains("<html", ignoreCase = true) &&
+                text.contains("login", ignoreCase = true) ->
+                return SeedboxResult.Failure("Authentication failed — check seedbox credentials")
             else -> return SeedboxResult.Failure("Unexpected ruTorrent response")
         }
     }
