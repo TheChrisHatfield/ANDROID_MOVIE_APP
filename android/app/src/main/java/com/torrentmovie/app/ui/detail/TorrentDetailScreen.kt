@@ -206,7 +206,7 @@ fun TorrentDetailScreen(
                     Toast.makeText(context, "Magnet not available", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                if (loading || magnetLoading || magnetError != null) return@Button
+                if (loading || magnetLoading) return@Button
                 loading = true
                 scope.launch {
                     try {
@@ -232,7 +232,7 @@ fun TorrentDetailScreen(
                 }
             },
             enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && magnetError == null,
+                !magnet.isNullOrBlank() && !duplicate && !magnetLoading,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")

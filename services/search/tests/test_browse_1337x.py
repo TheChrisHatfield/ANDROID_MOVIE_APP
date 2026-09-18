@@ -45,6 +45,13 @@ def test_browse_1337x_endpoint(mock_browse):
 
 
 @patch.object(_searcher, "browse_1337x")
+def test_browse_rejects_pages_above_max(mock_browse):
+    response = client.get("/v1/browse/1337x/trending", params={"pages": 10})
+    assert response.status_code == 422
+    mock_browse.assert_not_called()
+
+
+@patch.object(_searcher, "browse_1337x")
 def test_browse_1337x_unavailable(mock_browse):
     mock_browse.return_value = SearchOutcome([], [], indexers_unavailable=True)
     response = client.get("/v1/browse/1337x/top-100")
