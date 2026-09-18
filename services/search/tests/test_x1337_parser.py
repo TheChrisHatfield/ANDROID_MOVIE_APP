@@ -19,6 +19,27 @@ SAMPLE_HTML = """
 """
 
 
+def test_x1337_parse_results_keeps_row_when_optional_cells_missing():
+    site = X1337()
+    site.working_url = "https://1337xx.to"
+    html = """
+    <html><body>
+    <table class="table-list">
+    <tr><th>Name</th></tr>
+    <tr>
+      <td class="name"><a href="/torrent/99/partial/">Partial Row</a></td>
+      <td class="seeds">3</td>
+    </tr>
+    </table>
+    </body></html>
+    """
+    rows = site.parse_results(html.encode(), "partial")
+    assert len(rows) == 1
+    assert rows[0]["name"] == "Partial Row"
+    assert rows[0]["leeches"] == "-"
+    assert rows[0]["size"] == "-"
+
+
 def test_x1337_parse_results_extracts_torrent_row():
     site = X1337()
     site.working_url = "https://1337xx.to"

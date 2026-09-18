@@ -257,12 +257,21 @@ class X1337(TorrentSite):
                 )
                 if not name_cell:
                     continue
-                name = name_cell.text
+                name = name_cell.get_text(strip=True)
                 detail_url = urljoin(self.working_url, name_cell["href"])
-                seeds = row.find("td", class_="seeds").text
-                leeches = row.find("td", class_="leeches").text
-                size = row.find("td", class_="size").text.split("B")[0] + "B"
-                date = row.find("td", class_="coll-date").text
+                seeds_td = row.find("td", class_="seeds")
+                leeches_td = row.find("td", class_="leeches")
+                size_td = row.find("td", class_="size")
+                date_td = row.find("td", class_="coll-date")
+                seeds = seeds_td.get_text(strip=True) if seeds_td else "-"
+                leeches = leeches_td.get_text(strip=True) if leeches_td else "-"
+                size_raw = size_td.get_text(strip=True) if size_td else "-"
+                size = (
+                    size_raw.split("B")[0] + "B"
+                    if size_raw != "-" and "B" in size_raw
+                    else size_raw
+                )
+                date = date_td.get_text(strip=True) if date_td else "-"
 
                 results.append({
                     "name": name,
