@@ -66,6 +66,15 @@ fun AppNavGraph(
         return SearchReleaseRematch.find(allReleases(), resultId, name, site)
     }
 
+    fun openUploaded(storageKey: String) {
+        container.pendingUploadedHighlight = storageKey
+        navController.navigate(Routes.UPLOADED) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     var wasFoldTwoPane by remember { mutableStateOf(useFoldTwoPane) }
 
     LaunchedEffect(useFoldTwoPane) {
@@ -112,6 +121,7 @@ fun AppNavGraph(
                             restoreState = true
                         }
                     },
+                    onOpenUploaded = ::openUploaded,
                 )
             } else {
                 SearchScreen(
@@ -196,6 +206,7 @@ fun AppNavGraph(
                 onResultExpired = {
                     navController.popBackStack(Routes.SEARCH, inclusive = false)
                 },
+                onOpenUploaded = ::openUploaded,
             )
         }
         composable(Routes.UPLOADED) { UploadedScreen(container) }

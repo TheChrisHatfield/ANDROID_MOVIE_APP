@@ -41,6 +41,7 @@ fun TorrentDetailScreen(
     site: String,
     initialMagnet: String?,
     onResultExpired: (() -> Unit)? = null,
+    onOpenUploaded: ((storageKey: String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -74,13 +75,17 @@ fun TorrentDetailScreen(
         }
     }
 
-    fun isAlreadyUploaded(magnetValue: String?): Boolean {
-        val magnet = magnetValue?.takeIf { it.isNotBlank() }
-        if (magnet != null) {
-            val key = MagnetHashUtil.storageKey(magnet, name, site)
-            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+    fun resolveUploadedKey(magnetValue: String? = magnet): String? {
+        val magnetUri = magnetValue?.takeIf { it.isNotBlank() }
+        if (magnetUri != null) {
+            val key = MagnetHashUtil.storageKey(magnetUri, name, site)
+            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return key
         }
-        return uploaded.any { it.displayName == name && it.site == site }
+        return uploaded.find { it.displayName == name && it.site == site }?.infoHash
+    }
+
+    fun isAlreadyUploaded(magnetValue: String?): Boolean {
+        return resolveUploadedKey(magnetValue) != null
     }
 
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
@@ -254,6 +259,18 @@ fun TorrentDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
+        }
+        if (duplicate && onOpenUploaded != null) {
+            TextButton(
+                onClick = {
+                    resolveUploadedKey()?.let { key -> onOpenUploaded(key) }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+            ) {
+                Text("View in Uploaded")
+            }
         }
     }
 }

@@ -10,6 +10,9 @@ class AppContainer(context: Context) {
     /** Latest fold two-pane selection (survives layout disposal on width change). */
     var foldActiveSelection: PendingFoldDetail? = null
 
+    /** Scroll/highlight target when opening Uploaded from detail after send. */
+    var pendingUploadedHighlight: String? = null
+
     val settingsRepository = SettingsRepository(context)
     val searchResultStore = SearchResultStore()
     val movieMetadataStore = MovieMetadataStore()

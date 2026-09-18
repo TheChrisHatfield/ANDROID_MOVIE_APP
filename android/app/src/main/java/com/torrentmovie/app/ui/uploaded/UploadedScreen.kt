@@ -1,5 +1,6 @@
 package com.torrentmovie.app.ui.uploaded
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -28,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -60,6 +63,8 @@ fun UploadedScreen(
         refreshing = state.refreshing,
         onRefresh = { vm.refreshStatuses() },
     )
+    val listState = rememberLazyListState()
+    var highlightKey by remember { mutableStateOf(container.pendingUploadedHighlight) }
     var resumeTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -73,9 +78,24 @@ fun UploadedScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    LaunchedEffect(Unit) {
+        container.pendingUploadedHighlight?.let { highlightKey = it }
+    }
+
     LaunchedEffect(resumeTick) {
         if (resumeTick > 0) {
             vm.refreshStatuses()
+        }
+    }
+
+    LaunchedEffect(highlightKey, state.rows) {
+        val key = highlightKey ?: return@LaunchedEffect
+        val index = state.rows.indexOfFirst { it.entry.infoHash.equals(key, ignoreCase = true) }
+        if (index >= 0) {
+            listState.animateScrollToItem(index + 1)
+            delay(2500)
+            highlightKey = null
+            container.pendingUploadedHighlight = null
         }
     }
 
@@ -104,7 +124,10 @@ fun UploadedScreen(
                         .padding(16.dp),
                 )
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                ) {
                     item {
                         Text(
                             if (state.seedboxConfigured) {
@@ -125,8 +148,11 @@ fun UploadedScreen(
                         }
                     }
                     items(state.rows, key = { it.entry.infoHash }) { row ->
+                        val highlighted = highlightKey != null &&
+                            row.entry.infoHash.equals(highlightKey, ignoreCase = true)
                         UploadedRow(
                             row = row,
+                            highlighted = highlighted,
                             onRemove = {
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
@@ -151,8 +177,17 @@ fun UploadedScreen(
 }
 
 @Composable
-private fun UploadedRow(row: UploadedRowUi, onRemove: () -> Unit) {
+private fun UploadedRow(
+    row: UploadedRowUi,
+    highlighted: Boolean = false,
+    onRemove: () -> Unit,
+) {
     ListItem(
+        modifier = if (highlighted) {
+            Modifier.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+        } else {
+            Modifier
+        },
         headlineContent = { Text(row.entry.displayName) },
         supportingContent = {
             Column {

@@ -32,6 +32,7 @@ fun FoldSearchDetailLayout(
     container: AppContainer,
     searchViewModel: SearchViewModel,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenUploaded: ((storageKey: String) -> Unit)? = null,
 ) {
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -285,6 +286,7 @@ fun FoldSearchDetailLayout(
                             restoredSite = null
                             syncFoldSelection(null, "", "")
                         },
+                        onOpenUploaded = onOpenUploaded,
                     )
                 }
             }
