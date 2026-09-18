@@ -173,7 +173,9 @@ fun AppNavGraph(
                 if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
                 val releases = allReleases()
                 if (resultId in releases.map { it.id }) return@LaunchedEffect
-                val matched = rematchRelease(resultId, navName, navSite)
+                val storedSite = container.searchResultStore.get(resultId)?.site
+                val rematchSite = navSite.takeIf { it.isNotBlank() } ?: storedSite.orEmpty()
+                val matched = rematchRelease(resultId, navName, rematchSite)
                 if (matched != null) {
                     val oldMagnet = container.searchResultStore.get(resultId)?.magnet?.takeIf { it.isNotBlank() }
                     val merged = if (!oldMagnet.isNullOrBlank() && matched.magnet.isNullOrBlank()) {
@@ -194,6 +196,7 @@ fun AppNavGraph(
                     return@LaunchedEffect
                 }
                 if (container.searchResultStore.get(resultId) != null) return@LaunchedEffect
+                if (navName.isNotBlank()) return@LaunchedEffect
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
 
