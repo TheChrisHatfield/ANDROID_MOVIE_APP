@@ -23,6 +23,9 @@ paths:
                   status:
                     type: string
                     example: ok
+                  tmdb_configured:
+                    type: boolean
+                    description: Whether TMDB enrichment is available on this server
 
   /v1/sites/health:
     get:

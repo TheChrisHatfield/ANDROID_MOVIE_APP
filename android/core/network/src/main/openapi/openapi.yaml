@@ -23,6 +23,8 @@ paths:
                   status:
                     type: string
                     example: ok
+                  tmdb_configured:
+                    type: boolean
 
   /v1/sites/health:
     get:
