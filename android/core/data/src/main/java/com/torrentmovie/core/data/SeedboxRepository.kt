@@ -57,6 +57,9 @@ class SeedboxRepository(
             lastSeedboxSettingsKey = seedboxKey
         }
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
+        if (MagnetHashUtil.extractInfoHash(magnet) == null) {
+            return SeedboxResult.Failure("Magnet missing info hash — cannot send or track status")
+        }
         if (isDuplicate(magnet, displayName, site)) {
             return SeedboxResult.Failure("Already uploaded — remove from Uploaded list to re-send")
         }
