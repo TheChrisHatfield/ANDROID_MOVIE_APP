@@ -5,7 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +66,8 @@ fun AppNavGraph(
         return SearchReleaseRematch.find(allReleases(), resultId, name, site)
     }
 
+    var wasFoldTwoPane by remember { mutableStateOf(useFoldTwoPane) }
+
     LaunchedEffect(useFoldTwoPane) {
         if (useFoldTwoPane) {
             val entry = navController.currentBackStackEntry
@@ -79,7 +83,20 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
+        } else if (wasFoldTwoPane) {
+            container.foldActiveSelection?.let { active ->
+                val route = navController.currentBackStackEntry?.destination?.route
+                if (route == null || !route.startsWith("detail/")) {
+                    navController.navigate(
+                        Routes.detail(active.resultId, active.name, active.site),
+                    ) {
+                        launchSingleTop = true
+                        popUpTo(Routes.SEARCH) { inclusive = false }
+                    }
+                }
+            }
         }
+        wasFoldTwoPane = useFoldTwoPane
     }
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
