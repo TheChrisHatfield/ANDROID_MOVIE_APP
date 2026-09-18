@@ -35,6 +35,25 @@ def test_x1337_mirror_list_prioritizes_working_domains():
     assert site.base_urls[0] == "https://1337xx.to"
 
 
+def test_x1337_rewrites_stale_mirror_host_for_magnet_fetch():
+    site = X1337()
+    site.working_url = "https://1337xx.to"
+    stale = "https://old-mirror.example/torrent/9/stale-title/"
+    html = """
+    <html><body>
+    <a class="download-torrent" href="magnet:?xt=urn:btih:deadbeef">Magnet</a>
+    </body></html>
+    """
+    mock_response = MagicMock(status_code=200, content=html.encode())
+
+    def assert_url(url, **kwargs):
+        assert url == "https://1337xx.to/torrent/9/stale-title/"
+        return mock_response
+
+    with patch("torrtux_core.http_client.http_get", side_effect=assert_url):
+        assert site.get_magnet_link(stale) == "magnet:?xt=urn:btih:deadbeef"
+
+
 def test_x1337_magnet_parser_finds_detail_page_link():
     site = X1337()
     site.working_url = "https://1337xx.to"

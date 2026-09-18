@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 
@@ -45,6 +45,17 @@ class TorrentSite:
         if base:
             return urljoin(base.rstrip("/") + "/", detail_url.lstrip("/"))
         return None
+
+    def current_detail_url(self, detail_url: str | None) -> str | None:
+        """Resolve relative URLs and rewrite stale mirror hosts to working_url."""
+        absolute = self.absolute_detail_url(detail_url)
+        if not absolute or not self.working_url:
+            return absolute
+        parsed = urlparse(absolute)
+        if "/torrent/" not in parsed.path:
+            return absolute
+        working = urlparse(self.working_url.rstrip("/"))
+        return urlunparse((working.scheme, working.netloc, parsed.path, "", "", ""))
 
     def make_result(
         self,

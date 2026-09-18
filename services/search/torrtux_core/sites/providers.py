@@ -279,7 +279,7 @@ class X1337(TorrentSite):
         return results
 
     def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
-        detail_url = self.absolute_detail_url(detail_url)
+        detail_url = self.current_detail_url(detail_url)
         if not detail_url:
             return None
         try:
