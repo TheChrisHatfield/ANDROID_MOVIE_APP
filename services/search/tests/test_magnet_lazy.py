@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
@@ -83,6 +83,32 @@ def test_magnet_endpoint_unknown_id_returns_not_found_or_expired():
     response = client.get(f"/v1/results/{uuid4()}/magnet")
     assert response.status_code == 404
     assert response.json()["detail"] == "Result not found or expired"
+
+
+def test_magnet_resolve_returns_stable_cache_id_not_client_result_id():
+    client_id = uuid4()
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    mock_site.get_magnet_link.return_value = "magnet:?xt=urn:btih:deadbeef"
+
+    with patch.object(_searcher, "sites", [mock_site]):
+        response = client.get(
+            "/v1/magnet/resolve",
+            params={
+                "site": "1337x",
+                "detail_url": "https://1337x.to/torrent/42/stable-id/",
+                "name": "Stable Id",
+                "result_id": str(client_id),
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["magnet"].startswith("magnet:")
+    assert body["id"] != str(client_id)
+    cached = _result_cache.get(UUID(body["id"]))
+    assert cached is not None
+    assert cached["detail_url"].endswith("/torrent/42/stable-id/")
 
 
 def test_magnet_resolve_by_detail_url_without_cache():

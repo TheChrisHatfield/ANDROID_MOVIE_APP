@@ -83,7 +83,7 @@ def _refresh_sites_health(force: bool = False) -> list[str]:
     now = time.time()
     if not force and now - float(_sites_health_cache["checked_at"]) < _SITES_HEALTH_TTL:
         if _searcher.working_sites:
-            return list(_sites_health_cache["working"])
+            return [site.name for site in _searcher.working_sites]
         force = True
     _searcher.test_sites(quiet=True)
     working = [site.name for site in _searcher.working_sites]
@@ -392,5 +392,4 @@ def resolve_magnet_by_detail(
     stored = _result_cache.put_many([{**row, "magnet": magnet}])
     if not stored:
         raise HTTPException(status_code=404, detail="Magnet unavailable")
-    resolved_id = result_id or UUID(stored[0]["id"])
-    return MagnetResponse(id=str(resolved_id), magnet=magnet)
+    return MagnetResponse(id=str(UUID(stored[0]["id"])), magnet=magnet)
