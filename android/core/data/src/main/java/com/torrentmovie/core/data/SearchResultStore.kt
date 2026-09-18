@@ -15,14 +15,12 @@ class SearchResultStore {
             pruneExpired()
             val now = System.currentTimeMillis()
             val existing = byId[result.id]?.result
-            val merged = if (
-                existing != null &&
-                result.magnet.isNullOrBlank() &&
-                !existing.magnet.isNullOrBlank()
-            ) {
-                result.copy(magnet = existing.magnet)
-            } else {
-                result
+            val merged = when {
+                existing == null -> result
+                else -> result.copy(
+                    magnet = result.magnet?.takeIf { it.isNotBlank() } ?: existing.magnet,
+                    detail_url = result.detail_url?.takeIf { it.isNotBlank() } ?: existing.detail_url,
+                )
             }
             byId[merged.id] = Entry(merged, now)
             evictOverflow()
