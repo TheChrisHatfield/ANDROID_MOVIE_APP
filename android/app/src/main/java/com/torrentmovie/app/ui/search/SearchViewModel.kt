@@ -313,7 +313,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         emptyResultsMessage: String,
     ) {
         val infoMessages = mutableListOf<String>()
-        if (minSeeds != null) {
+        if (minSeeds != null && activeBrowseFeed == null) {
             infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
         }
         if (maxSeeds != null) {
