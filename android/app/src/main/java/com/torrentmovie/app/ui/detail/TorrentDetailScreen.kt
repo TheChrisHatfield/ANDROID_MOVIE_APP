@@ -226,8 +226,14 @@ fun TorrentDetailScreen(
                             container.seedboxRepository.addMagnet(m, name, site)
                         }
                         when (result) {
-                            is SeedboxResult.Success ->
-                                Toast.makeText(context, "Sent to seedbox", Toast.LENGTH_SHORT).show()
+                            is SeedboxResult.Success -> {
+                                val length = if (result.message.contains("history save failed")) {
+                                    Toast.LENGTH_LONG
+                                } else {
+                                    Toast.LENGTH_SHORT
+                                }
+                                Toast.makeText(context, result.message, length).show()
+                            }
                             is SeedboxResult.Failure ->
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
                         }
