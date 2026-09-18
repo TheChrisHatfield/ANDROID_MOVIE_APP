@@ -131,11 +131,11 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
-            statusError != null -> "Status unavailable"
             remote != null -> buildString {
                 append(remote.statusLabel())
                 remote.rateSummary()?.let { append(" · ").append(it) }
             }
+            statusError != null -> "Status unavailable"
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"
         }
