@@ -110,7 +110,6 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                     _pollSucceeded.value = true
                 } else {
                     _statusError.value = error
-                    _remoteByHash.value = emptyMap()
                     _pollSucceeded.value = false
                 }
             } finally {
