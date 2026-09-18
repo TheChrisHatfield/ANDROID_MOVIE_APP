@@ -98,6 +98,13 @@ fun UploadedScreen(
             delay(2500)
             highlightKey = null
             container.pendingUploadedHighlight = null
+        } else if (!state.refreshing) {
+            delay(750)
+            val retryIndex = state.rows.indexOfFirst { it.entry.infoHash.equals(key, ignoreCase = true) }
+            if (retryIndex < 0) {
+                highlightKey = null
+                container.pendingUploadedHighlight = null
+            }
         }
     }
 
