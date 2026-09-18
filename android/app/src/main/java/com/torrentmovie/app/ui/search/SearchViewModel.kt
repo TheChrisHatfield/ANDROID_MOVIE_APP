@@ -74,8 +74,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                         error = null,
                         errorCode = null,
                         info = null,
-                        results = emptyList(),
-                        groups = emptyList(),
                     )
                     refreshCurrentResults()
                 }
