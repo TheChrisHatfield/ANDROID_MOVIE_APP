@@ -3,6 +3,26 @@ from unittest.mock import MagicMock, patch
 from torrtux_core.searcher import TorrentSearcher
 
 
+def test_browse_1337x_applies_movie_profile_except_tv_feed():
+    from torrtux_core.sites.providers import X1337
+
+    searcher = TorrentSearcher(site_classes=[X1337])
+    mock_site = MagicMock(spec=X1337)
+    mock_site.name = "1337x"
+    searcher.working_sites = [mock_site]
+    raw = [
+        {"name": "Movie Title 2024 1080p", "seeds": "50", "size": "2 GB", "site": "1337x"},
+        {"name": "Some Show S01E01 1080p", "seeds": "40", "size": "1 GB", "site": "1337x"},
+    ]
+    with patch.object(searcher, "_browse_site", return_value=(raw, False)):
+        movies = searcher.browse_1337x("trending")
+    assert len(movies.results) == 1
+    assert movies.results[0]["name"].startswith("Movie Title")
+    with patch.object(searcher, "_browse_site", return_value=(raw, False)):
+        tv = searcher.browse_1337x("top-100-television")
+    assert len(tv.results) == 2
+
+
 def test_site_for_name_is_case_insensitive():
     searcher = TorrentSearcher(site_classes=[])
     mock_site = MagicMock()
