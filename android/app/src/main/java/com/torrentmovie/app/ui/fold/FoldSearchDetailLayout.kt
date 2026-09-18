@@ -111,16 +111,32 @@ fun FoldSearchDetailLayout(
     }
 
     var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
-    var lastSettingsRevision by rememberSaveable { mutableStateOf(settingsRevision) }
+    var lastSearchSettingsKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingFilterSelectionClear by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(settingsRevision) {
-        if (settingsRevision != lastSettingsRevision && state.hasSearched) {
-            lastSettingsRevision = settingsRevision
+    fun currentSearchSettingsKey(): String {
+        val settings = container.settingsRepository.load()
+        return listOf(
+            settings.searchApiBaseUrl,
+            settings.tmdbApiKey,
+            settings.searchPages.toString(),
+            settings.movieSitesOnly.toString(),
+            settings.fetchMovieMetadata.toString(),
+            state.minSeeds?.toString().orEmpty(),
+            state.maxSeeds?.toString().orEmpty(),
+            state.maxSize.orEmpty(),
+        ).joinToString("|")
+    }
+
+    LaunchedEffect(settingsRevision, state.minSeeds, state.maxSeeds, state.maxSize) {
+        val key = currentSearchSettingsKey()
+        if (lastSearchSettingsKey != null && lastSearchSettingsKey != key && state.hasSearched) {
             selectedId = null
             restoredName = null
             restoredSite = null
             syncFoldSelection(null, "", "")
         }
+        lastSearchSettingsKey = key
     }
 
     LaunchedEffect(state.query, state.lastExecutedQuery, state.hasSearched) {
@@ -156,17 +172,24 @@ fun FoldSearchDetailLayout(
             state.maxSize.orEmpty(),
         ).joinToString("|")
         if (lastSearchFilterKey != null && lastSearchFilterKey != filterKey) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            syncFoldSelection(null, "", "")
+            pendingFilterSelectionClear = true
         }
         lastSearchFilterKey = filterKey
     }
 
-    LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading) {
+    LaunchedEffect(state.loading, pendingFilterSelectionClear, state.hasSearched) {
+        if (!pendingFilterSelectionClear || state.loading || !state.hasSearched) return@LaunchedEffect
+        pendingFilterSelectionClear = false
+        selectedId = null
+        restoredName = null
+        restoredSite = null
+        syncFoldSelection(null, "", "")
+    }
+
+    LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
         if (state.loading || !state.hasSearched) return@LaunchedEffect
         if (state.error != null && state.groups.isEmpty() && state.results.isEmpty()) {
+            if (state.query.trim() == state.lastExecutedQuery.trim()) return@LaunchedEffect
             selectedId = null
             restoredName = null
             restoredSite = null
