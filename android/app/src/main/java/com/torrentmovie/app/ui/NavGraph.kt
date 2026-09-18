@@ -23,6 +23,7 @@ import com.torrentmovie.app.ui.search.SearchViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
+import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
@@ -60,13 +61,7 @@ fun AppNavGraph(
     }
 
     fun rematchRelease(resultId: String, name: String, site: String): TorrentResultDto? {
-        val releases = allReleases()
-        releases.find { it.id == resultId }?.let { return it }
-        if (name.isBlank()) return null
-        return releases.find { release ->
-            release.name.equals(name, ignoreCase = true) &&
-                (site.isBlank() || release.site == site)
-        }
+        return SearchReleaseRematch.find(allReleases(), resultId, name, site)
     }
 
     LaunchedEffect(useFoldTwoPane) {
@@ -150,9 +145,6 @@ fun AppNavGraph(
                 if (searchState.loading || !searchState.hasSearched) return@LaunchedEffect
                 val releases = allReleases()
                 if (resultId in releases.map { it.id }) return@LaunchedEffect
-                if (container.searchResultStore.get(resultId) != null) {
-                    return@LaunchedEffect
-                }
                 val matched = rematchRelease(resultId, navName, navSite)
                 if (matched != null) {
                     val oldMagnet = container.searchResultStore.get(resultId)?.magnet?.takeIf { it.isNotBlank() }
