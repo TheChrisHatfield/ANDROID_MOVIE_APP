@@ -21,10 +21,12 @@ def _stable_row_key(row: dict[str, Any]) -> str | None:
     site = str(row.get("site") or "").strip().lower()
     detail = str(row.get("detail_url") or "").strip()
     name = str(row.get("name") or "").strip().lower()
+    size = str(row.get("size") or "").strip().lower()
+    seeds = str(row.get("seeds") or "").strip()
     if detail and site:
         return f"{site}|{detail}"
     if name and site:
-        return f"{site}|{name}"
+        return f"{site}|{name}|{size}|{seeds}"
     return None
 
 
