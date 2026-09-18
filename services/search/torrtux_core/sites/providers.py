@@ -351,7 +351,7 @@ class YTS(TorrentSite):
                 info_hash = torrent.get("hash")
                 seeds_val = int(torrent.get("seeds") or 0)
                 peers_val = int(torrent.get("peers") or 0)
-                leeches_val = max(peers_val - seeds_val, 0) if peers_val else None
+                leeches_val = peers_val if peers_val else None
                 quality = torrent.get("quality")
                 label = f"{title} [{quality}]" if quality else title
                 results.append(
@@ -470,7 +470,7 @@ class YTS(TorrentSite):
         return _magnet_from_hash(info_hash, label) if info_hash else None
 
     def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
-        detail_url = self.absolute_detail_url(detail_url)
+        detail_url = self.current_detail_url(detail_url)
         if not detail_url:
             return None
         try:

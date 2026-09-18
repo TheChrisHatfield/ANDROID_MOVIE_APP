@@ -1,9 +1,32 @@
 import json
 from pathlib import Path
-
 from torrtux_core.sites.providers import PirateBay, YTS
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_yts_peers_field_is_leech_count():
+    site = YTS()
+    site.working_url = "https://yts.rs"
+    payload = {
+        "props": {
+            "pageProps": {
+                "movies": [
+                    {
+                        "title": "Test Film",
+                        "year": 2024,
+                        "medium_cover_image": "https://img.yts.rs/poster.jpg",
+                        "torrents": [
+                            {"hash": "A" * 40, "quality": "1080p", "seeds": 83, "peers": 53, "size": "1 GB"},
+                        ],
+                    }
+                ]
+            }
+        }
+    }
+    rows = site._movie_rows_from_payload(payload)
+    assert len(rows) == 1
+    assert rows[0]["leeches"] == "53"
 
 
 def test_yts_parses_next_data_fixture():
@@ -22,6 +45,13 @@ def test_yts_parses_next_data_fixture():
     assert all(row.get("poster_url") for row in rows)
     assert all("medium_cover_image" in row["poster_url"] for row in rows)
     assert any(row.get("trailer_youtube_key") for row in rows)
+
+
+def test_yts_current_detail_url_rewrites_stale_mirror_host():
+    site = YTS()
+    site.working_url = "https://yts.rs"
+    stale = "https://old-yts.example/movie/inception-2010_123"
+    assert site.current_detail_url(stale) == "https://yts.rs/movie/inception-2010_123"
 
 
 def test_tpb_skips_apibay_no_results_placeholder():
