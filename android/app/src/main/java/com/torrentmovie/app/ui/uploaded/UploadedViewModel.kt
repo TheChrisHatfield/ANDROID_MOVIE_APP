@@ -141,7 +141,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"
         }
-        val showProgress = statusError == null && remote != null && remote.sizeBytes > 0L &&
+        val showProgress = remote != null && remote.sizeBytes > 0L &&
             remote.leftBytes > 0L && !remote.isHashChecking
         return UploadedRowUi(
             entry = entry,
