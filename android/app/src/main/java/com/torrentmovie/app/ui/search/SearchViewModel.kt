@@ -256,7 +256,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 results = emptyList(),
                 groups = emptyList(),
                 info = null,
-                hasSearched = false,
+                hasSearched = true,
                 showTmdbSetupHint = false,
                 activeBrowseFeed = _state.value.activeBrowseFeed,
             )
