@@ -87,20 +87,21 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
-        } else if (wasTwoPane && !searchState.loading) {
-            container.foldActiveSelection?.let { active ->
-                val route = navController.currentBackStackEntry?.destination?.route
-                if (route == null || !route.startsWith("detail/")) {
-                    navController.navigate(
-                        Routes.detail(active.resultId, active.name, active.site),
-                    ) {
-                        launchSingleTop = true
-                        popUpTo(Routes.SEARCH) { inclusive = false }
-                    }
-                }
-            }
         }
         wasTwoPane = useTwoPane
+    }
+
+    LaunchedEffect(useTwoPane, searchState.loading, container.foldActiveSelection) {
+        if (useTwoPane || searchState.loading) return@LaunchedEffect
+        val active = container.foldActiveSelection ?: return@LaunchedEffect
+        val route = navController.currentBackStackEntry?.destination?.route
+        if (route != null && route.startsWith("detail/")) return@LaunchedEffect
+        navController.navigate(
+            Routes.detail(active.resultId, active.name, active.site),
+        ) {
+            launchSingleTop = true
+            popUpTo(Routes.SEARCH) { inclusive = false }
+        }
     }
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
