@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
@@ -52,21 +51,6 @@ private fun destinationIcon(label: String) = when (label) {
     "Uploaded" -> Icons.Default.CloudUpload
     "Settings" -> Icons.Default.Settings
     else -> Icons.AutoMirrored.Filled.Help
-}
-
-@Composable
-internal fun AppNavigationDrawerItems(
-    route: String,
-    onDetailRoute: Boolean,
-    onNavigate: (String) -> Unit,
-) {
-    appDestinations.forEach { dest ->
-        NavigationDrawerItem(
-            label = { Text(dest.label) },
-            selected = dest.selected(route, onDetailRoute),
-            onClick = { onNavigate(dest.route) },
-        )
-    }
 }
 
 @Composable
