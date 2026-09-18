@@ -110,6 +110,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                     _pollSucceeded.value = true
                 } else {
                     _statusError.value = error
+                    _pollSucceeded.value = false
                 }
             } finally {
                 if (generation == refreshGeneration) {
