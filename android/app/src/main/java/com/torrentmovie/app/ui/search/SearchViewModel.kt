@@ -146,6 +146,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         val label = feed.label
+        _state.value = _state.value.copy(
+            query = label,
+            activeBrowseFeed = feed.id,
+            loading = true,
+            error = null,
+            errorCode = null,
+            info = null,
+        )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
             val maxSeeds = _state.value.maxSeeds
@@ -160,14 +168,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     searchSettingsKey() == settingsKeyAtStart
             }
             try {
-                _state.value = _state.value.copy(
-                    loading = true,
-                    query = label,
-                    activeBrowseFeed = feed.id,
-                    error = null,
-                    errorCode = null,
-                    info = null,
-                )
                 val outcome = container.searchRepository.browse1337x(
                     feed.id,
                     minSeeds = minSeeds,
@@ -205,6 +205,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun search() {
+        val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
+            ?: X1337BrowseFeed.entriesList.find {
+                it.label.equals(_state.value.query.trim(), ignoreCase = true)
+            }
+        if (activeFeed != null) {
+            loadBrowse1337x(activeFeed)
+            return
+        }
         val q = _state.value.query.trim()
         searchJob?.cancel()
         if (q.isEmpty()) {
@@ -399,6 +407,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             hasSearched = true,
             showTmdbSetupHint = false,
             lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
+            activeBrowseFeed = if (preserveResults) _state.value.activeBrowseFeed else null,
         )
     }
 
