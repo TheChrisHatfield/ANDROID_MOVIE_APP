@@ -124,7 +124,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 loadBrowse1337x(labelFeed)
             } else {
                 val labelGenre = X1337MovieGenre.entriesList.find { it.label.equals(trimmed, ignoreCase = true) }
-                if (labelGenre != null) {
+                if (labelGenre != null && _state.value.genrePanelExpanded) {
                     loadGenreBrowse(labelGenre)
                 } else {
                     search()
@@ -158,22 +158,55 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val feed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
         if (feed != null) {
             loadBrowse1337x(feed)
-        } else {
+            return
+        }
+        if (_state.value.genrePanelExpanded) {
+            return
+        }
+        val q = _state.value.query.trim()
+        if (q.isNotEmpty() && _state.value.hasSearched) {
             search()
         }
     }
 
     fun expandGenrePanel() {
+        searchJob?.cancel()
+        searchGeneration += 1
+        lastSearchedQuery = null
         _state.value = _state.value.copy(
             genrePanelExpanded = true,
             activeBrowseFeed = null,
+            activeGenre = null,
+            query = "",
+            results = emptyList(),
+            groups = emptyList(),
+            error = null,
+            errorCode = null,
+            info = null,
+            hasSearched = false,
+            showTmdbSetupHint = false,
+            lastExecutedQuery = "",
+            loading = false,
         )
     }
 
     fun collapseGenrePanel() {
+        searchJob?.cancel()
+        searchGeneration += 1
+        lastSearchedQuery = null
         _state.value = _state.value.copy(
             genrePanelExpanded = false,
             activeGenre = null,
+            query = "",
+            results = emptyList(),
+            groups = emptyList(),
+            error = null,
+            errorCode = null,
+            info = null,
+            hasSearched = false,
+            showTmdbSetupHint = false,
+            lastExecutedQuery = "",
+            loading = false,
         )
     }
 
@@ -395,12 +428,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             )
             return
         }
-        val labelFeed = X1337BrowseFeed.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        val labelFeed = if (!_state.value.genrePanelExpanded) {
+            X1337BrowseFeed.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        } else {
+            null
+        }
         if (labelFeed != null) {
             loadBrowse1337x(labelFeed)
             return
         }
-        val labelGenre = X1337MovieGenre.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        val labelGenre = if (_state.value.genrePanelExpanded || _state.value.activeGenre != null) {
+            X1337MovieGenre.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        } else {
+            null
+        }
         if (labelGenre != null) {
             loadGenreBrowse(labelGenre)
             return
