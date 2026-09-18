@@ -144,6 +144,88 @@ class TorrentSearcher:
             all_results.extend(site_results)
         return all_results, failed_sites
 
+    def _browse_site(self, site, feed: str, page_limit: int) -> tuple[list[dict], bool]:
+        results: list[dict] = []
+        errored = False
+        prev_url: str | None = None
+        for page in range(page_limit):
+            try:
+                browse_url = site.build_browse_url(feed, page)
+            except Exception as exc:
+                logger.debug("build_browse_url failed %s: %s", site.name, exc)
+                errored = page == 0 and not results
+                break
+            if not browse_url.startswith("http"):
+                errored = page == 0 and not results
+                break
+            if page > 0 and browse_url == prev_url:
+                break
+            prev_url = browse_url
+            try:
+                response = http_get(browse_url, timeout=15)
+            except Exception as exc:
+                logger.debug("browse request failed %s: %s", site.name, exc)
+                errored = page == 0 and not results
+                break
+            if response.status_code != 200:
+                errored = page == 0 and not results
+                break
+            try:
+                page_results = site.parse_results(response.content, feed)
+            except Exception as exc:
+                logger.debug("parse_results failed %s browse page %s: %s", site.name, page, exc)
+                errored = page == 0 and not results
+                break
+            if not page_results:
+                break
+            results.extend(page_results)
+        return results, errored
+
+    def browse_1337x(
+        self,
+        feed: str,
+        *,
+        page_limit: int = 1,
+        min_seeds: int | None = None,
+        max_seeds: int | None = None,
+        max_size: str | None = None,
+        limit: int | None = None,
+    ) -> SearchOutcome:
+        from torrtux_core.sites.providers import X1337
+
+        with self._lock:
+            pool = list(self.working_sites)
+        site = next((s for s in pool if s.name == "1337x"), None)
+        if site is None:
+            candidate = next((s for s in self.sites if s.name == "1337x"), None)
+            if candidate and candidate.test_connection():
+                with self._lock:
+                    if candidate not in self.working_sites:
+                        self.working_sites.append(candidate)
+                site = candidate
+        if site is None or not isinstance(site, X1337):
+            return SearchOutcome([], [], indexers_unavailable=True)
+        if feed not in X1337.BROWSE_FEEDS:
+            return SearchOutcome([], [], indexers_unavailable=True)
+
+        raw, errored = self._browse_site(site, feed, page_limit)
+        filtered = apply_filters(
+            raw,
+            min_seeds=min_seeds,
+            max_seeds=max_seeds,
+            max_size=max_size,
+        )
+        sorted_results = sort_by_seeds_desc(filtered)
+        if limit is not None:
+            sorted_results = sorted_results[:limit]
+        failed_sites = ["1337x"] if errored and not sorted_results else []
+        all_sources_failed = errored and not sorted_results
+        return SearchOutcome(
+            results=sorted_results,
+            failed_sites=failed_sites,
+            all_sources_failed=all_sources_failed,
+        )
+
     def _select_working_sites(
         self,
         sites: list[str] | None,

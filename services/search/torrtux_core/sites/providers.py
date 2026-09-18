@@ -176,6 +176,13 @@ class PirateBay(TorrentSite):
         return results
 
 class X1337(TorrentSite):
+    BROWSE_FEEDS: dict[str, str] = {
+        "trending": "trending",
+        "top-100": "top-100",
+        "top-100-movies": "top-100-movies",
+        "top-100-television": "top-100-television",
+    }
+
     def __init__(self):
         super().__init__(
             "1337x",
@@ -191,6 +198,14 @@ class X1337(TorrentSite):
         )
     def build_search_url(self, query, page=0):
         return f"{self.working_url}/search/{quote(query)}/{page+1}/"
+
+    def build_browse_url(self, feed: str, page: int = 0) -> str:
+        path = self.BROWSE_FEEDS.get(feed)
+        if not path:
+            raise ValueError(f"Unknown 1337x browse feed: {feed}")
+        if page <= 0:
+            return f"{self.working_url}/{path}/"
+        return f"{self.working_url}/{path}/{page + 1}/"
 
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")

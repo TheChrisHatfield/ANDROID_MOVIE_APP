@@ -9,6 +9,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
 
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException, Query
 
 from api.cache import ResultCache
@@ -17,8 +19,17 @@ from metadata.grouping import build_movie_groups
 from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import filter_size_bytes
 from torrtux_core.searcher import TorrentSearcher
+from torrtux_core.sites.providers import X1337
 
 logger = logging.getLogger(__name__)
+
+BrowseFeed = Literal["trending", "top-100", "top-100-movies", "top-100-television"]
+BROWSE_FEED_LABELS: dict[str, str] = {
+    "trending": "1337x Trending",
+    "top-100": "1337x Top 100",
+    "top-100-movies": "1337x Top 100 Movies",
+    "top-100-television": "1337x Top 100 Television",
+}
 
 def _load_local_env() -> None:
     env_file = Path(__file__).resolve().parents[1] / ".env"
@@ -79,6 +90,50 @@ def _refresh_sites_health(force: bool = False) -> list[str]:
     _sites_health_cache["checked_at"] = now
     _sites_health_cache["working"] = working
     return working
+
+
+def _build_search_response(
+    query: str,
+    raw_results: list[dict],
+    failed_sites: list[str],
+    *,
+    limit: int,
+    group: bool,
+    enrich: bool,
+    tmdb_api_key: str | None,
+) -> SearchResponse:
+    stored = _result_cache.put_many(raw_results)
+    flat_results = [TorrentResult(**row) for row in stored]
+    groups: list[MovieGroup] = []
+    display_results = flat_results
+    enrichment_capped = False
+    tmdb_key_rejected = False
+
+    if group and stored:
+        tmdb_client, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
+        group_rows, ungrouped_rows, enrichment_capped = build_movie_groups(
+            stored,
+            tmdb=tmdb_client,
+            enrich_metadata=enrich,
+            max_groups=min(limit, 50),
+        )
+        groups = [MovieGroup(**g) for g in group_rows]
+        if groups:
+            display_results = [TorrentResult(**row) for row in ungrouped_rows]
+    elif (tmdb_api_key or "").strip():
+        _, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
+
+    visible_count = sum(len(g.releases) for g in groups) + len(display_results)
+    return SearchResponse(
+        query=query,
+        count=visible_count,
+        total_count=len(stored),
+        results=display_results,
+        failed_sites=failed_sites,
+        groups=groups,
+        tmdb_key_rejected=tmdb_key_rejected,
+        tmdb_enrichment_capped=enrichment_capped if group and stored else False,
+    )
 
 
 @asynccontextmanager
@@ -162,37 +217,65 @@ def search(
         _refresh_sites_health(force=True)
         raise HTTPException(status_code=503, detail="No sources available")
 
-    stored = _result_cache.put_many(outcome.results)
-    flat_results = [TorrentResult(**row) for row in stored]
-    groups: list[MovieGroup] = []
-    display_results = flat_results
+    return _build_search_response(
+        q,
+        outcome.results,
+        outcome.failed_sites,
+        limit=limit,
+        group=group,
+        enrich=enrich,
+        tmdb_api_key=tmdb_api_key,
+    )
 
-    if group and stored:
-        tmdb_client, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
-        group_rows, ungrouped_rows, enrichment_capped = build_movie_groups(
-            stored,
-            tmdb=tmdb_client,
-            enrich_metadata=enrich,
-            max_groups=min(limit, 50),
-        )
-        groups = [MovieGroup(**g) for g in group_rows]
-        if groups:
-            display_results = [TorrentResult(**row) for row in ungrouped_rows]
-    else:
-        tmdb_key_rejected = False
-        if (tmdb_api_key or "").strip():
-            _, tmdb_key_rejected = _tmdb_for_request(tmdb_api_key)
 
-    visible_count = sum(len(g.releases) for g in groups) + len(display_results)
-    return SearchResponse(
-        query=q,
-        count=visible_count,
-        total_count=len(stored),
-        results=display_results,
-        failed_sites=outcome.failed_sites,
-        groups=groups,
-        tmdb_key_rejected=tmdb_key_rejected,
-        tmdb_enrichment_capped=enrichment_capped if group and stored else False,
+@app.get("/v1/browse/1337x/{feed}", response_model=SearchResponse)
+def browse_1337x(
+    feed: BrowseFeed,
+    limit: int = Query(100, ge=1, le=200),
+    pages: int = Query(1, ge=1, le=5),
+    min_seeds: int | None = Query(None, ge=0),
+    max_seeds: int | None = Query(None, ge=0),
+    max_size: str | None = Query(None),
+    group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
+) -> SearchResponse:
+    if feed not in X1337.BROWSE_FEEDS:
+        raise HTTPException(status_code=400, detail="Unknown browse feed")
+    if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
+        raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
+
+    if not _searcher.working_sites:
+        _refresh_sites_health(force=True)
+    try:
+        if max_size is not None:
+            filter_size_bytes(max_size)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid max_size")
+
+    outcome = _searcher.browse_1337x(
+        feed,
+        page_limit=pages,
+        min_seeds=min_seeds,
+        max_seeds=max_seeds,
+        max_size=max_size,
+        limit=limit,
+    )
+    if outcome.indexers_unavailable:
+        raise HTTPException(status_code=503, detail="1337x unavailable")
+    if outcome.all_sources_failed:
+        _refresh_sites_health(force=True)
+        raise HTTPException(status_code=503, detail="1337x browse unavailable")
+
+    label = BROWSE_FEED_LABELS.get(feed, f"1337x {feed}")
+    return _build_search_response(
+        label,
+        outcome.results,
+        outcome.failed_sites,
+        limit=limit,
+        group=group,
+        enrich=enrich,
+        tmdb_api_key=tmdb_api_key,
     )
 
 
