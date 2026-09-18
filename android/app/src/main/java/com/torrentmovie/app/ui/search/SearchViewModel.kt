@@ -142,7 +142,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 results = emptyList(),
                 groups = emptyList(),
                 info = null,
-                hasSearched = false,
+                hasSearched = true,
                 showTmdbSetupHint = false,
                 activeBrowseFeed = feed.id,
             )
@@ -154,6 +154,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             query = label,
             activeBrowseFeed = feed.id,
             loading = true,
+            hasSearched = true,
             error = null,
             errorCode = null,
             info = null,

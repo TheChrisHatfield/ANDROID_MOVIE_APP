@@ -21,6 +21,7 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -173,19 +174,13 @@ fun SearchScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
         )
-        Button(
-            onClick = { vm.search() },
-            modifier = Modifier.padding(horizontal = 16.dp),
-            enabled = !state.loading,
-        ) { Text("Search") }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             X1337BrowseFeed.entriesList.forEach { feed ->
@@ -196,6 +191,13 @@ fun SearchScreen(
                     enabled = !state.loading,
                 )
             }
+        }
+        if (state.activeBrowseFeed == null) {
+            Button(
+                onClick = { vm.search() },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                enabled = !state.loading && state.query.isNotBlank(),
+            ) { Text("Search") }
         }
 
         if (state.showTmdbSetupHint) {
@@ -239,6 +241,25 @@ fun SearchScreen(
                 .pullRefresh(pullState),
         ) {
             when {
+                state.loading && state.groups.isEmpty() && state.results.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = if (state.activeBrowseFeed != null) {
+                                "Loading 1337x list…"
+                            } else {
+                                "Searching…"
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                    }
+                }
                 !state.hasSearched && state.query.isNotBlank() && !state.loading &&
                     state.activeBrowseFeed == null -> {
                     Text(
