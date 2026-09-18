@@ -53,6 +53,17 @@ class SeedboxUrlTest {
     }
 
     @Test
+    fun resolveRedirectJoinsRelativeLocation() {
+        assertEquals(
+            "https://chris82.snow.seedhost.eu/rutorrent/php/addtorrent.php?result[]=Success",
+            resolveSeedboxRedirect(
+                "https://chris82.snow.seedhost.eu/rutorrent/",
+                "/rutorrent/php/addtorrent.php?result[]=Success",
+            ),
+        )
+    }
+
+    @Test
     fun searchApiAddsHttpWhenSchemeMissing() {
         assertEquals(
             "http://192.168.1.5:8765",

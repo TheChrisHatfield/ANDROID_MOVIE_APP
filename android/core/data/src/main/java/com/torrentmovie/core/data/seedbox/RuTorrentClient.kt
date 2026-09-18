@@ -90,6 +90,7 @@ class RuTorrentClient(
             val body = FormBody.Builder()
                 .add("url", magnet)
                 .add("dir_edit", downloadDirectory)
+                .add("json", "1")
                 .build()
             val request = Request.Builder()
                 .url(seedboxAddTorrentUrl(baseUrl))
@@ -97,40 +98,79 @@ class RuTorrentClient(
                 .post(body)
                 .build()
             return executeWithAuth(request, addTorrentClient).use { response ->
-                val text = response.body?.string() ?: ""
-                when {
-                    response.code in 300..399 &&
-                        isAddTorrentSuccess(response, text) -> SeedboxResult.Success()
-                    !response.isSuccessful -> {
-                        val msg = when (response.code) {
-                            401 -> "Authentication failed — check username, password, and auth scheme"
-                            403 -> "Forbidden — ruTorrent rejected the request"
-                            404 -> "ruTorrent URL not found — use https://<user>.<slot>.seedhost.eu/rutorrent/ in Settings (not addtorrent.php)"
-                            else -> "HTTP ${response.code}"
-                        }
-                        SeedboxResult.Failure(msg, response.code)
-                    }
-                    text.contains("FailedDirectory", ignoreCase = true) ->
-                        SeedboxResult.Failure("Invalid download directory")
-                    text.contains("Failed", ignoreCase = true) &&
-                        !text.contains("Success", ignoreCase = true) ->
-                        SeedboxResult.Failure("ruTorrent rejected magnet")
-                    isAddTorrentSuccess(response, text) -> SeedboxResult.Success()
-                    else -> SeedboxResult.Failure("Unexpected ruTorrent response")
-                }
+                handleAddMagnetResponse(response)
             }
         } catch (e: Exception) {
             SeedboxResult.Failure(e.message ?: "Connection failed")
         }
     }
 
+    private fun handleAddMagnetResponse(response: okhttp3.Response): SeedboxResult {
+        val text = response.body?.string() ?: ""
+        if (response.code in 300..399) {
+            if (isAddTorrentSuccess(response, text)) {
+                return SeedboxResult.Success()
+            }
+            val location = response.header("Location")
+            if (!location.isNullOrBlank()) {
+                val followRequest = Request.Builder()
+                    .url(resolveSeedboxRedirect(baseUrl, location))
+                    .apply { if (!useDigest) header("Authorization", basicAuthHeader()) }
+                    .get()
+                    .build()
+                return executeWithAuth(followRequest, addTorrentClient).use { follow ->
+                    handleAddMagnetResponse(follow)
+                }
+            }
+        }
+        when {
+            !response.isSuccessful -> {
+                val msg = when (response.code) {
+                    401 -> "Authentication failed — check username, password, and auth scheme"
+                    403 -> "Forbidden — ruTorrent rejected the request"
+                    404 -> "ruTorrent URL not found — use https://<user>.<slot>.seedhost.eu/rutorrent/ in Settings (not addtorrent.php)"
+                    in 300..399 -> "Seedbox redirect did not confirm success — check credentials and download folder"
+                    else -> "HTTP ${response.code}"
+                }
+                return SeedboxResult.Failure(msg, response.code)
+            }
+            text.contains("FailedDirectory", ignoreCase = true) ->
+                return SeedboxResult.Failure("Invalid download directory")
+            text.contains("Failed", ignoreCase = true) &&
+                !text.contains("Success", ignoreCase = true) ->
+                return SeedboxResult.Failure("ruTorrent rejected magnet")
+            isAddTorrentSuccess(response, text) -> return SeedboxResult.Success()
+            else -> return SeedboxResult.Failure("Unexpected ruTorrent response")
+        }
+    }
+
     private fun basicAuthHeader(): String = Credentials.basic(username, password)
 
     private fun isAddTorrentSuccess(response: okhttp3.Response, text: String): Boolean {
-        if (text.contains("Success", ignoreCase = true)) return true
+        val trimmed = text.trim()
+        if (trimmed.contains("FailedDirectory", ignoreCase = true)) return false
+        if (trimmed.contains("FailedURL", ignoreCase = true)) return false
+        if (trimmed.contains("FailedFile", ignoreCase = true)) return false
+        if (Regex(""""result"\s*:\s*"Success"""", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) {
+            return true
+        }
+        if (Regex(""""status"\s*:\s*"Success"""", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) {
+            return true
+        }
+        if (Regex("""result(\[\])?=Success""", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) {
+            return true
+        }
+        if (Regex("""status=Success""", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) {
+            return true
+        }
         val location = response.header("Location").orEmpty()
+        if (Regex("""result(\[\])?=Success""", RegexOption.IGNORE_CASE).containsMatchIn(location)) {
+            return true
+        }
         if (location.contains("status=Success", ignoreCase = true)) return true
-        if (Regex(""""status"\s*:\s*"Success"""", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+        if (trimmed.contains("Success", ignoreCase = true) &&
+            !trimmed.contains("Failed", ignoreCase = true)
+        ) {
             return true
         }
         return false

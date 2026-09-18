@@ -32,8 +32,31 @@ class RuTorrentClientTest {
         server.enqueue(
             MockResponse()
                 .setResponseCode(302)
-                .addHeader("Location", "/rutorrent/php/addtorrent.php?status=Success"),
+                .addHeader("Location", "/rutorrent/php/addtorrent.php?result[]=Success&json=1"),
         )
+        server.start()
+        val client = RuTorrentClient(
+            baseUrl = server.url("/rutorrent/").toString(),
+            username = "u",
+            password = "p",
+        )
+        val result = client.addMagnet(
+            "magnet:?xt=urn:btih:ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            "/movies/",
+        )
+        server.shutdown()
+        assertTrue(result is SeedboxResult.Success)
+    }
+
+    @Test
+    fun addMagnetSuccessOnRedirectFollowJson() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(302)
+                .addHeader("Location", "/rutorrent/php/addtorrent.php?json=1"),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"result":"Success"}"""))
         server.start()
         val client = RuTorrentClient(
             baseUrl = server.url("/rutorrent/").toString(),

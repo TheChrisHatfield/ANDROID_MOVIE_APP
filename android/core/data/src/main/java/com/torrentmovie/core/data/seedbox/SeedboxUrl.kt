@@ -57,3 +57,28 @@ internal fun seedboxAddTorrentUrl(baseUrl: String): String {
 internal fun seedboxHttprpcUrl(baseUrl: String): String {
     return "${normalizeSeedboxUrl(baseUrl)}plugins/httprpc/action.php"
 }
+
+internal fun resolveSeedboxRedirect(baseUrl: String, location: String): String {
+    val trimmed = location.trim()
+    if (trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)
+    ) {
+        return trimmed
+    }
+    val base = normalizeSeedboxUrl(baseUrl)
+    val uri = URI(base)
+    val origin = buildString {
+        append(uri.scheme ?: "https")
+        append("://")
+        append(uri.host ?: return trimmed)
+        if (uri.port != -1) {
+            append(':')
+            append(uri.port)
+        }
+    }
+    return when {
+        trimmed.startsWith("//") -> "${uri.scheme ?: "https"}:$trimmed"
+        trimmed.startsWith("/") -> "$origin$trimmed"
+        else -> "$base$trimmed"
+    }
+}
