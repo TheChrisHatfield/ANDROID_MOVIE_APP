@@ -185,7 +185,6 @@ fun FoldSearchDetailLayout(
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
         if (state.loading || !state.hasSearched) return@LaunchedEffect
         if (state.error != null && state.groups.isEmpty() && state.results.isEmpty()) {
-            if (state.query.trim() == state.lastExecutedQuery.trim()) return@LaunchedEffect
             selectedId = null
             restoredName = null
             restoredSite = null
