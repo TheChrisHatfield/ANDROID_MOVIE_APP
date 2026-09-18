@@ -52,7 +52,7 @@ class TorrentSite:
         if not absolute or not self.working_url:
             return absolute
         parsed = urlparse(absolute)
-        if "/torrent/" not in parsed.path:
+        if not any(marker in parsed.path for marker in ("/torrent/", "/movie/", "/movies/")):
             return absolute
         working = urlparse(self.working_url.rstrip("/"))
         return urlunparse((working.scheme, working.netloc, parsed.path, "", "", ""))
