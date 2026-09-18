@@ -182,6 +182,7 @@ fun AppNavGraph(
                     }
                     return@LaunchedEffect
                 }
+                if (container.searchResultStore.get(resultId) != null) return@LaunchedEffect
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
 
