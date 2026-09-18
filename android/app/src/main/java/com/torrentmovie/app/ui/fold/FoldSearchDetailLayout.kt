@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
+import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
@@ -112,7 +113,6 @@ fun FoldSearchDetailLayout(
 
     var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
     var lastSearchSettingsKey by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingFilterSelectionClear by rememberSaveable { mutableStateOf(false) }
 
     fun currentSearchSettingsKey(): String {
         val settings = container.settingsRepository.load()
@@ -139,17 +139,19 @@ fun FoldSearchDetailLayout(
         lastSearchSettingsKey = key
     }
 
-    LaunchedEffect(state.query, state.lastExecutedQuery, state.hasSearched) {
-        if (!state.hasSearched) return@LaunchedEffect
+    LaunchedEffect(state.query, state.lastExecutedQuery) {
         val query = state.query.trim()
-        if (query.isBlank()) {
+        if (state.lastExecutedQuery.isNotBlank() && query != state.lastExecutedQuery.trim()) {
             selectedId = null
             restoredName = null
             restoredSite = null
             syncFoldSelection(null, "", "")
-            return@LaunchedEffect
         }
-        if (state.lastExecutedQuery.isNotBlank() && query != state.lastExecutedQuery) {
+    }
+
+    LaunchedEffect(state.query, state.hasSearched) {
+        if (!state.hasSearched) return@LaunchedEffect
+        if (state.query.trim().isBlank()) {
             selectedId = null
             restoredName = null
             restoredSite = null
@@ -172,18 +174,12 @@ fun FoldSearchDetailLayout(
             state.maxSize.orEmpty(),
         ).joinToString("|")
         if (lastSearchFilterKey != null && lastSearchFilterKey != filterKey) {
-            pendingFilterSelectionClear = true
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
         }
         lastSearchFilterKey = filterKey
-    }
-
-    LaunchedEffect(state.loading, pendingFilterSelectionClear, state.hasSearched) {
-        if (!pendingFilterSelectionClear || state.loading || !state.hasSearched) return@LaunchedEffect
-        pendingFilterSelectionClear = false
-        selectedId = null
-        restoredName = null
-        restoredSite = null
-        syncFoldSelection(null, "", "")
     }
 
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
@@ -206,10 +202,12 @@ fun FoldSearchDetailLayout(
         val matchName = anchor?.name ?: restoredName
         val matchSite = anchor?.site ?: restoredSite
         if (!matchName.isNullOrBlank()) {
-            val rematched = allReleases.find { release ->
-                release.name.equals(matchName, ignoreCase = true) &&
-                    (matchSite.isNullOrBlank() || release.site == matchSite)
-            }
+            val rematched = SearchReleaseRematch.find(
+                allReleases,
+                id,
+                matchName,
+                matchSite.orEmpty(),
+            )
             if (rematched != null) {
                 val oldId = selectedId
                 val oldRelease = oldId?.let { findRelease(it) }

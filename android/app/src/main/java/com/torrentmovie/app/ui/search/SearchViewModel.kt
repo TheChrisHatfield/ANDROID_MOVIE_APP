@@ -63,7 +63,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val key = searchSettingsKey()
                 if (key != lastSearchSettingsKey && _state.value.hasSearched) {
                     lastSearchSettingsKey = key
-                    search()
+                    if (_state.value.query.trim() == lastSearchedQuery?.trim()) {
+                        search()
+                    }
                 }
             }
         }
