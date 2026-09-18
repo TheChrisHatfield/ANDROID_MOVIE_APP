@@ -242,11 +242,15 @@ fun TorrentDetailScreen(
                         }
                         when (result) {
                             is SeedboxResult.Success -> {
-                                duplicate = true
-                                if (!result.message.contains("history save failed")) {
+                                val persistFailed = result.message.contains(
+                                    "history save failed",
+                                    ignoreCase = true,
+                                )
+                                if (!persistFailed) {
+                                    duplicate = true
                                     justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
                                 }
-                                val length = if (result.message.contains("history save failed")) {
+                                val length = if (persistFailed) {
                                     Toast.LENGTH_LONG
                                 } else {
                                     Toast.LENGTH_SHORT
