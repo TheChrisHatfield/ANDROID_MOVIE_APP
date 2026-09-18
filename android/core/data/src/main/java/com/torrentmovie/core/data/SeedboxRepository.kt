@@ -89,7 +89,9 @@ class SeedboxRepository(
             )
             if (persisted is SeedboxResult.Failure) {
                 sentWithoutPersist.add(key)
-                return persisted
+                return SeedboxResult.Success(
+                    "Sent to seedbox (local history save failed — tap send again to retry)",
+                )
             }
             return persisted
         }
