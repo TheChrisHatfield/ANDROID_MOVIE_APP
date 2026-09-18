@@ -2,6 +2,7 @@ package com.torrentmovie.app.ui
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -130,6 +131,11 @@ fun AppNavGraph(
                     },
                     onOpenDetail = { r ->
                         container.searchResultStore.put(r)
+                        container.foldActiveSelection = PendingFoldDetail(
+                            resultId = r.id,
+                            name = r.name,
+                            site = r.site,
+                        )
                         navController.navigate(Routes.detail(r.id, r.name, r.site)) {
                             launchSingleTop = true
                             popUpTo(Routes.SEARCH) { inclusive = false }
@@ -190,6 +196,21 @@ fun AppNavGraph(
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
 
+            DisposableEffect(resultId, useTwoPane) {
+                if (!useTwoPane) {
+                    container.foldActiveSelection = PendingFoldDetail(
+                        resultId = resultId,
+                        name = navName,
+                        site = navSite,
+                    )
+                }
+                onDispose {
+                    if (!useTwoPane) {
+                        container.foldActiveSelection = null
+                    }
+                }
+            }
+
             val cached = container.searchResultStore.get(resultId)
             TorrentDetailScreen(
                 container = container,
@@ -198,6 +219,7 @@ fun AppNavGraph(
                 site = cached?.site ?: navSite,
                 initialMagnet = cached?.magnet,
                 onResultExpired = {
+                    container.foldActiveSelection = null
                     navController.popBackStack(Routes.SEARCH, inclusive = false)
                 },
                 onOpenUploaded = ::openUploaded,
