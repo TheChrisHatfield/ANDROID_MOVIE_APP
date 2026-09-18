@@ -64,6 +64,7 @@ fun UploadedScreen(
         onRefresh = { vm.refreshStatuses() },
     )
     val listState = rememberLazyListState()
+    val highlightSeq by container.uploadedHighlightSeq.collectAsState()
     var highlightKey by remember { mutableStateOf(container.pendingUploadedHighlight) }
     var resumeTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -78,7 +79,8 @@ fun UploadedScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(highlightSeq) {
+        if (highlightSeq == 0L) return@LaunchedEffect
         container.pendingUploadedHighlight?.let { highlightKey = it }
     }
 

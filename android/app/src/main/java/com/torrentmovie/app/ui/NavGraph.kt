@@ -67,7 +67,7 @@ fun AppNavGraph(
     }
 
     fun openUploaded(storageKey: String) {
-        container.pendingUploadedHighlight = storageKey
+        container.requestUploadedHighlight(storageKey)
         navController.navigate(Routes.UPLOADED) {
             popUpTo(navController.graph.startDestinationId) { saveState = true }
             launchSingleTop = true
