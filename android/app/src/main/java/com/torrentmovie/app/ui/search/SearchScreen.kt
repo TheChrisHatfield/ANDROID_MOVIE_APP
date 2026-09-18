@@ -73,6 +73,11 @@ fun SearchScreen(
             highlightedReleaseId = null
         }
     }
+    LaunchedEffect(state.activeBrowseFeed) {
+        playingTrailerGroupKey = null
+        expandedGroupKey = null
+        highlightedReleaseId = null
+    }
     LaunchedEffect(selectedResultId, state.groups) {
         val id = selectedResultId
         if (id != null) {
