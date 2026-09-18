@@ -239,7 +239,8 @@ fun SearchScreen(
                 .pullRefresh(pullState),
         ) {
             when {
-                !state.hasSearched && state.query.isNotBlank() && !state.loading -> {
+                !state.hasSearched && state.query.isNotBlank() && !state.loading &&
+                    state.activeBrowseFeed == null -> {
                     Text(
                         text = "Tap Search to find movies",
                         style = MaterialTheme.typography.bodyLarge,
