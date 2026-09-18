@@ -407,7 +407,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             hasSearched = true,
             showTmdbSetupHint = false,
             lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
-            activeBrowseFeed = if (preserveResults) _state.value.activeBrowseFeed else null,
+            // Text search clears activeBrowseFeed in search() before failure; keep chip on browse errors.
+            activeBrowseFeed = _state.value.activeBrowseFeed,
         )
     }
 
