@@ -158,16 +158,27 @@ fun FoldSearchDetailLayout(
         }
     }
 
+    var lastBrowseGenreKey by rememberSaveable { mutableStateOf<String?>(null) }
+
     LaunchedEffect(
         state.activeGenre,
         state.activeBrowseFeed,
         state.genrePanelExpanded,
         state.lastExecutedQuery,
     ) {
-        selectedId = null
-        restoredName = null
-        restoredSite = null
-        syncFoldSelection(null, "", "")
+        val key = listOf(
+            state.activeGenre.orEmpty(),
+            state.activeBrowseFeed.orEmpty(),
+            state.genrePanelExpanded.toString(),
+            state.lastExecutedQuery,
+        ).joinToString("|")
+        if (lastBrowseGenreKey != null && lastBrowseGenreKey != key) {
+            selectedId = null
+            restoredName = null
+            restoredSite = null
+            syncFoldSelection(null, "", "")
+        }
+        lastBrowseGenreKey = key
     }
 
     LaunchedEffect(state.query, state.hasSearched) {
