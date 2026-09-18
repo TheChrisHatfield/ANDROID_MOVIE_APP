@@ -80,8 +80,16 @@ fun TorrentDetailScreen(
         if (magnetUri != null) {
             val key = MagnetHashUtil.storageKey(magnetUri, name, site)
             if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return key
+            return null
         }
         return uploaded.find { it.displayName == name && it.site == site }?.infoHash
+    }
+
+    fun viewInUploadedKey(): String? {
+        resolveUploadedKey()?.let { return it }
+        if (!duplicate) return null
+        val magnetUri = magnet?.takeIf { it.isNotBlank() } ?: return null
+        return MagnetHashUtil.storageKey(magnetUri, name, site)
     }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
@@ -232,6 +240,7 @@ fun TorrentDetailScreen(
                         }
                         when (result) {
                             is SeedboxResult.Success -> {
+                                duplicate = true
                                 val length = if (result.message.contains("history save failed")) {
                                     Toast.LENGTH_LONG
                                 } else {
@@ -242,7 +251,6 @@ fun TorrentDetailScreen(
                             is SeedboxResult.Failure ->
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
                         }
-                        duplicate = isAlreadyUploaded(m)
                     } catch (e: Exception) {
                         Toast.makeText(
                             context,
@@ -263,7 +271,7 @@ fun TorrentDetailScreen(
         if (duplicate && onOpenUploaded != null) {
             TextButton(
                 onClick = {
-                    resolveUploadedKey()?.let { key -> onOpenUploaded(key) }
+                    viewInUploadedKey()?.let { key -> onOpenUploaded(key) }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
