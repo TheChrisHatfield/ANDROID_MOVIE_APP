@@ -18,7 +18,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
@@ -257,6 +259,10 @@ fun FoldSearchDetailLayout(
         syncFoldSelection(null, "", "")
     }
 
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val listWeight = AdaptiveLayout.searchListPaneWeight(screenWidthDp)
+    val detailWeight = 1f - listWeight
+
     Row(Modifier.fillMaxSize()) {
         SearchScreen(
             container = container,
@@ -271,13 +277,13 @@ fun FoldSearchDetailLayout(
                 syncFoldSelection(result.id, result.name, result.site)
             },
             modifier = Modifier
-                .weight(0.42f)
+                .weight(listWeight)
                 .fillMaxHeight(),
         )
         VerticalDivider(modifier = Modifier.fillMaxHeight())
         Box(
             modifier = Modifier
-                .weight(0.58f)
+                .weight(detailWeight)
                 .fillMaxHeight(),
         ) {
             val result = selected

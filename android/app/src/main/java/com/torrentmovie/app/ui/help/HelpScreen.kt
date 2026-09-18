@@ -1,17 +1,16 @@
 package com.torrentmovie.app.ui.help
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.app.ui.adaptive.ResponsiveContent
 import com.torrentmovie.core.data.AppSettings
 
 @Composable
 fun HelpScreen() {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    ResponsiveContent {
         Text("Legal")
         Text(
             "For content you have rights to access only. You supply your own seedbox and indexers.",

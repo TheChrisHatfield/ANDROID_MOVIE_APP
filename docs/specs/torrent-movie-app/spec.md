@@ -225,7 +225,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-030**: Site name filters (`sites` query param, Settings movie-profile toggle) MUST match indexers **case-insensitively** on canonical site names.
 - **FR-031**: Search API SHOULD return `failed_sites[]` when individual indexers error during a parallel search; Android SHOULD surface a non-blocking info message (partial success per US1 scenario 3).
 - **FR-032**: Android MUST ship as **one APK** with shared search/detail/send logic; Z Fold MUST NOT use a separate app module or forked repositories.
-- **FR-032a**: On Samsung Galaxy Z Fold (detected once on first launch; Z Flip excluded), the app MUST enable two-pane search+detail when `screenWidthDp >= 600`; otherwise MUST use phone-style single-pane navigation.
+- **FR-032a**: On any device when `screenWidthDp >= 600` (tablet, fold unfolded, landscape phone), the app MUST enable two-pane search+detail; below that width MUST use single-pane navigation. Samsung Z Fold cover→unfold selection restore remains fold-specific (FR-032c).
 - **FR-032b**: Two-pane mode MUST compose shared `SearchScreen` and `TorrentDetailScreen` inside `FoldSearchDetailLayout`; magnet resolution and seedbox send MUST behave identically to the phone detail route.
 - **FR-032c**: Transition from cover/single-pane detail to unfolded two-pane MUST restore the selected result when possible (`pendingFoldDetailId` or equivalent).
 - **FR-033**: Bug-hunt and release validation MUST follow **dual-lane** coverage: universal fixes in shared layers plus explicit phone and fold smoke for navigation/selection changes (see `.cursor/rules/bug-hunt-dual-lane.mdc`).

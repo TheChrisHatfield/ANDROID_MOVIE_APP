@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.layout.widthIn
+import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.core.data.AppContainer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -124,7 +126,13 @@ fun UploadedScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .pullRefresh(pullState),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = AdaptiveLayout.CONTENT_MAX_WIDTH_DP.dp),
+            ) {
             if (state.rows.isEmpty()) {
                 Text(
                     "No uploads yet — search and send your first movie.",
@@ -175,6 +183,7 @@ fun UploadedScreen(
                         )
                     }
                 }
+            }
             }
             PullRefreshIndicator(
                 refreshing = state.refreshing,

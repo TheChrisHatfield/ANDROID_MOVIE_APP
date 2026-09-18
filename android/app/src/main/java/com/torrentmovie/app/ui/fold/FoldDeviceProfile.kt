@@ -4,8 +4,8 @@ import android.content.Context
 import android.os.Build
 
 /**
- * Samsung Galaxy Z Fold detection, locked in on first app launch on the device.
- * One APK: non-Fold phones never enable two-pane; Z Fold models persist the flag at install/first run.
+ * Samsung Galaxy Z Fold detection for cover→unfold detail restore (FR-032c).
+ * Two-pane layout is width-based via [com.torrentmovie.app.ui.adaptive.AdaptiveLayout].
  */
 object FoldDeviceProfile {
     private const val PREFS = "device_profile"

@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.app.ui.adaptive.ResponsiveContent
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.AppSettings
 import kotlinx.coroutines.Dispatchers
@@ -44,12 +45,7 @@ fun SettingsScreen(container: AppContainer) {
         settings = container.settingsRepository.load()
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-    ) {
+    ResponsiveContent(scroll = true) {
         Text("General", style = MaterialTheme.typography.titleMedium)
         Text(
             if (settings.disclaimerAccepted) "Legal disclaimer accepted" else "Legal disclaimer not yet accepted",
@@ -132,6 +128,11 @@ fun SettingsScreen(container: AppContainer) {
 
         Text("Interface", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         Text("Theme follows system default (Material 3).")
+        Text(
+            "Wide screens (tablet, fold unfolded, landscape): search and detail appear side by side; navigation uses the side rail.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+        )
 
         Button(
             onClick = {

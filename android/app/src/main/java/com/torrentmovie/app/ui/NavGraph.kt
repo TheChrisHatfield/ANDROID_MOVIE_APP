@@ -10,8 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import com.torrentmovie.app.ui.fold.FoldDeviceProfile
+import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.fold.FoldSearchDetailLayout
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -48,15 +47,10 @@ fun AppNavGraph(
     container: AppContainer,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
     val searchState by searchViewModel.state.collectAsState()
-    val foldTwoPaneDevice = remember {
-        FoldDeviceProfile.twoPaneSearchDetailEnabled(context)
-    }
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val useFoldTwoPane = foldTwoPaneDevice &&
-        screenWidthDp >= FoldDeviceProfile.TWO_PANE_MIN_WIDTH_DP
+    val useTwoPane = AdaptiveLayout.useTwoPaneSearchDetail(screenWidthDp)
 
     fun allReleases(): List<TorrentResultDto> {
         return searchState.results + searchState.groups.flatMap { it.releases }
@@ -75,10 +69,10 @@ fun AppNavGraph(
         }
     }
 
-    var wasFoldTwoPane by remember { mutableStateOf(useFoldTwoPane) }
+    var wasTwoPane by remember { mutableStateOf(useTwoPane) }
 
-    LaunchedEffect(useFoldTwoPane) {
-        if (useFoldTwoPane) {
+    LaunchedEffect(useTwoPane) {
+        if (useTwoPane) {
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
             if (route != null && route.startsWith("detail/")) {
@@ -92,7 +86,7 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
-        } else if (wasFoldTwoPane) {
+        } else if (wasTwoPane) {
             container.foldActiveSelection?.let { active ->
                 val route = navController.currentBackStackEntry?.destination?.route
                 if (route == null || !route.startsWith("detail/")) {
@@ -105,12 +99,12 @@ fun AppNavGraph(
                 }
             }
         }
-        wasFoldTwoPane = useFoldTwoPane
+        wasTwoPane = useTwoPane
     }
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
-            if (useFoldTwoPane) {
+            if (useTwoPane) {
                 FoldSearchDetailLayout(
                     container = container,
                     searchViewModel = searchViewModel,
