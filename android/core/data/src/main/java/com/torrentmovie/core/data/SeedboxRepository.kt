@@ -28,14 +28,13 @@ class SeedboxRepository(
     }
     private var cachedClient: RuTorrentClient? = null
     private var cachedClientRevision = -1
-    private var lastSeedboxSettingsKey: String? = null
+    private var lastSeedboxConnectionKey: String? = null
 
-    private fun seedboxSettingsKey(settings: AppSettings): String = listOf(
+    private fun seedboxConnectionKey(settings: AppSettings): String = listOf(
         settings.rutorrentBaseUrl,
         settings.username,
         settings.password,
         settings.authScheme,
-        settings.downloadDirectory,
     ).joinToString("|")
 
     @Synchronized
@@ -61,10 +60,10 @@ class SeedboxRepository(
         site: String,
     ): SeedboxResult = addMutex.withLock {
         val settings = settingsRepository.load()
-        val seedboxKey = seedboxSettingsKey(settings)
-        if (seedboxKey != lastSeedboxSettingsKey) {
+        val connectionKey = seedboxConnectionKey(settings)
+        if (connectionKey != lastSeedboxConnectionKey) {
             clearSentWithoutPersistCache()
-            lastSeedboxSettingsKey = seedboxKey
+            lastSeedboxConnectionKey = connectionKey
         }
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
         if (MagnetHashUtil.extractInfoHash(magnet) == null) {
