@@ -23,6 +23,14 @@ class SearchReleaseRematchTest {
     }
 
     @Test
+    fun rematchSiteIsCaseInsensitive() {
+        assertEquals(
+            "2",
+            SearchReleaseRematch.find(releases, "old", "Inception 2010", "1337X")?.id,
+        )
+    }
+
+    @Test
     fun rematchSingleNameMatchWithoutSite() {
         val single = listOf(TorrentResultDto(id = "9", name = "Solo Film", site = "YTS"))
         assertEquals("9", SearchReleaseRematch.find(single, "old", "Solo Film", "")?.id)

@@ -236,6 +236,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         val label = feed.label
+        val previousResults = _state.value.results
+        val previousGroups = _state.value.groups
         _state.value = _state.value.copy(
             query = label,
             activeBrowseFeed = feed.id,
@@ -286,11 +288,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
+                    previousResults, previousGroups,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
+                    previousResults, previousGroups,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {
@@ -322,6 +326,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         val label = genre.label
+        val previousResults = _state.value.results
+        val previousGroups = _state.value.groups
         _state.value = _state.value.copy(
             query = label,
             activeBrowseFeed = null,
@@ -372,11 +378,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
+                    previousResults, previousGroups,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
+                    previousResults, previousGroups,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {
@@ -464,6 +472,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.maxSize == maxSize &&
                     searchSettingsKey() == settingsKeyAtStart
             }
+            val previousResults = _state.value.results
+            val previousGroups = _state.value.groups
             try {
                 _state.value = _state.value.copy(
                     loading = true,
@@ -499,11 +509,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
+                    previousResults, previousGroups,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
                 handleSearchFailure(
                     q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
+                    previousResults, previousGroups,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {
@@ -625,17 +637,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         settingsKeyAtStart: String,
         message: String?,
         httpCode: Int?,
+        previousResults: List<TorrentResultDto> = emptyList(),
+        previousGroups: List<MovieGroupDto> = emptyList(),
     ) {
         val preserveResults = shouldPreserveResultsOnError(
             q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
+            previousResults, previousGroups,
         )
         lastSearchedQuery = q
         _state.value = _state.value.copy(
             loading = false,
             error = message ?: "Search failed",
             errorCode = httpCode,
-            results = if (preserveResults) _state.value.results else emptyList(),
-            groups = if (preserveResults) _state.value.groups else emptyList(),
+            results = if (preserveResults) previousResults else emptyList(),
+            groups = if (preserveResults) previousGroups else emptyList(),
             info = null,
             hasSearched = true,
             showTmdbSetupHint = false,
@@ -652,6 +667,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         maxSeeds: Int?,
         maxSize: String?,
         settingsKeyAtStart: String,
+        previousResults: List<TorrentResultDto>,
+        previousGroups: List<MovieGroupDto>,
     ): Boolean {
         return _state.value.hasSearched &&
             lastSearchedQuery == q &&
@@ -662,7 +679,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastSearchActiveBrowseFeed == _state.value.activeBrowseFeed &&
             lastSearchActiveGenre == _state.value.activeGenre &&
             searchSettingsKey() == settingsKeyAtStart &&
-            (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
+            (previousGroups.isNotEmpty() || previousResults.isNotEmpty())
     }
 
     private data class DisplaySearchOutcome(

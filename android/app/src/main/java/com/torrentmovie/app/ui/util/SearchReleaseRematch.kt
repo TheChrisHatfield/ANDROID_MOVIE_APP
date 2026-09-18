@@ -13,7 +13,7 @@ object SearchReleaseRematch {
         if (name.isBlank()) return null
         val nameMatches = releases.filter { it.name.equals(name, ignoreCase = true) }
         if (site.isNotBlank()) {
-            return nameMatches.find { it.site == site }
+            return nameMatches.find { it.site.equals(site, ignoreCase = true) }
         }
         return nameMatches.singleOrNull()
     }
