@@ -11,6 +11,17 @@ client = TestClient(app)
 
 @patch.object(_searcher, "test_sites", return_value=True)
 @patch.object(_searcher, "search")
+def test_search_keeps_movie_profile_when_sites_filtered(mock_search, _mock_test):
+    mock_search.return_value = SearchOutcome(results=[], failed_sites=[])
+    _searcher.working_sites = [MagicMock(name="YTS")]
+
+    client.get("/v1/search", params={"q": "inception", "sites": "YTS", "movie_profile": True})
+    mock_search.assert_called_once()
+    assert mock_search.call_args.kwargs["movie_profile"] is True
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
+@patch.object(_searcher, "search")
 def test_search_returns_cached_results(mock_search, _mock_test):
     mock_search.return_value = SearchOutcome(
         results=[
