@@ -81,11 +81,7 @@ fun MainScaffold(container: AppContainer) {
                     actions = {
                         SeedboxStatusChip(
                             container = container,
-                            onOpenSettings = {
-                                navController.navigate(Routes.SETTINGS) {
-                                    launchSingleTop = true
-                                }
-                            },
+                            onOpenSettings = { navigate(Routes.SETTINGS) },
                         )
                     },
                 )

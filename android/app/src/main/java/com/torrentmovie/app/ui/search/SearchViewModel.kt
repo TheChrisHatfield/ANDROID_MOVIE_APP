@@ -161,6 +161,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             return
         }
         if (_state.value.genrePanelExpanded) {
+            val q = _state.value.query.trim()
+            if (q.isNotEmpty() && _state.value.hasSearched) {
+                search()
+            }
             return
         }
         val q = _state.value.query.trim()
