@@ -179,11 +179,6 @@ class RuTorrentClient(
             return true
         }
         if (location.contains("status=Success", ignoreCase = true)) return true
-        if (trimmed.contains("Success", ignoreCase = true) &&
-            !trimmed.contains("Failed", ignoreCase = true)
-        ) {
-            return true
-        }
         return false
     }
 

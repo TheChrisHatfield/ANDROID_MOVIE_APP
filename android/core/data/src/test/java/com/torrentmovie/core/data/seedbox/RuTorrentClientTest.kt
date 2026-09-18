@@ -90,6 +90,28 @@ class RuTorrentClientTest {
     }
 
     @Test
+    fun addMagnetFailsOnGenericHtmlMentioningSuccess() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                "<html><body>Login failed but Success message elsewhere</body></html>",
+            ),
+        )
+        server.start()
+        val client = RuTorrentClient(
+            baseUrl = server.url("/rutorrent/").toString(),
+            username = "u",
+            password = "p",
+        )
+        val result = client.addMagnet(
+            "magnet:?xt=urn:btih:ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            "/movies/",
+        )
+        server.shutdown()
+        assertTrue(result is SeedboxResult.Failure)
+    }
+
+    @Test
     fun addMagnetFailsOnEmptyBody() = runBlocking {
         val server = MockWebServer()
         server.enqueue(MockResponse().setResponseCode(200).setBody(""))
