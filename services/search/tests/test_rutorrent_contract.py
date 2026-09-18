@@ -7,9 +7,10 @@ import httpx
 def test_addtorrent_form_body_shape():
     magnet = "magnet:?xt=urn:btih:abc"
     directory = "/home5/chris82/downloads/MOVIES/"
-    body = urlencode({"url": magnet, "dir_edit": directory})
+    body = urlencode({"url": magnet, "dir_edit": directory, "json": "1"})
     assert "url=magnet" in body
     assert "dir_edit=" in body
+    assert "json=1" in body
 
 
 def test_rutorrent_mock_server_success():
@@ -18,12 +19,13 @@ def test_rutorrent_mock_server_success():
             assert request.url.path.endswith("/php/addtorrent.php")
             assert b"url=magnet" in request.content
             assert b"dir_edit=" in request.content
+            assert b"json=1" in request.content
             return httpx.Response(200, text="status=Success")
 
     client = httpx.Client(transport=Handler())
     response = client.post(
         "https://seedbox.example/rutorrent/php/addtorrent.php",
-        data={"url": "magnet:?xt=urn:btih:abc", "dir_edit": "/movies/"},
+        data={"url": "magnet:?xt=urn:btih:abc", "dir_edit": "/movies/", "json": "1"},
         auth=("user", "pass"),
     )
     assert response.status_code == 200
