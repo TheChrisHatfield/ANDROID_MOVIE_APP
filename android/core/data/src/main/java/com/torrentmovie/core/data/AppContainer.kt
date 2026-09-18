@@ -28,6 +28,6 @@ class AppContainer(context: Context) {
     val movieMetadataStore = MovieMetadataStore()
     private val database = AppDatabase.get(context)
     val searchRepository = SearchRepository(settingsRepository)
-    val seedboxRepository = SeedboxRepository(settingsRepository, database)
+    val seedboxRepository = SeedboxRepository(context, settingsRepository, database)
     val uploadedRepository = UploadedRepository(database)
 }

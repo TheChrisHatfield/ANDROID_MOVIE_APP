@@ -1,5 +1,6 @@
 package com.torrentmovie.core.data
 
+import android.content.Context
 import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.db.UploadedMagnet
 import com.torrentmovie.core.data.seedbox.RuTorrentClient
@@ -11,11 +12,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class SeedboxRepository(
+    context: Context,
     private val settingsRepository: SettingsRepository,
     private val database: AppDatabase,
 ) {
     private val addMutex = Mutex()
     private val sentWithoutPersist = mutableSetOf<String>()
+    private val pendingPersistPrefs =
+        context.applicationContext.getSharedPreferences(PREFS_PENDING_PERSIST, Context.MODE_PRIVATE)
+
+    init {
+        sentWithoutPersist.addAll(
+            pendingPersistPrefs.getStringSet(KEY_PENDING, emptySet()).orEmpty(),
+        )
+    }
     private var cachedClient: RuTorrentClient? = null
     private var cachedClientRevision = -1
     private var lastSeedboxSettingsKey: String? = null
@@ -53,7 +63,7 @@ class SeedboxRepository(
         val settings = settingsRepository.load()
         val seedboxKey = seedboxSettingsKey(settings)
         if (seedboxKey != lastSeedboxSettingsKey) {
-            sentWithoutPersist.clear()
+            clearSentWithoutPersistCache()
             lastSeedboxSettingsKey = seedboxKey
         }
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
@@ -88,7 +98,7 @@ class SeedboxRepository(
                 downloadDirectory = settings.downloadDirectory,
             )
             if (persisted is SeedboxResult.Failure) {
-                sentWithoutPersist.add(key)
+                rememberSentWithoutPersist(key)
                 return SeedboxResult.Success(
                     "Sent to seedbox (local history save failed — tap send again to retry)",
                 )
@@ -99,7 +109,26 @@ class SeedboxRepository(
     }
 
     fun clearSentWithoutPersist(infoHash: String) {
-        sentWithoutPersist.remove(infoHash)
+        if (sentWithoutPersist.remove(infoHash)) {
+            persistSentWithoutPersistCache()
+        }
+    }
+
+    private fun rememberSentWithoutPersist(key: String) {
+        if (sentWithoutPersist.add(key)) {
+            persistSentWithoutPersistCache()
+        }
+    }
+
+    private fun clearSentWithoutPersistCache() {
+        sentWithoutPersist.clear()
+        pendingPersistPrefs.edit().remove(KEY_PENDING).apply()
+    }
+
+    private fun persistSentWithoutPersistCache() {
+        pendingPersistPrefs.edit()
+            .putStringSet(KEY_PENDING, sentWithoutPersist.toSet())
+            .apply()
     }
 
     private suspend fun persistUploadedMagnet(
@@ -121,6 +150,7 @@ class SeedboxRepository(
                 ),
             )
             sentWithoutPersist.remove(key)
+            persistSentWithoutPersistCache()
             SeedboxResult.Success()
         } catch (_: Exception) {
             SeedboxResult.Failure(
@@ -197,5 +227,10 @@ class SeedboxRepository(
             }
             is SeedboxListResult.Failure -> emptyMap<String, SeedboxTorrentStatus>() to result.message
         }
+    }
+
+    companion object {
+        private const val PREFS_PENDING_PERSIST = "seedbox_pending_persist"
+        private const val KEY_PENDING = "keys"
     }
 }
