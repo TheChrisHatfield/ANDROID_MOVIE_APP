@@ -232,6 +232,7 @@ fun FoldSearchDetailLayout(
         val anchor = findRelease(id)
         val matchName = anchor?.name ?: restoredName
         val matchSite = anchor?.site ?: restoredSite
+            ?: container.searchResultStore.get(id)?.site
         if (!matchName.isNullOrBlank()) {
             val rematched = SearchReleaseRematch.find(
                 allReleases,
