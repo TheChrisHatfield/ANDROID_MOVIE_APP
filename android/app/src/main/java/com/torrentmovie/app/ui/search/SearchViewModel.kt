@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MovieMetadata
 import com.torrentmovie.core.data.SearchException
+import com.torrentmovie.core.data.SearchResult
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
@@ -29,6 +30,7 @@ data class SearchUiState(
     val hasSearched: Boolean = false,
     val showTmdbSetupHint: Boolean = false,
     val lastExecutedQuery: String = "",
+    val activeBrowseFeed: String? = null,
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
@@ -63,9 +65,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val key = searchSettingsKey()
                 if (key != lastSearchSettingsKey && _state.value.hasSearched) {
                     lastSearchSettingsKey = key
-                    if (_state.value.query.trim() == lastSearchedQuery?.trim()) {
-                        search()
-                    }
+                    refreshCurrentResults()
                 }
             }
         }
@@ -84,17 +84,19 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value.results.isEmpty() &&
             _state.value.groups.isEmpty() &&
             !_state.value.loading
-            _state.value = _state.value.copy(
-                query = q,
-                loading = if (stale) false else _state.value.loading,
-                results = if (stale) emptyList() else _state.value.results,
-                groups = if (stale) emptyList() else _state.value.groups,
-                error = if (stale) null else _state.value.error,
-                errorCode = if (stale) null else _state.value.errorCode,
-                info = if (stale) null else _state.value.info,
-                hasSearched = if (stale) false else _state.value.hasSearched,
-                showTmdbSetupHint = if (stale) false else _state.value.showTmdbSetupHint,
-            )
+        val clearingBrowse = _state.value.activeBrowseFeed != null && q != _state.value.query
+        _state.value = _state.value.copy(
+            query = q,
+            loading = if (stale) false else _state.value.loading,
+            results = if (stale) emptyList() else _state.value.results,
+            groups = if (stale) emptyList() else _state.value.groups,
+            error = if (stale) null else _state.value.error,
+            errorCode = if (stale) null else _state.value.errorCode,
+            info = if (stale) null else _state.value.info,
+            hasSearched = if (stale) false else _state.value.hasSearched,
+            showTmdbSetupHint = if (stale) false else _state.value.showTmdbSetupHint,
+            activeBrowseFeed = if (clearingBrowse) null else _state.value.activeBrowseFeed,
+        )
         if (revertingToLastSearch) {
             search()
         }
@@ -116,6 +118,92 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         _state.value = _state.value.copy(maxSize = value?.takeIf { it.isNotBlank() })
     }
 
+    fun refreshCurrentResults() {
+        val feed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
+        if (feed != null) {
+            loadBrowse1337x(feed)
+        } else {
+            search()
+        }
+    }
+
+    fun loadBrowse1337x(feed: X1337BrowseFeed) {
+        searchJob?.cancel()
+        val settings = container.settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) {
+            _state.value = _state.value.copy(
+                loading = false,
+                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                errorCode = null,
+                results = emptyList(),
+                groups = emptyList(),
+                info = null,
+                hasSearched = false,
+                showTmdbSetupHint = false,
+                activeBrowseFeed = null,
+            )
+            return
+        }
+        val generation = ++searchGeneration
+        val label = feed.label
+        searchJob = viewModelScope.launch {
+            val minSeeds = _state.value.minSeeds
+            val maxSeeds = _state.value.maxSeeds
+            val maxSize = _state.value.maxSize
+            val settingsKeyAtStart = searchSettingsKey()
+            fun requestStillCurrent(): Boolean {
+                return generation == searchGeneration &&
+                    _state.value.activeBrowseFeed == feed.id &&
+                    _state.value.minSeeds == minSeeds &&
+                    _state.value.maxSeeds == maxSeeds &&
+                    _state.value.maxSize == maxSize &&
+                    searchSettingsKey() == settingsKeyAtStart
+            }
+            try {
+                _state.value = _state.value.copy(
+                    loading = true,
+                    query = label,
+                    activeBrowseFeed = feed.id,
+                    error = null,
+                    errorCode = null,
+                    info = null,
+                )
+                val outcome = container.searchRepository.browse1337x(
+                    feed.id,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
+                )
+                if (!requestStillCurrent()) return@launch
+                applySuccessfulOutcome(
+                    outcome = outcome,
+                    executedLabel = label,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
+                    activeBrowseFeed = feed.id,
+                    emptyResultsMessage = "No torrents in this 1337x list. Try another feed.",
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SearchException) {
+                if (!requestStillCurrent()) return@launch
+                handleSearchFailure(
+                    label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
+                )
+            } catch (e: Exception) {
+                if (!requestStillCurrent()) return@launch
+                handleSearchFailure(
+                    label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
+                )
+            } finally {
+                if (generation == searchGeneration && _state.value.loading) {
+                    _state.value = _state.value.copy(loading = false)
+                }
+            }
+        }
+    }
+
     fun search() {
         val q = _state.value.query.trim()
         searchJob?.cancel()
@@ -131,6 +219,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 info = null,
                 hasSearched = false,
                 showTmdbSetupHint = false,
+                activeBrowseFeed = null,
             )
             return
         }
@@ -168,6 +257,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     error = null,
                     errorCode = null,
                     info = null,
+                    activeBrowseFeed = null,
                 )
                 val outcome = container.searchRepository.search(
                     q,
@@ -176,113 +266,26 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     maxSize = maxSize,
                 )
                 if (!requestStillCurrent()) return@launch
-                val infoMessages = mutableListOf<String>()
-                if (minSeeds != null) {
-                    infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
-                }
-                if (maxSeeds != null) {
-                    infoMessages += "Max seeds filter may hide indexers without seed counts."
-                }
-                if (outcome.tmdbEnrichmentCapped) {
-                    infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
-                }
-                if (outcome.tmdbKeyRejected) {
-                    infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
-                }
-                if (outcome.failedSites.isNotEmpty()) {
-                    infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
-                }
-                val display = normalizeKodiGroups(outcome.groups, outcome.results)
-                val settings = container.settingsRepository.load()
-                val needsTmdbSetup = settings.fetchMovieMetadata &&
-                    display.groups.isNotEmpty() &&
-                    display.groups.none { group ->
-                        !group.posterUrl.isNullOrBlank() ||
-                            group.releases.any { !it.posterUrl.isNullOrBlank() }
-                    } &&
-                    settings.tmdbApiKey.isBlank() &&
-                    !try {
-                        container.searchRepository.isTmdbConfigured()
-                    } catch (_: Exception) {
-                        false
-                    }
-                val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
-                val allReleases = display.groups.flatMap { it.releases }
-                allReleases.forEach { container.searchResultStore.put(it) }
-                display.groups.forEach { group ->
-                    val releasePoster = group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
-                    val metadata = MovieMetadata(
-                        title = group.title,
-                        year = group.year,
-                        overview = group.overview,
-                        posterUrl = group.posterUrl ?: releasePoster,
-                        trailerYoutubeKey = group.trailerYoutubeKey,
-                    )
-                    group.releases.forEach { release ->
-                        container.movieMetadataStore.put(release.id, metadata)
-                    }
-                }
-                container.movieMetadataStore.bumpRevision()
-
-                val hasAnyResults = display.groups.isNotEmpty()
-                val emptyMessage = if (!hasAnyResults && info == null) {
-                    "No results found. Try a broader query."
-                } else null
-                val inlineError = emptyMessage
-                    ?: if (!hasAnyResults && info != null) info else null
-                val snackInfo = if (!hasAnyResults && info != null) null else info
-
-                lastSearchedQuery = q
-                lastSearchMinSeeds = minSeeds
-                lastSearchMaxSeeds = maxSeeds
-                lastSearchMaxSize = maxSize
-                lastSearchSettingsKey = searchSettingsKey()
-                _state.value = _state.value.copy(
-                    loading = false,
-                    results = display.results,
-                    groups = display.groups,
-                    hasSearched = true,
-                    info = snackInfo,
-                    error = inlineError,
-                    errorCode = null,
-                    showTmdbSetupHint = needsTmdbSetup,
-                    lastExecutedQuery = q,
+                applySuccessfulOutcome(
+                    outcome = outcome,
+                    executedLabel = q,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
+                    activeBrowseFeed = null,
+                    emptyResultsMessage = "No results found. Try a broader query.",
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SearchException) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = shouldPreserveResultsOnError(
-                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
-                )
-                lastSearchedQuery = q
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = e.message ?: "Search failed",
-                    errorCode = e.httpCode,
-                    results = if (preserveResults) _state.value.results else emptyList(),
-                    groups = if (preserveResults) _state.value.groups else emptyList(),
-                    info = null,
-                    hasSearched = true,
-                    showTmdbSetupHint = false,
-                    lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
+                handleSearchFailure(
+                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
                 )
             } catch (e: Exception) {
                 if (!requestStillCurrent()) return@launch
-                val preserveResults = shouldPreserveResultsOnError(
-                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
-                )
-                lastSearchedQuery = q
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = e.message ?: "Search failed",
-                    errorCode = null,
-                    results = if (preserveResults) _state.value.results else emptyList(),
-                    groups = if (preserveResults) _state.value.groups else emptyList(),
-                    info = null,
-                    hasSearched = true,
-                    showTmdbSetupHint = false,
-                    lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
+                handleSearchFailure(
+                    q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
                 )
             } finally {
                 if (generation == searchGeneration && _state.value.loading) {
@@ -290,6 +293,113 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }
         }
+    }
+
+    private suspend fun applySuccessfulOutcome(
+        outcome: SearchResult,
+        executedLabel: String,
+        minSeeds: Int?,
+        maxSeeds: Int?,
+        maxSize: String?,
+        activeBrowseFeed: String?,
+        emptyResultsMessage: String,
+    ) {
+        val infoMessages = mutableListOf<String>()
+        if (minSeeds != null) {
+            infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
+        }
+        if (maxSeeds != null) {
+            infoMessages += "Max seeds filter may hide indexers without seed counts."
+        }
+        if (outcome.tmdbEnrichmentCapped) {
+            infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
+        }
+        if (outcome.tmdbKeyRejected) {
+            infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
+        }
+        if (outcome.failedSites.isNotEmpty()) {
+            infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
+        }
+        val display = normalizeKodiGroups(outcome.groups, outcome.results)
+        val settings = container.settingsRepository.load()
+        val needsTmdbSetup = settings.fetchMovieMetadata &&
+            display.groups.isNotEmpty() &&
+            display.groups.none { group ->
+                !group.posterUrl.isNullOrBlank() ||
+                    group.releases.any { !it.posterUrl.isNullOrBlank() }
+            } &&
+            settings.tmdbApiKey.isBlank() &&
+            !try {
+                container.searchRepository.isTmdbConfigured()
+            } catch (_: Exception) {
+                false
+            }
+        val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
+        val allReleases = display.groups.flatMap { it.releases }
+        allReleases.forEach { container.searchResultStore.put(it) }
+        display.groups.forEach { group ->
+            val releasePoster = group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
+            val metadata = MovieMetadata(
+                title = group.title,
+                year = group.year,
+                overview = group.overview,
+                posterUrl = group.posterUrl ?: releasePoster,
+                trailerYoutubeKey = group.trailerYoutubeKey,
+            )
+            group.releases.forEach { release ->
+                container.movieMetadataStore.put(release.id, metadata)
+            }
+        }
+        container.movieMetadataStore.bumpRevision()
+
+        val hasAnyResults = display.groups.isNotEmpty()
+        val emptyMessage = if (!hasAnyResults && info == null) emptyResultsMessage else null
+        val inlineError = emptyMessage ?: if (!hasAnyResults && info != null) info else null
+        val snackInfo = if (!hasAnyResults && info != null) null else info
+
+        lastSearchedQuery = executedLabel
+        lastSearchMinSeeds = minSeeds
+        lastSearchMaxSeeds = maxSeeds
+        lastSearchMaxSize = maxSize
+        lastSearchSettingsKey = searchSettingsKey()
+        _state.value = _state.value.copy(
+            loading = false,
+            results = display.results,
+            groups = display.groups,
+            hasSearched = true,
+            info = snackInfo,
+            error = inlineError,
+            errorCode = null,
+            showTmdbSetupHint = needsTmdbSetup,
+            lastExecutedQuery = executedLabel,
+            activeBrowseFeed = activeBrowseFeed,
+        )
+    }
+
+    private fun handleSearchFailure(
+        q: String,
+        minSeeds: Int?,
+        maxSeeds: Int?,
+        maxSize: String?,
+        settingsKeyAtStart: String,
+        message: String?,
+        httpCode: Int?,
+    ) {
+        val preserveResults = shouldPreserveResultsOnError(
+            q, minSeeds, maxSeeds, maxSize, settingsKeyAtStart,
+        )
+        lastSearchedQuery = q
+        _state.value = _state.value.copy(
+            loading = false,
+            error = message ?: "Search failed",
+            errorCode = httpCode,
+            results = if (preserveResults) _state.value.results else emptyList(),
+            groups = if (preserveResults) _state.value.groups else emptyList(),
+            info = null,
+            hasSearched = true,
+            showTmdbSetupHint = false,
+            lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
+        )
     }
 
     private fun shouldPreserveResultsOnError(

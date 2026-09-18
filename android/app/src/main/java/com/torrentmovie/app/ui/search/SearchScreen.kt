@@ -1,10 +1,11 @@
 package com.torrentmovie.app.ui.search
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import com.torrentmovie.core.data.MagnetHashUtil
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.network.TorrentResultDto
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -89,7 +92,7 @@ fun SearchScreen(
 
     val pullState = rememberPullRefreshState(
         refreshing = state.loading,
-        onRefresh = { vm.search() },
+        onRefresh = { vm.refreshCurrentResults() },
     )
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
@@ -142,8 +145,8 @@ fun SearchScreen(
                 vm.setMinSeeds(min)
                 vm.setMaxSeeds(maxSeeds)
                 vm.setMaxSize(maxSize)
-                if (state.query.isNotBlank()) {
-                    vm.search()
+                if (state.query.isNotBlank() || state.activeBrowseFeed != null) {
+                    vm.refreshCurrentResults()
                 }
             },
         )
@@ -172,6 +175,23 @@ fun SearchScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             enabled = !state.loading,
         ) { Text("Search") }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            X1337BrowseFeed.entriesList.forEach { feed ->
+                FilterChip(
+                    selected = state.activeBrowseFeed == feed.id,
+                    onClick = { vm.loadBrowse1337x(feed) },
+                    label = { Text(feed.buttonLabel) },
+                    enabled = !state.loading,
+                )
+            }
+        }
 
         if (state.showTmdbSetupHint) {
             Card(
@@ -239,7 +259,7 @@ fun SearchScreen(
                         Text(message, style = MaterialTheme.typography.bodyLarge)
                         if (state.errorCode == 503 || state.errorCode == 400) {
                             Button(
-                                onClick = { vm.search() },
+                                onClick = { vm.refreshCurrentResults() },
                                 modifier = Modifier.padding(top = 12.dp),
                             ) { Text("Retry") }
                         }
