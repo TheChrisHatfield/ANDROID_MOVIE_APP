@@ -77,3 +77,9 @@ def test_magnet_endpoint_uses_inline_magnet_without_fetch():
 
     assert response.status_code == 200
     mock_site.get_magnet_link.assert_not_called()
+
+
+def test_magnet_endpoint_unknown_id_returns_not_found_or_expired():
+    response = client.get(f"/v1/results/{uuid4()}/magnet")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Result not found or expired"
