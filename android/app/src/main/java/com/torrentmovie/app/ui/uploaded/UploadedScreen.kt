@@ -40,6 +40,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.core.data.AppContainer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -74,6 +75,14 @@ fun UploadedScreen(
 
     LaunchedEffect(resumeTick) {
         if (resumeTick > 0) {
+            vm.refreshStatuses()
+        }
+    }
+
+    LaunchedEffect(resumeTick, state.seedboxConfigured) {
+        if (resumeTick == 0 || !state.seedboxConfigured) return@LaunchedEffect
+        while (true) {
+            delay(15_000)
             vm.refreshStatuses()
         }
     }
