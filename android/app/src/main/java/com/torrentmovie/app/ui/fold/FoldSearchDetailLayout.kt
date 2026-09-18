@@ -162,7 +162,6 @@ fun FoldSearchDetailLayout(
         state.genrePanelExpanded,
         state.lastExecutedQuery,
     ) {
-        if (!state.hasSearched && state.lastExecutedQuery.isBlank()) return@LaunchedEffect
         selectedId = null
         restoredName = null
         restoredSite = null
