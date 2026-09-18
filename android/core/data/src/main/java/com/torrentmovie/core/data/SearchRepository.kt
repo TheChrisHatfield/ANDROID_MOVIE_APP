@@ -151,7 +151,15 @@ internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
     val detail = parseSearchErrorDetail(e, gson)
     return when (e.code()) {
         503 -> SearchException(detail ?: "No sources available", 503, e)
-        404 -> SearchException(detail ?: "Not found", 404, e)
+        404 -> SearchException(
+            when {
+                detail.equals("Not Found", ignoreCase = true) ->
+                    "Search API endpoint missing — restart search service (uvicorn on :8765)"
+                else -> detail ?: "Not found"
+            },
+            404,
+            e,
+        )
         else -> SearchException(detail ?: "Request failed (${e.code()})", e.code(), e)
     }
 }
