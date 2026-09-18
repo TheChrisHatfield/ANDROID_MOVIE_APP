@@ -93,9 +93,10 @@ fun TorrentDetailScreen(
 
     LaunchedEffect(resultId, resolveRequest, settingsRevision) {
         if (resolveRequest == 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
-        if (resolveRequest > 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
         if (resolveRequest > 0) {
             magnet = null
+            magnetError = null
+            resultExpired = false
         }
         val apiUrl = container.settingsRepository.load().searchApiBaseUrl
         if (apiUrl.isBlank()) {
@@ -126,8 +127,12 @@ fun TorrentDetailScreen(
                 magnetError = "Magnet unavailable — tap retry"
             }
         } catch (e: SearchException) {
+            magnet = null
             val expired = e.httpCode == 404 &&
-                e.message?.equals("Result expired", ignoreCase = true) == true
+                (
+                    e.message?.contains("not found or expired", ignoreCase = true) == true ||
+                        e.message?.contains("expired", ignoreCase = true) == true
+                    )
             if (expired) {
                 resultExpired = true
                 container.searchResultStore.remove(resultId)
@@ -135,12 +140,13 @@ fun TorrentDetailScreen(
             }
             magnetError = when {
                 expired -> "Result expired — search again"
-                e.httpCode == 404 && e.message?.contains("not found", ignoreCase = true) == true ->
-                    "Result not in cache — tap retry or search again"
-                e.httpCode == 404 -> "Magnet unavailable — tap retry"
+                e.httpCode == 404 && e.message?.contains("Magnet unavailable", ignoreCase = true) == true ->
+                    "Magnet unavailable — tap retry"
+                e.httpCode == 404 -> "Result not in cache — tap retry or search again"
                 else -> e.message ?: "Magnet fetch failed"
             }
         } catch (e: Exception) {
+            magnet = null
             magnetError = e.message ?: "Magnet fetch failed"
         } finally {
             magnetLoading = false
@@ -232,7 +238,7 @@ fun TorrentDetailScreen(
                 }
             },
             enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                !magnet.isNullOrBlank() && !duplicate && !magnetLoading,
+                magnetError == null && !magnet.isNullOrBlank() && !duplicate && !magnetLoading,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
