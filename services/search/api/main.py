@@ -200,7 +200,7 @@ def search(
 def get_magnet(result_id: UUID) -> MagnetResponse:
     row = _result_cache.get(result_id)
     if not row:
-        raise HTTPException(status_code=404, detail="Result not found or expired")
+        raise HTTPException(status_code=404, detail="Result not found")
 
     magnet = row.get("magnet")
     if not magnet or not str(magnet).strip():

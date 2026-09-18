@@ -75,9 +75,12 @@ fun TorrentDetailScreen(
     }
 
     fun isAlreadyUploaded(magnetValue: String?): Boolean {
-        val magnet = magnetValue?.takeIf { it.isNotBlank() } ?: return false
-        val key = MagnetHashUtil.storageKey(magnet, name, site)
-        return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
+        val magnet = magnetValue?.takeIf { it.isNotBlank() }
+        if (magnet != null) {
+            val key = MagnetHashUtil.storageKey(magnet, name, site)
+            if (uploaded.any { it.infoHash.equals(key, ignoreCase = true) }) return true
+        }
+        return uploaded.any { it.displayName == name && it.site == site }
     }
 
     LaunchedEffect(magnet, name, site, uploaded, magnetLoading) {
@@ -90,6 +93,7 @@ fun TorrentDetailScreen(
 
     LaunchedEffect(resultId, resolveRequest, settingsRevision) {
         if (resolveRequest == 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
+        if (resolveRequest > 0 && !magnet.isNullOrBlank()) return@LaunchedEffect
         if (resolveRequest > 0) {
             magnet = null
         }
@@ -123,7 +127,7 @@ fun TorrentDetailScreen(
             }
         } catch (e: SearchException) {
             val expired = e.httpCode == 404 &&
-                e.message?.contains("expired", ignoreCase = true) == true
+                e.message?.equals("Result expired", ignoreCase = true) == true
             if (expired) {
                 resultExpired = true
                 container.searchResultStore.remove(resultId)
@@ -131,6 +135,8 @@ fun TorrentDetailScreen(
             }
             magnetError = when {
                 expired -> "Result expired — search again"
+                e.httpCode == 404 && e.message?.contains("not found", ignoreCase = true) == true ->
+                    "Result not in cache — tap retry or search again"
                 e.httpCode == 404 -> "Magnet unavailable — tap retry"
                 else -> e.message ?: "Magnet fetch failed"
             }
