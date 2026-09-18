@@ -186,6 +186,20 @@ class X1337(TorrentSite):
     BROWSE_FALLBACKS: dict[str, str] = {
         "top-100-movies": "cat/Movies",
     }
+    MOVIE_GENRES: dict[str, str] = {
+        "action": "action movie",
+        "adventure": "adventure movie",
+        "animation": "animation movie",
+        "comedy": "comedy movie",
+        "crime": "crime movie",
+        "drama": "drama movie",
+        "fantasy": "fantasy movie",
+        "horror": "horror movie",
+        "mystery": "mystery movie",
+        "romance": "romance movie",
+        "sci-fi": "sci-fi movie",
+        "thriller": "thriller movie",
+    }
 
     def __init__(self):
         super().__init__(
@@ -216,6 +230,13 @@ class X1337(TorrentSite):
         if page <= 0:
             return f"{self.working_url}/{path}/"
         return f"{self.working_url}/{path}/{page + 1}/"
+
+    def build_genre_browse_url(self, genre: str, page: int = 0) -> str:
+        query = self.MOVIE_GENRES.get(genre)
+        if not query:
+            raise ValueError(f"Unknown 1337x genre: {genre}")
+        page_num = max(page + 1, 1)
+        return f"{self.working_url}/search/{quote(query)}/{page_num}/"
 
     def parse_results(self, content, query):
         soup = BeautifulSoup(content, "lxml")

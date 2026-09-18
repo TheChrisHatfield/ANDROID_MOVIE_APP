@@ -279,6 +279,58 @@ def browse_1337x(
     )
 
 
+@app.get("/v1/browse/1337x/genre/{genre}", response_model=SearchResponse)
+def browse_1337x_genre(
+    genre: str,
+    limit: int = Query(100, ge=1, le=200),
+    pages: int = Query(1, ge=1, le=5),
+    min_seeds: int | None = Query(None, ge=0),
+    max_seeds: int | None = Query(None, ge=0),
+    max_size: str | None = Query(None),
+    group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
+) -> SearchResponse:
+    normalized = genre.strip().lower()
+    if normalized not in X1337.MOVIE_GENRES:
+        raise HTTPException(status_code=400, detail="Unknown genre")
+    if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
+        raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
+
+    if not _searcher.working_sites:
+        _refresh_sites_health(force=True)
+    try:
+        if max_size is not None:
+            filter_size_bytes(max_size)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid max_size")
+
+    outcome = _searcher.browse_1337x_genre(
+        normalized,
+        page_limit=pages,
+        min_seeds=min_seeds,
+        max_seeds=max_seeds,
+        max_size=max_size,
+        limit=limit,
+    )
+    if outcome.indexers_unavailable:
+        raise HTTPException(status_code=503, detail="1337x unavailable")
+    if outcome.all_sources_failed:
+        _refresh_sites_health(force=True)
+        raise HTTPException(status_code=503, detail="1337x genre browse unavailable")
+
+    label = f"1337x {normalized.replace('-', ' ').title()}"
+    return _build_search_response(
+        label,
+        outcome.results,
+        outcome.failed_sites,
+        limit=limit,
+        group=group,
+        enrich=enrich,
+        tmdb_api_key=tmdb_api_key,
+    )
+
+
 def _fetch_magnet_for_row(row: dict) -> str | None:
     magnet = row.get("magnet")
     if magnet and str(magnet).strip():

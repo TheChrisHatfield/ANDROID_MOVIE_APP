@@ -31,6 +31,8 @@ data class SearchUiState(
     val showTmdbSetupHint: Boolean = false,
     val lastExecutedQuery: String = "",
     val activeBrowseFeed: String? = null,
+    val genrePanelExpanded: Boolean = false,
+    val activeGenre: String? = null,
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
@@ -44,6 +46,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private var lastSearchMaxSize: String? = null
     private var lastSearchSettingsKey: String? = null
     private var lastSearchActiveBrowseFeed: String? = null
+    private var lastSearchActiveGenre: String? = null
 
     private fun searchSettingsKey(): String {
         val settings = container.settingsRepository.load()
@@ -96,24 +99,36 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val clearingBrowse = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)?.let { feed ->
             trimmed != feed.label
         } == true
+        val clearingGenre = X1337MovieGenre.fromId(_state.value.activeGenre)?.let { genre ->
+            trimmed != genre.label
+        } == true
+        val modeCleared = clearingBrowse || clearingGenre
         _state.value = _state.value.copy(
             query = q,
-            loading = if (stale) false else _state.value.loading,
-            results = if (stale) emptyList() else _state.value.results,
-            groups = if (stale) emptyList() else _state.value.groups,
-            error = if (stale) null else _state.value.error,
-            errorCode = if (stale) null else _state.value.errorCode,
-            info = if (stale) null else _state.value.info,
-            hasSearched = if (stale) false else _state.value.hasSearched,
-            showTmdbSetupHint = if (stale) false else _state.value.showTmdbSetupHint,
+            loading = if (stale || modeCleared) false else _state.value.loading,
+            results = if (stale || modeCleared) emptyList() else _state.value.results,
+            groups = if (stale || modeCleared) emptyList() else _state.value.groups,
+            error = if (stale || modeCleared) null else _state.value.error,
+            errorCode = if (stale || modeCleared) null else _state.value.errorCode,
+            info = if (stale || modeCleared) null else _state.value.info,
+            hasSearched = if (stale || modeCleared) false else _state.value.hasSearched,
+            showTmdbSetupHint = if (stale || modeCleared) false else _state.value.showTmdbSetupHint,
             activeBrowseFeed = if (clearingBrowse) null else _state.value.activeBrowseFeed,
+            genrePanelExpanded = if (clearingGenre) false else _state.value.genrePanelExpanded,
+            activeGenre = if (clearingGenre) null else _state.value.activeGenre,
+            lastExecutedQuery = if (modeCleared) "" else _state.value.lastExecutedQuery,
         )
         if (revertingToLastSearch) {
             val labelFeed = X1337BrowseFeed.entriesList.find { it.label.equals(trimmed, ignoreCase = true) }
             if (labelFeed != null) {
                 loadBrowse1337x(labelFeed)
             } else {
-                search()
+                val labelGenre = X1337MovieGenre.entriesList.find { it.label.equals(trimmed, ignoreCase = true) }
+                if (labelGenre != null) {
+                    loadGenreBrowse(labelGenre)
+                } else {
+                    search()
+                }
             }
         }
     }
@@ -135,12 +150,31 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun refreshCurrentResults() {
+        val genre = X1337MovieGenre.fromId(_state.value.activeGenre)
+        if (genre != null) {
+            loadGenreBrowse(genre)
+            return
+        }
         val feed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
         if (feed != null) {
             loadBrowse1337x(feed)
         } else {
             search()
         }
+    }
+
+    fun expandGenrePanel() {
+        _state.value = _state.value.copy(
+            genrePanelExpanded = true,
+            activeBrowseFeed = null,
+        )
+    }
+
+    fun collapseGenrePanel() {
+        _state.value = _state.value.copy(
+            genrePanelExpanded = false,
+            activeGenre = null,
+        )
     }
 
     fun loadBrowse1337x(feed: X1337BrowseFeed) {
@@ -158,6 +192,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 hasSearched = true,
                 showTmdbSetupHint = false,
                 activeBrowseFeed = feed.id,
+                genrePanelExpanded = false,
+                activeGenre = null,
             )
             return
         }
@@ -166,6 +202,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         _state.value = _state.value.copy(
             query = label,
             activeBrowseFeed = feed.id,
+            genrePanelExpanded = false,
+            activeGenre = null,
             loading = true,
             hasSearched = true,
             error = null,
@@ -202,6 +240,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     maxSeeds = maxSeeds,
                     maxSize = maxSize,
                     activeBrowseFeed = feed.id,
+                    activeGenre = null,
                     emptyResultsMessage = "No torrents in this 1337x list. Try another feed.",
                 )
             } catch (e: CancellationException) {
@@ -224,7 +263,98 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun loadGenreBrowse(genre: X1337MovieGenre) {
+        searchJob?.cancel()
+        val settings = container.settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) {
+            _state.value = _state.value.copy(
+                query = genre.label,
+                loading = false,
+                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                errorCode = null,
+                results = emptyList(),
+                groups = emptyList(),
+                info = null,
+                hasSearched = true,
+                showTmdbSetupHint = false,
+                activeBrowseFeed = null,
+                genrePanelExpanded = true,
+                activeGenre = genre.id,
+            )
+            return
+        }
+        val generation = ++searchGeneration
+        val label = genre.label
+        _state.value = _state.value.copy(
+            query = label,
+            activeBrowseFeed = null,
+            genrePanelExpanded = true,
+            activeGenre = genre.id,
+            loading = true,
+            hasSearched = true,
+            error = null,
+            errorCode = null,
+            info = null,
+            results = emptyList(),
+            groups = emptyList(),
+        )
+        searchJob = viewModelScope.launch {
+            val minSeeds = _state.value.minSeeds
+            val maxSeeds = _state.value.maxSeeds
+            val maxSize = _state.value.maxSize
+            val settingsKeyAtStart = searchSettingsKey()
+            fun requestStillCurrent(): Boolean {
+                return generation == searchGeneration &&
+                    _state.value.activeGenre == genre.id &&
+                    _state.value.minSeeds == minSeeds &&
+                    _state.value.maxSeeds == maxSeeds &&
+                    _state.value.maxSize == maxSize &&
+                    searchSettingsKey() == settingsKeyAtStart
+            }
+            try {
+                val outcome = container.searchRepository.browse1337xGenre(
+                    genre.id,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
+                )
+                if (!requestStillCurrent()) return@launch
+                applySuccessfulOutcome(
+                    outcome = outcome,
+                    executedLabel = label,
+                    minSeeds = minSeeds,
+                    maxSeeds = maxSeeds,
+                    maxSize = maxSize,
+                    activeBrowseFeed = null,
+                    activeGenre = genre.id,
+                    emptyResultsMessage = "No torrents for this genre. Try another genre or relax filters.",
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SearchException) {
+                if (!requestStillCurrent()) return@launch
+                handleSearchFailure(
+                    label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, e.httpCode,
+                )
+            } catch (e: Exception) {
+                if (!requestStillCurrent()) return@launch
+                handleSearchFailure(
+                    label, minSeeds, maxSeeds, maxSize, settingsKeyAtStart, e.message, null,
+                )
+            } finally {
+                if (generation == searchGeneration && _state.value.loading) {
+                    _state.value = _state.value.copy(loading = false)
+                }
+            }
+        }
+    }
+
     fun search() {
+        val activeGenre = X1337MovieGenre.fromId(_state.value.activeGenre)
+        if (activeGenre != null) {
+            loadGenreBrowse(activeGenre)
+            return
+        }
         val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
         if (activeFeed != null) {
             loadBrowse1337x(activeFeed)
@@ -245,6 +375,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 hasSearched = false,
                 showTmdbSetupHint = false,
                 activeBrowseFeed = null,
+                genrePanelExpanded = false,
+                activeGenre = null,
             )
             return
         }
@@ -268,6 +400,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             loadBrowse1337x(labelFeed)
             return
         }
+        val labelGenre = X1337MovieGenre.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        if (labelGenre != null) {
+            loadGenreBrowse(labelGenre)
+            return
+        }
         val generation = ++searchGeneration
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -289,6 +426,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     errorCode = null,
                     info = null,
                     activeBrowseFeed = null,
+                    activeGenre = null,
+                    genrePanelExpanded = false,
                     results = emptyList(),
                     groups = emptyList(),
                 )
@@ -306,6 +445,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     maxSeeds = maxSeeds,
                     maxSize = maxSize,
                     activeBrowseFeed = null,
+                    activeGenre = null,
                     emptyResultsMessage = "No results found. Try a broader query.",
                 )
             } catch (e: CancellationException) {
@@ -335,19 +475,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         maxSeeds: Int?,
         maxSize: String?,
         activeBrowseFeed: String?,
+        activeGenre: String?,
         emptyResultsMessage: String,
     ) {
         val infoMessages = mutableListOf<String>()
-        if (minSeeds != null && activeBrowseFeed == null) {
+        if (minSeeds != null && activeBrowseFeed == null && activeGenre == null) {
             infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
         }
-        if (minSeeds != null && activeBrowseFeed != null) {
+        if (minSeeds != null && (activeBrowseFeed != null || activeGenre != null)) {
             infoMessages += "Min seeds filter may hide torrents without seed counts."
         }
         if (maxSeeds != null) {
             infoMessages += "Max seeds filter may hide indexers without seed counts."
         }
-        if (maxSize != null && activeBrowseFeed != null) {
+        if (maxSize != null && (activeBrowseFeed != null || activeGenre != null)) {
             infoMessages += "Max size filter may hide larger releases in this list."
         }
         if (
@@ -355,6 +496,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             (minSeeds != null || maxSeeds != null || maxSize != null)
         ) {
             infoMessages += "If the list is empty, relax filters — they may hide all browse results."
+        }
+        if (
+            activeGenre != null &&
+            (minSeeds != null || maxSeeds != null || maxSize != null)
+        ) {
+            infoMessages += "If the list is empty, relax filters — they may hide all genre results."
         }
         if (outcome.tmdbEnrichmentCapped) {
             infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
@@ -408,6 +555,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchMaxSize = maxSize
         lastSearchSettingsKey = searchSettingsKey()
         lastSearchActiveBrowseFeed = activeBrowseFeed
+        lastSearchActiveGenre = activeGenre
         _state.value = _state.value.copy(
             loading = false,
             results = display.results,
@@ -419,6 +567,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             showTmdbSetupHint = needsTmdbSetup,
             lastExecutedQuery = executedLabel,
             activeBrowseFeed = activeBrowseFeed,
+            activeGenre = activeGenre,
+            genrePanelExpanded = activeGenre != null || _state.value.genrePanelExpanded,
         )
     }
 
@@ -445,8 +595,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             hasSearched = true,
             showTmdbSetupHint = false,
             lastExecutedQuery = if (preserveResults) _state.value.lastExecutedQuery else q,
-            // Text search clears activeBrowseFeed in search() before failure; keep chip on browse errors.
             activeBrowseFeed = _state.value.activeBrowseFeed,
+            activeGenre = _state.value.activeGenre,
+            genrePanelExpanded = _state.value.genrePanelExpanded,
         )
     }
 
@@ -464,6 +615,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastSearchMaxSize == maxSize &&
             lastSearchSettingsKey == settingsKeyAtStart &&
             lastSearchActiveBrowseFeed == _state.value.activeBrowseFeed &&
+            lastSearchActiveGenre == _state.value.activeGenre &&
             searchSettingsKey() == settingsKeyAtStart &&
             (_state.value.groups.isNotEmpty() || _state.value.results.isNotEmpty())
     }

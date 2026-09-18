@@ -79,6 +79,13 @@ fun SearchScreen(
         expandedGroupKey = null
         highlightedReleaseId = null
     }
+    LaunchedEffect(state.activeGenre) {
+        if (state.activeGenre != null) {
+            playingTrailerGroupKey = null
+            expandedGroupKey = null
+            highlightedReleaseId = null
+        }
+    }
     LaunchedEffect(selectedResultId, state.groups) {
         val id = selectedResultId
         if (id != null) {
@@ -151,7 +158,7 @@ fun SearchScreen(
                 vm.setMinSeeds(min)
                 vm.setMaxSeeds(maxSeeds)
                 vm.setMaxSize(maxSize)
-                if (state.query.isNotBlank() || state.activeBrowseFeed != null) {
+                if (state.query.isNotBlank() || state.activeBrowseFeed != null || state.activeGenre != null) {
                     vm.refreshCurrentResults()
                 }
             },
@@ -183,16 +190,39 @@ fun SearchScreen(
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            X1337BrowseFeed.entriesList.forEach { feed ->
+            if (state.genrePanelExpanded) {
                 FilterChip(
-                    selected = state.activeBrowseFeed == feed.id,
-                    onClick = { vm.loadBrowse1337x(feed) },
-                    label = { Text(feed.buttonLabel) },
+                    selected = false,
+                    onClick = { vm.collapseGenrePanel() },
+                    label = { Text("Lists") },
+                    enabled = !state.loading,
+                )
+                X1337MovieGenre.entriesList.forEach { genre ->
+                    FilterChip(
+                        selected = state.activeGenre == genre.id,
+                        onClick = { vm.loadGenreBrowse(genre) },
+                        label = { Text(genre.buttonLabel) },
+                        enabled = !state.loading,
+                    )
+                }
+            } else {
+                X1337BrowseFeed.entriesList.forEach { feed ->
+                    FilterChip(
+                        selected = state.activeBrowseFeed == feed.id,
+                        onClick = { vm.loadBrowse1337x(feed) },
+                        label = { Text(feed.buttonLabel) },
+                        enabled = !state.loading,
+                    )
+                }
+                FilterChip(
+                    selected = false,
+                    onClick = { vm.expandGenrePanel() },
+                    label = { Text("By Genre") },
                     enabled = !state.loading,
                 )
             }
         }
-        if (state.activeBrowseFeed == null) {
+        if (state.activeBrowseFeed == null && state.activeGenre == null) {
             Button(
                 onClick = { vm.search() },
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
@@ -250,10 +280,10 @@ fun SearchScreen(
                     ) {
                         CircularProgressIndicator()
                         Text(
-                            text = if (state.activeBrowseFeed != null) {
-                                "Loading 1337x list…"
-                            } else {
-                                "Searching…"
+                            text = when {
+                                state.activeGenre != null -> "Loading genre…"
+                                state.activeBrowseFeed != null -> "Loading 1337x list…"
+                                else -> "Searching…"
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(top = 12.dp),
@@ -261,7 +291,8 @@ fun SearchScreen(
                     }
                 }
                 !state.hasSearched && state.query.isNotBlank() && !state.loading &&
-                    state.activeBrowseFeed == null -> {
+                    state.activeBrowseFeed == null && state.activeGenre == null &&
+                    !state.genrePanelExpanded -> {
                     Text(
                         text = "Tap Search to find movies",
                         style = MaterialTheme.typography.bodyLarge,

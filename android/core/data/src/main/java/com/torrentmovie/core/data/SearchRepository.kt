@@ -115,6 +115,40 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         }
     }
 
+    suspend fun browse1337xGenre(
+        genre: String,
+        minSeeds: Int? = null,
+        maxSeeds: Int? = null,
+        maxSize: String? = null,
+    ): SearchResult {
+        val settings = settingsRepository.load()
+        return try {
+            val response = api().browse1337xGenre(
+                genre = genre,
+                limit = minOf(settings.searchPages * 50, 200),
+                pages = minOf(settings.searchPages, 5),
+                minSeeds = minSeeds,
+                maxSeeds = maxSeeds,
+                maxSize = maxSize,
+                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
+                enrich = settings.fetchMovieMetadata,
+            )
+            SearchResult(
+                results = response.results,
+                failedSites = response.failedSites,
+                groups = response.groups,
+                tmdbKeyRejected = response.tmdbKeyRejected,
+                tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
+            )
+        } catch (e: HttpException) {
+            throw mapHttpError(e)
+        } catch (e: IllegalArgumentException) {
+            throw SearchException("Invalid search API URL — check Settings", cause = e)
+        } catch (e: IOException) {
+            throw mapNetworkError(e)
+        }
+    }
+
     suspend fun isTmdbConfigured(): Boolean {
         return try {
             api().health().tmdbConfigured

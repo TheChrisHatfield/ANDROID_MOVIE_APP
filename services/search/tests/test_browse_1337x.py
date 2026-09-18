@@ -17,6 +17,8 @@ def test_x1337_build_browse_urls():
     assert site.build_browse_url("top-100-movies") == "https://1337xx.to/top-100-movies/"
     assert site.build_browse_url("top-100-movies", use_fallback=True) == "https://1337xx.to/cat/Movies/1/"
     assert site.build_browse_url("top-100-television", 1) == "https://1337xx.to/top-100-television/2/"
+    assert site.build_genre_browse_url("horror") == "https://1337xx.to/search/horror%20movie/1/"
+    assert site.build_genre_browse_url("sci-fi", 1) == "https://1337xx.to/search/sci-fi%20movie/2/"
 
 
 @patch.object(_searcher, "browse_1337x")
@@ -57,3 +59,31 @@ def test_browse_1337x_unavailable(mock_browse):
     mock_browse.return_value = SearchOutcome([], [], indexers_unavailable=True)
     response = client.get("/v1/browse/1337x/top-100")
     assert response.status_code == 503
+
+
+@patch.object(_searcher, "browse_1337x_genre")
+def test_browse_1337x_genre_endpoint(mock_browse):
+    mock_browse.return_value = SearchOutcome(
+        results=[
+            {
+                "name": "Horror Movie 2024 1080p",
+                "site": "1337x",
+                "size": "2 GB",
+                "seeds": "100",
+                "leeches": "5",
+                "date": "Today",
+                "magnet": None,
+                "detail_url": "https://1337xx.to/torrent/2/horror/",
+            }
+        ],
+        failed_sites=[],
+    )
+    response = client.get("/v1/browse/1337x/genre/horror", params={"group": False})
+    assert response.status_code == 200
+    assert response.json()["query"] == "1337x Horror"
+    mock_browse.assert_called_once_with("horror", page_limit=1, min_seeds=None, max_seeds=None, max_size=None, limit=100)
+
+
+def test_browse_genre_rejects_unknown():
+    response = client.get("/v1/browse/1337x/genre/not-a-genre")
+    assert response.status_code == 400
