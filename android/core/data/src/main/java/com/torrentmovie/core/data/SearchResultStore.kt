@@ -20,6 +20,7 @@ class SearchResultStore {
                 else -> result.copy(
                     magnet = result.magnet?.takeIf { it.isNotBlank() } ?: existing.magnet,
                     detail_url = result.detail_url?.takeIf { it.isNotBlank() } ?: existing.detail_url,
+                    site = result.site.takeIf { it.isNotBlank() } ?: existing.site,
                 )
             }
             byId[merged.id] = Entry(merged, now)

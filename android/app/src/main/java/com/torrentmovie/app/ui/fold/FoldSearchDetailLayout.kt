@@ -49,6 +49,8 @@ fun FoldSearchDetailLayout(
             fromStore == null -> fromList
             else -> fromList.copy(
                 magnet = fromList.magnet?.takeIf { it.isNotBlank() } ?: fromStore.magnet,
+                detail_url = fromList.detail_url?.takeIf { it.isNotBlank() } ?: fromStore.detail_url,
+                site = fromList.site.takeIf { it.isNotBlank() } ?: fromStore.site,
             )
         }
     }

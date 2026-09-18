@@ -49,4 +49,24 @@ class SearchResultStoreTest {
         assertEquals("https://1337x.to/torrent/1/movie/", store.get("a")?.detail_url)
         assertEquals("magnet:?xt=urn:btih:abc", store.get("a")?.magnet)
     }
+
+    @Test
+    fun putPreservesExistingSiteWhenIncomingRowHasBlankSite() {
+        val store = SearchResultStore()
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 1080p",
+                site = "1337x",
+            ),
+        )
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 1080p",
+                site = "",
+            ),
+        )
+        assertEquals("1337x", store.get("a")?.site)
+    }
 }
