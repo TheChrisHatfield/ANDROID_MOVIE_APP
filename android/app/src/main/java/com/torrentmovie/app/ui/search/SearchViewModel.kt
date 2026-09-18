@@ -65,7 +65,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             container.settingsRepository.revision.drop(1).collect {
                 val key = searchSettingsKey()
                 if (key != lastSearchSettingsKey && _state.value.hasSearched) {
-                    lastSearchSettingsKey = key
+                    _state.value = _state.value.copy(
+                        loading = true,
+                        error = null,
+                        errorCode = null,
+                        info = null,
+                        results = emptyList(),
+                        groups = emptyList(),
+                    )
                     refreshCurrentResults()
                 }
             }
@@ -101,7 +108,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             activeBrowseFeed = if (clearingBrowse) null else _state.value.activeBrowseFeed,
         )
         if (revertingToLastSearch) {
-            search()
+            val labelFeed = X1337BrowseFeed.entriesList.find { it.label.equals(trimmed, ignoreCase = true) }
+            if (labelFeed != null) {
+                loadBrowse1337x(labelFeed)
+            } else {
+                search()
+            }
         }
     }
 
@@ -250,6 +262,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             )
             return
         }
+        val labelFeed = X1337BrowseFeed.entriesList.find { it.label.equals(q, ignoreCase = true) }
+        if (labelFeed != null) {
+            loadBrowse1337x(labelFeed)
+            return
+        }
         val generation = ++searchGeneration
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -271,6 +288,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     errorCode = null,
                     info = null,
                     activeBrowseFeed = null,
+                    results = emptyList(),
+                    groups = emptyList(),
                 )
                 val outcome = container.searchRepository.search(
                     q,
@@ -321,8 +340,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         if (minSeeds != null && activeBrowseFeed == null) {
             infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
         }
+        if (minSeeds != null && activeBrowseFeed != null) {
+            infoMessages += "Min seeds filter may hide torrents without seed counts."
+        }
         if (maxSeeds != null) {
             infoMessages += "Max seeds filter may hide indexers without seed counts."
+        }
+        if (maxSize != null && activeBrowseFeed != null) {
+            infoMessages += "Max size filter may hide larger releases in this list."
         }
         if (outcome.tmdbEnrichmentCapped) {
             infoMessages += "TMDB enrichment limited to first 50 movie groups — later groups may lack posters."
