@@ -67,6 +67,13 @@ def seed_count(seeds: str) -> int | None:
     return None
 
 
+def _unknown_seeds_exempt(row: dict) -> bool:
+    """Browse/indexer rows often omit seed counts; do not drop them on seed filters."""
+    if row.get("seeds") not in (None, "-"):
+        return False
+    return row.get("site") in ("YTS", "1337x")
+
+
 def apply_filters(
     results: list[dict],
     *,
@@ -81,7 +88,7 @@ def apply_filters(
         filtered = [
             r
             for r in filtered
-            if (r.get("site") == "YTS" and r.get("seeds") in (None, "-"))
+            if _unknown_seeds_exempt(r)
             or (
                 seed_count(r.get("seeds", "-")) is not None
                 and seed_count(r["seeds"]) >= min_seeds
@@ -91,7 +98,7 @@ def apply_filters(
         filtered = [
             r
             for r in filtered
-            if (r.get("site") == "YTS" and r.get("seeds") in (None, "-"))
+            if _unknown_seeds_exempt(r)
             or (
                 seed_count(r.get("seeds", "-")) is not None
                 and seed_count(r["seeds"]) <= max_seeds

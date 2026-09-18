@@ -62,14 +62,14 @@ def test_min_seeds_zero_keeps_unknown_seed_rows():
     assert len(out) == 1
 
 
-def test_max_seeds_drops_unknown_seed_rows_except_yts():
+def test_max_seeds_keeps_unknown_seed_rows_for_yts_and_1337x():
     rows = [
         {"name": "a", "site": "1337x", "seeds": "-", "size": "1 GB"},
         {"name": "b", "site": "YTS", "seeds": "-", "size": "1 GB"},
         {"name": "c", "site": "TPB", "seeds": "5", "size": "1 GB"},
     ]
     out = apply_filters(rows, max_seeds=10)
-    assert [row["name"] for row in out] == ["b", "c"]
+    assert [row["name"] for row in out] == ["a", "b", "c"]
 
 
 def test_apply_min_seeds():
