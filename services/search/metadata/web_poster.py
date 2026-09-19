@@ -90,6 +90,23 @@ def poster_public_path(poster_id: str) -> str:
     return f"{POSTER_PATH_PREFIX}{poster_id}.jpg"
 
 
+def is_usable_poster_url(url: object) -> bool:
+    text = str(url or "").strip()
+    if not text:
+        return False
+    lower = text.lower()
+    if lower.startswith(POSTER_PATH_PREFIX):
+        return True
+    if not lower.startswith(("http://", "https://")):
+        return False
+    path = lower.split("?", 1)[0]
+    if path.endswith((".html", ".htm", ".php", ".asp", ".aspx")):
+        return False
+    if "/torrent/" in path or "/description.php" in path:
+        return False
+    return True
+
+
 def coerce_year(year: object) -> int | None:
     if year is None or isinstance(year, bool):
         return None
@@ -439,8 +456,10 @@ def fill_missing_posters(buckets: list[dict], *, limit: int = _MAX_PER_REQUEST) 
     filled = 0
     pending: list[dict] = []
     for bucket in buckets:
-        if bucket.get("poster_url"):
+        if is_usable_poster_url(bucket.get("poster_url")):
             continue
+        if bucket.get("poster_url"):
+            bucket["poster_url"] = None
         title = str(bucket.get("title") or "").strip()
         if not title:
             continue

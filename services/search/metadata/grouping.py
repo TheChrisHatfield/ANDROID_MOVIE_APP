@@ -4,7 +4,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
-from metadata.web_poster import fill_missing_posters
+from metadata.web_poster import fill_missing_posters, is_usable_poster_url
 
 _MAX_TMDB_WORKERS = 4
 
@@ -35,7 +35,7 @@ def _enrich_buckets_parallel(buckets: list[dict], tmdb: TmdbClient) -> None:
 def _apply_indexer_metadata(bucket: dict, releases: list[dict]) -> None:
     """Use poster/overview/trailer from indexer rows (e.g. YTS) without TMDB."""
     for row in releases:
-        if not bucket.get("poster_url") and row.get("poster_url"):
+        if not bucket.get("poster_url") and is_usable_poster_url(row.get("poster_url")):
             bucket["poster_url"] = row["poster_url"]
         if not bucket.get("overview") and row.get("overview"):
             bucket["overview"] = row["overview"]

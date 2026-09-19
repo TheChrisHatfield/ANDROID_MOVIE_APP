@@ -15,6 +15,7 @@ from metadata.web_poster import (
     encode_poster_jpeg,
     fill_missing_posters,
     fit_poster_image,
+    is_usable_poster_url,
     overview_hint_tokens,
     poster_id_for,
     poster_public_path,
@@ -28,6 +29,32 @@ from metadata.grouping import build_movie_groups
 
 def _rgb_image(width: int, height: int, color=(20, 80, 160)) -> Image.Image:
     return Image.new("RGB", (width, height), color)
+
+
+def test_usable_poster_url_rejects_html_pages():
+    assert is_usable_poster_url("https://yts.rs/images/superman.jpg")
+    assert is_usable_poster_url("/v1/posters/abc123.jpg")
+    assert not is_usable_poster_url("https://1337x.to/torrent/1/movie/")
+    assert not is_usable_poster_url("https://example.com/cover.php")
+    assert not is_usable_poster_url("/relative.jpg")
+
+
+def test_fill_replaces_html_indexer_poster_with_web_art():
+    buckets = [
+        {
+            "title": "Obscure Film",
+            "year": 2020,
+            "poster_url": "https://1337x.to/torrent/1/obscure/",
+            "releases": [],
+        },
+    ]
+
+    def fake_resolve(title, year, **kwargs):
+        return "/v1/posters/obscure.jpg"
+
+    with patch("metadata.web_poster.resolve_web_poster", side_effect=fake_resolve):
+        assert fill_missing_posters(buckets) == 1
+    assert buckets[0]["poster_url"] == "/v1/posters/obscure.jpg"
 
 
 def test_queries_include_title_year_and_overview_tokens():
