@@ -44,7 +44,8 @@ class GenrePoolCache:
             entry = self._entries.get(key)
             if entry and entry.is_usable():
                 return entry
-            if entry is not None:
+            # Keep in-flight placeholders so concurrent browse cannot steal the refresh lock.
+            if entry is not None and not entry.refreshing:
                 self._entries.pop(key, None)
             return None
 
@@ -99,8 +100,14 @@ class GenrePoolCache:
             if entry:
                 entry.refreshing = False
 
+    def is_refreshing(self, genre_id: str, *, movie_profile: bool = True) -> bool:
+        key = _entry_key(genre_id, movie_profile)
+        with self._lock:
+            entry = self._entries.get(key)
+            return bool(entry and entry.refreshing)
+
     def invalidate(self, genre_id: str, *, movie_profile: bool = True) -> None:
         key = _entry_key(genre_id, movie_profile)
         with self._lock:
             self._entries.pop(key, None)
-
+

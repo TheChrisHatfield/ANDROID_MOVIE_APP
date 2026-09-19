@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 # Build a wide pool for cache; per-request filters applied at serve time.
 _POOL_BUILD_LIMIT = 150
+_REFRESH_WAIT_SECONDS = 45.0
+_REFRESH_POLL_SECONDS = 0.05
 
 def _discover_page_offset(genre_id: str, *, rotate: bool) -> int:
     """Rotate TMDB discover pages on refresh so genre shelves surface new titles."""
@@ -146,12 +148,58 @@ class GenreBrowseService:
                     failed_sites=list(cached.failed_sites),
                 )
 
-        if not self._cache.mark_refreshing(normalized, movie_profile=movie_profile):
-            cached = self._cache.get(normalized, movie_profile=movie_profile)
+        owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
+        if not owned_refresh:
+            served = self._wait_for_in_flight_refresh(
+                normalized,
+                movie_profile=movie_profile,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=limit,
+            )
+            if served is not None:
+                return served
+            owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
+            if not owned_refresh:
+                return SearchOutcome([], [])
+
+        try:
+            return self._refresh_sync(
+                normalized,
+                movie_profile=movie_profile,
+                page_limit=page_limit,
+                parallel=parallel,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=limit,
+                tmdb_api_key=tmdb_api_key,
+                enrich=enrich,
+                partial_ok=False,
+                discover_page_offset=_discover_page_offset(normalized, rotate=force_refresh),
+            )
+        finally:
+            if owned_refresh:
+                self._cache.clear_refreshing(normalized, movie_profile=movie_profile)
+
+    def _wait_for_in_flight_refresh(
+        self,
+        genre_id: str,
+        *,
+        movie_profile: bool,
+        min_seeds: int | None,
+        max_seeds: int | None,
+        max_size: str | None,
+        limit: int | None,
+    ) -> SearchOutcome | None:
+        deadline = time.time() + _REFRESH_WAIT_SECONDS
+        while time.time() < deadline:
+            cached = self._cache.get(genre_id, movie_profile=movie_profile)
             if cached and cached.rows:
                 filtered = _rank_and_serve_rows(
                     cached.rows,
-                    normalized,
+                    genre_id,
                     self._searcher,
                     movie_profile=movie_profile,
                     min_seeds=min_seeds,
@@ -164,24 +212,27 @@ class GenreBrowseService:
                     results=filtered,
                     failed_sites=list(cached.failed_sites),
                 )
-
-        try:
-            return self._refresh_sync(
-            normalized,
-            movie_profile=movie_profile,
-            page_limit=page_limit,
-            parallel=parallel,
-            min_seeds=min_seeds,
-            max_seeds=max_seeds,
-            max_size=max_size,
-            limit=limit,
-            tmdb_api_key=tmdb_api_key,
-            enrich=enrich,
-            partial_ok=False,
-            discover_page_offset=_discover_page_offset(normalized, rotate=force_refresh),
+            if not self._cache.is_refreshing(genre_id, movie_profile=movie_profile):
+                break
+            time.sleep(_REFRESH_POLL_SECONDS)
+        cached = self._cache.get(genre_id, movie_profile=movie_profile)
+        if cached and cached.rows:
+            filtered = _rank_and_serve_rows(
+                cached.rows,
+                genre_id,
+                self._searcher,
+                movie_profile=movie_profile,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=limit,
+                mct_live=False,
             )
-        finally:
-            self._cache.clear_refreshing(normalized, movie_profile=movie_profile)
+            return SearchOutcome(
+                results=filtered,
+                failed_sites=list(cached.failed_sites),
+            )
+        return None
 
     def _schedule_refresh(
         self,

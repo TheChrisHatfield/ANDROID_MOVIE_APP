@@ -23,3 +23,11 @@ def test_expired_genre_pool_entry_is_evicted():
     assert entry is not None
     entry.created_at = time.time() - STALE_TTL_SECONDS - 1
     assert cache.get("horror") is None
+
+
+def test_get_does_not_evict_refreshing_placeholder():
+    cache = GenrePoolCache()
+    assert cache.mark_refreshing("horror", movie_profile=True) is True
+    assert cache.get("horror", movie_profile=True) is None
+    assert cache.is_refreshing("horror", movie_profile=True)
+    assert cache.mark_refreshing("horror", movie_profile=True) is False

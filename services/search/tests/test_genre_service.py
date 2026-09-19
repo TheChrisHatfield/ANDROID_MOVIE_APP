@@ -112,6 +112,18 @@ def test_pool_rows_from_ranked_dedupes_live_discoveries():
     assert len(pool) == 3
 
 
+@patch("api.genre_service._REFRESH_WAIT_SECONDS", 0.0)
+@patch("api.genre_service.fetch_genre_pool_rows")
+def test_browse_does_not_steal_in_flight_refresh(mock_fetch):
+    cache = GenrePoolCache()
+    assert cache.mark_refreshing("horror", movie_profile=True)
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    outcome = service.browse("horror", movie_profile=True)
+    mock_fetch.assert_not_called()
+    assert outcome.results == []
+    assert cache.is_refreshing("horror", movie_profile=True)
+
+
 def test_browse_applies_filters_on_cache_hit():
     cache = GenrePoolCache()
     cache.put(
