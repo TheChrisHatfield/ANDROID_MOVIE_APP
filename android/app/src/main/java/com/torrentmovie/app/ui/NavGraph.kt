@@ -91,8 +91,8 @@ fun AppNavGraph(
         wasTwoPane = useTwoPane
     }
 
-    LaunchedEffect(useTwoPane, searchState.loading, container.foldActiveSelection) {
-        if (useTwoPane || searchState.loading) return@LaunchedEffect
+    LaunchedEffect(useTwoPane, container.foldActiveSelection) {
+        if (useTwoPane) return@LaunchedEffect
         val active = container.foldActiveSelection ?: return@LaunchedEffect
         val route = navController.currentBackStackEntry?.destination?.route
         if (route != null && route.startsWith("detail/")) return@LaunchedEffect
