@@ -18,7 +18,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        // Genre browse may wait on an in-flight refresh (45s) then fan out indexers.
+        .readTimeout(120, TimeUnit.SECONDS)
         .build()
     private var cachedBaseUrl: String? = null
     private var cachedApi: SearchApi? = null
