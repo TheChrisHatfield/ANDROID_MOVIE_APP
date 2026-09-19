@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.adaptive.ResponsiveContent
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.AppSettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -148,21 +149,23 @@ fun SettingsScreen(container: AppContainer) {
                 }
                 saving = true
                 scope.launch {
-                    val message = if (container.settingsRepository.isSeedboxConfigured()) {
-                        val probe = withContext(Dispatchers.IO) {
-                            container.seedboxRepository.probeSeedbox()
+                    try {
+                        val message = if (container.settingsRepository.isSeedboxConfigured()) {
+                            val probe = withContext(Dispatchers.IO) {
+                                container.seedboxRepository.probeSeedbox()
+                            }
+                            settingsSavedMessage(seedboxConfigured = true, probe = probe)
+                        } else {
+                            settingsSavedMessage(seedboxConfigured = false, probe = null)
                         }
-                        when {
-                            probe.fullyOnline -> "Settings saved · seedbox ready"
-                            probe.addReachable ->
-                                "Settings saved · send OK, live status unavailable"
-                            else -> "Settings saved · ${probe.message}"
-                        }
-                    } else {
-                        "Settings saved"
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        Toast.makeText(context, "Settings saved", Toast.LENGTH_LONG).show()
+                    } finally {
+                        saving = false
                     }
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                    saving = false
                 }
             },
             enabled = !saving,
