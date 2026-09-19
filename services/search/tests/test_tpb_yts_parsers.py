@@ -104,3 +104,13 @@ def test_tpb_html_fixture_if_present():
     assert rows
     assert any("inception" in row["name"].lower() for row in rows)
     assert rows[0]["seeds"] != "1.85 GiB"
+
+
+def test_piratebay_health_probe_uses_spec_timeout():
+    from unittest.mock import patch
+
+    site = PirateBay()
+    with patch("torrtux_core.sites.providers.http_get", side_effect=OSError("skip")) as mock_get:
+        assert site.test_connection() is False
+    assert mock_get.call_args_list
+    assert all(call.kwargs.get("timeout") == 10 for call in mock_get.call_args_list)
