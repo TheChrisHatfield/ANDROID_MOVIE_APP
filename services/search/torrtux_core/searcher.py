@@ -142,6 +142,8 @@ class TorrentSearcher:
                             failed_sites.append(site.name)
                 except TimeoutError:
                     pending = [site.name for future, site in futures.items() if not future.done()]
+                    for future in futures:
+                        future.cancel()
                     if pending:
                         logger.warning(
                             "search fan-out timed out after %ss; skipping %s",
@@ -444,8 +446,12 @@ class TorrentSearcher:
         sorted_results = sort_by_seeds_desc(filtered)
         if limit is not None:
             sorted_results = sorted_results[:limit]
-        all_sources_failed = bool(queried_names) and not sorted_results and queried_names.issubset(
-            set(failed_sites)
+        failed = set(failed_sites)
+        all_sources_failed = (
+            bool(queried_names)
+            and not sorted_results
+            and queried_names.issubset(failed)
+            and len(failed) >= len(queried_names)
         )
         return SearchOutcome(
             results=sorted_results,

@@ -167,13 +167,9 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             api().getMagnet(resultId)
         } catch (e: HttpException) {
-            if (
-                e.code() == 404 &&
-                !detailUrl.isNullOrBlank() &&
-                !site.isNullOrBlank()
-            ) {
+            if (e.code() == 404 && !detailUrl.isNullOrBlank() && !site.isNullOrBlank()) {
                 try {
-                    api().resolveMagnetByDetail(
+                    return api().resolveMagnetByDetail(
                         site = site,
                         detailUrl = detailUrl,
                         resultId = resultId,
@@ -181,10 +177,11 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                     )
                 } catch (fallback: HttpException) {
                     throw mapHttpError(fallback)
+                } catch (fallback: IOException) {
+                    throw mapNetworkError(fallback)
                 }
-            } else {
-                throw mapHttpError(e)
             }
+            throw mapHttpError(e)
         } catch (e: IllegalArgumentException) {
             throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
