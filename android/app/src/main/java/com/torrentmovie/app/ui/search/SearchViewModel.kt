@@ -655,6 +655,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
         }
         val display = normalizeKodiGroups(outcome.groups, outcome.results)
+        if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val settings = container.settingsRepository.load()
         val needsTmdbSetup = settings.fetchMovieMetadata &&
             display.groups.isNotEmpty() &&
