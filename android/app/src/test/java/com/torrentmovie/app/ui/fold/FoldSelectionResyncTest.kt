@@ -49,4 +49,11 @@ class FoldSelectionResyncTest {
         assertNull(foldActivePayload(null, "Movie", "YTS", "horror"))
         assertNull(foldActivePayload("", "Movie", "YTS", "horror"))
     }
+
+    @Test
+    fun rankingFeedbackUsesLiveSelectedIdAfterRematch() {
+        assertEquals("new-id", foldRankingFeedbackResultId("new-id", "old-id"))
+        assertEquals("old-id", foldRankingFeedbackResultId(null, "old-id"))
+        assertEquals("old-id", foldRankingFeedbackResultId("  ", "old-id"))
+    }
 }

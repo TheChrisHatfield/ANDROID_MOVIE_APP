@@ -294,7 +294,7 @@ fun FoldSearchDetailLayout(
                         onOpenUploaded = onOpenUploaded,
                         onGenreBranchFeedback = { success ->
                             searchViewModel.recordGenreBranchFeedback(
-                                result.id,
+                                foldRankingFeedbackResultId(selectedId, result.id),
                                 success,
                                 genreAtDetailOpen,
                             )
@@ -308,6 +308,10 @@ fun FoldSearchDetailLayout(
 
 internal fun needsFoldSelectionResync(selectedId: String?, activeResultId: String?): Boolean {
     return !selectedId.isNullOrBlank() && activeResultId != selectedId
+}
+
+internal fun foldRankingFeedbackResultId(selectedId: String?, resultId: String): String {
+    return selectedId?.takeIf { it.isNotBlank() } ?: resultId
 }
 
 /** Cover/narrow fold must reopen the selected release even if the drawer is on Settings or Uploaded. */
