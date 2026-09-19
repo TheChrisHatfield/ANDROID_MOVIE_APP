@@ -31,13 +31,15 @@ fun RemoteMoviePoster(
     url: String?,
     title: String,
     modifier: Modifier = Modifier,
+    searchApiBaseUrl: String? = null,
 ) {
-    if (url.isNullOrBlank()) {
+    val model = resolvePosterUrl(url, searchApiBaseUrl)
+    if (model.isNullOrBlank()) {
         MoviePosterPlaceholder(title, modifier)
         return
     }
     SubcomposeAsyncImage(
-        model = url,
+        model = model,
         contentDescription = title,
         modifier = modifier,
         contentScale = ContentScale.Crop,

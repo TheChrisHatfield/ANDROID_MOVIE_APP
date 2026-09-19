@@ -34,6 +34,7 @@ fun MovieDetailHeader(
     metadata: MovieMetadata,
     releaseLabel: String? = null,
     resultId: String? = null,
+    searchApiBaseUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -45,6 +46,7 @@ fun MovieDetailHeader(
                 RemoteMoviePoster(
                     url = metadata.posterUrl,
                     title = metadata.title,
+                    searchApiBaseUrl = searchApiBaseUrl,
                     modifier = Modifier
                         .width(96.dp)
                         .height(144.dp),

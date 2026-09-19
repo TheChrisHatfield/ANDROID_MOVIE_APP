@@ -233,6 +233,7 @@ fun TorrentDetailScreen(
                 metadata = headerMetadata,
                 releaseLabel = "$site · ${name.take(80)}",
                 resultId = resultId,
+                searchApiBaseUrl = settings.searchApiBaseUrl,
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
         } else {

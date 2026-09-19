@@ -63,6 +63,9 @@ fun SearchScreen(
     val movieSitesOnly = remember(settingsRevision) {
         container.settingsRepository.load().movieSitesOnly
     }
+    val searchApiBaseUrl = remember(settingsRevision) {
+        container.settingsRepository.load().searchApiBaseUrl
+    }
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
@@ -318,6 +321,7 @@ fun SearchScreen(
                                     }
                                 },
                                 onOpenRelease = ::openDetail,
+                                searchApiBaseUrl = searchApiBaseUrl,
                             )
                         }
                         items(state.results, key = { it.id }) { result ->

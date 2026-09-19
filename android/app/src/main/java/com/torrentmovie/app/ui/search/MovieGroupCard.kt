@@ -50,6 +50,7 @@ fun MovieGroupCard(
     onToggleExpand: () -> Unit,
     onToggleTrailer: () -> Unit,
     onOpenRelease: (TorrentResultDto) -> Unit,
+    searchApiBaseUrl: String? = null,
 ) {
     val context = LocalContext.current
     val singleRelease = group.releases.size == 1
@@ -94,6 +95,7 @@ fun MovieGroupCard(
             RemoteMoviePoster(
                 url = posterUrl,
                 title = group.title,
+                searchApiBaseUrl = searchApiBaseUrl,
                 modifier = Modifier
                     .width(72.dp)
                     .height(108.dp),
