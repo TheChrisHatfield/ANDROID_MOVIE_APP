@@ -174,7 +174,8 @@ class SeedboxRepository(
             sentWithoutPersist.remove(key)
             persistSentWithoutPersistCache()
             SeedboxResult.Success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             SeedboxResult.Failure(
                 "Sent to seedbox but failed to save locally — tap send again",
             )
@@ -185,7 +186,8 @@ class SeedboxRepository(
         if (!settingsRepository.isSeedboxConfigured()) return false
         return try {
             client().ping()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             false
         }
     }
@@ -197,6 +199,7 @@ class SeedboxRepository(
         return try {
             client().listTorrentStatuses()
         } catch (e: Exception) {
+            e.rethrowIfCancelled()
             SeedboxListResult.Failure(e.message ?: "Could not load seedbox status")
         }
     }

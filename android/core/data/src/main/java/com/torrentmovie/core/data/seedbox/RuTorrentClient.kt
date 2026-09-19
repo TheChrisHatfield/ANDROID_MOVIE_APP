@@ -1,5 +1,6 @@
 package com.torrentmovie.core.data.seedbox
 
+import com.torrentmovie.core.data.rethrowIfCancelled
 import okhttp3.Credentials
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
@@ -46,7 +47,8 @@ class RuTorrentClient(
                     }
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             false
         }
     }
@@ -81,6 +83,7 @@ class RuTorrentClient(
                 }
             }
         } catch (e: Exception) {
+            e.rethrowIfCancelled()
             SeedboxListResult.Failure(e.message ?: "Could not load seedbox status")
         }
     }
@@ -101,6 +104,7 @@ class RuTorrentClient(
                 handleAddMagnetResponse(response, redirectDepth = 0)
             }
         } catch (e: Exception) {
+            e.rethrowIfCancelled()
             SeedboxResult.Failure(e.message ?: "Connection failed")
         }
     }
