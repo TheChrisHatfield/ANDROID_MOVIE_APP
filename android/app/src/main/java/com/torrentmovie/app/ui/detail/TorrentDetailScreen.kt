@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
@@ -45,6 +46,7 @@ fun TorrentDetailScreen(
     onResultIdChanged: ((String) -> Unit)? = null,
     onOpenUploaded: ((storageKey: String) -> Unit)? = null,
     onGenreBranchFeedback: ((success: Boolean) -> Unit)? = null,
+    detailUrl: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -140,7 +142,7 @@ fun TorrentDetailScreen(
             val resolved = withContext(Dispatchers.IO) {
                 container.searchRepository.resolveMagnet(
                     resultId = resultId,
-                    detailUrl = cachedBeforeResolve?.detail_url,
+                    detailUrl = magnetFallbackDetailUrl(cachedBeforeResolve?.detail_url, detailUrl),
                     site = cachedBeforeResolve?.site?.takeIf { it.isNotBlank() } ?: site,
                     name = cachedBeforeResolve?.name?.takeIf { it.isNotBlank() } ?: name,
                 )
@@ -153,7 +155,12 @@ fun TorrentDetailScreen(
                     id = resultId,
                     name = name,
                     site = site,
-                )).copy(id = stableId, magnet = magnet)
+                    detail_url = detailUrl,
+                )).copy(
+                    id = stableId,
+                    magnet = magnet,
+                    detail_url = cached?.detail_url?.takeIf { it.isNotBlank() } ?: detailUrl,
+                )
                 container.searchResultStore.put(merged)
                 if (stableId != resultId) {
                     container.searchResultStore.remove(resultId)

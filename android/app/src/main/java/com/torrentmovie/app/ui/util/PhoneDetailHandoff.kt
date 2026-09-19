@@ -24,3 +24,6 @@ internal fun resolveGenreForRankingFeedback(
     activeGenre: String?,
     lastSearchGenre: String?,
 ): String? = listOf(override, activeGenre, lastSearchGenre).firstOrNull { !it.isNullOrBlank() }
+
+internal fun magnetFallbackDetailUrl(storeUrl: String?, selectionUrl: String?): String? =
+    storeUrl?.takeIf { it.isNotBlank() } ?: selectionUrl?.takeIf { it.isNotBlank() }

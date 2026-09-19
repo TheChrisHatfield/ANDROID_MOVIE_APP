@@ -28,6 +28,7 @@ import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
+import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.app.ui.util.shouldClearPhoneFoldSelectionOnDetailDispose
 import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
 import com.torrentmovie.app.ui.util.snapshotGenreAtDetailOpen
@@ -108,6 +109,10 @@ fun AppNavGraph(
                             foldActiveSelection?.genreId,
                             searchState.activeGenre,
                         ),
+                        detailUrl = magnetFallbackDetailUrl(
+                            container.searchResultStore.get(resultId)?.detail_url,
+                            foldActiveSelection?.detailUrl,
+                        ),
                     )
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
@@ -145,6 +150,7 @@ fun AppNavGraph(
                             name = r.name,
                             site = r.site,
                             genreId = searchState.activeGenre,
+                            detailUrl = r.detail_url,
                         )
                         navController.navigate(Routes.detail(r.id, r.name, r.site)) {
                             launchSingleTop = true
@@ -222,12 +228,16 @@ fun AppNavGraph(
 
             DisposableEffect(resultId, useTwoPane) {
                 if (!useTwoPane) {
-                    val priorGenre = container.foldActiveSelection?.genreId
+                    val prior = container.foldActiveSelection
                     container.foldActiveSelection = PendingFoldDetail(
                         resultId = resultId,
                         name = navName,
                         site = navSite,
-                        genreId = snapshotGenreAtDetailOpen(priorGenre, searchState.activeGenre),
+                        genreId = snapshotGenreAtDetailOpen(prior?.genreId, searchState.activeGenre),
+                        detailUrl = magnetFallbackDetailUrl(
+                            container.searchResultStore.get(resultId)?.detail_url,
+                            prior?.detailUrl,
+                        ),
                     )
                 }
                 onDispose {
@@ -255,6 +265,10 @@ fun AppNavGraph(
                 name = cached?.name ?: navName,
                 site = cached?.site ?: navSite,
                 initialMagnet = cached?.magnet,
+                detailUrl = magnetFallbackDetailUrl(
+                    cached?.detail_url,
+                    foldActiveSelection?.detailUrl,
+                ),
                 onResultExpired = {
                     container.foldActiveSelection = null
                     navController.popBackStack(Routes.SEARCH, inclusive = false)

@@ -25,6 +25,7 @@ import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
+import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
@@ -60,8 +61,18 @@ fun FoldSearchDetailLayout(
         }
     }
 
-    fun syncFoldSelection(id: String?, name: String, site: String) {
-        container.foldActiveSelection = foldActivePayload(id, name, site, genreAtDetailOpen)
+    fun syncFoldSelection(id: String?, name: String, site: String, detailUrl: String? = null) {
+        val resolvedUrl = magnetFallbackDetailUrl(
+            detailUrl ?: id?.let { findRelease(it)?.detail_url },
+            container.foldActiveSelection?.takeIf { it.resultId == id }?.detailUrl,
+        )
+        container.foldActiveSelection = foldActivePayload(
+            id,
+            name,
+            site,
+            genreAtDetailOpen,
+            resolvedUrl,
+        )
     }
 
     val selected: TorrentResultDto? = selectedId?.let { id ->
@@ -75,6 +86,9 @@ fun FoldSearchDetailLayout(
                             ?.takeIf { it.resultId == id }
                             ?.site
                             .orEmpty(),
+                    detail_url = container.foldActiveSelection
+                        ?.takeIf { it.resultId == id }
+                        ?.detailUrl,
                 )
             }
     }
@@ -86,7 +100,7 @@ fun FoldSearchDetailLayout(
             restoredName = pending.name.takeIf { it.isNotBlank() }
             restoredSite = pending.site.takeIf { it.isNotBlank() }
             genreAtDetailOpen = pending.genreId ?: genreAtDetailOpen
-            syncFoldSelection(pending.resultId, pending.name, pending.site)
+            syncFoldSelection(pending.resultId, pending.name, pending.site, pending.detailUrl)
             container.pendingFoldDetail = null
         } else if (selectedId == null) {
             container.foldActiveSelection?.let { active ->
@@ -257,6 +271,7 @@ fun FoldSearchDetailLayout(
                         name = result.name,
                         site = result.site,
                         initialMagnet = result.magnet,
+                        detailUrl = result.detail_url,
                         onResultExpired = {
                             selectedId = null
                             restoredName = null
@@ -273,6 +288,7 @@ fun FoldSearchDetailLayout(
                                 newId,
                                 stored?.name ?: restoredName ?: "",
                                 stored?.site ?: restoredSite ?: "",
+                                stored?.detail_url,
                             )
                         },
                         onOpenUploaded = onOpenUploaded,
@@ -305,6 +321,7 @@ internal fun foldActivePayload(
     name: String,
     site: String,
     genreId: String?,
+    detailUrl: String? = null,
 ): PendingFoldDetail? {
     if (resultId.isNullOrBlank()) return null
     return PendingFoldDetail(
@@ -312,5 +329,6 @@ internal fun foldActivePayload(
         name = name,
         site = site,
         genreId = genreId,
+        detailUrl = detailUrl?.takeIf { it.isNotBlank() },
     )
 }

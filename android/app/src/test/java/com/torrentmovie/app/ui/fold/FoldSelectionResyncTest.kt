@@ -43,8 +43,9 @@ class FoldSelectionResyncTest {
 
     @Test
     fun twoPaneSelectionPayloadKeepsGenreSnapshot() {
-        val payload = foldActivePayload("abc", "Movie", "YTS", "horror")
+        val payload = foldActivePayload("abc", "Movie", "YTS", "horror", "https://yts.rs/movie")
         assertEquals("horror", payload?.genreId)
+        assertEquals("https://yts.rs/movie", payload?.detailUrl)
         assertNull(foldActivePayload(null, "Movie", "YTS", "horror"))
         assertNull(foldActivePayload("", "Movie", "YTS", "horror"))
     }

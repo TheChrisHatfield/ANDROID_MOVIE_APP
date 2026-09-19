@@ -70,4 +70,20 @@ class PhoneDetailHandoffTest {
         )
         assertNull(resolveGenreForRankingFeedback(override = "  ", activeGenre = null, lastSearchGenre = null))
     }
+
+    @Test
+    fun magnetFallbackPrefersStoreUrlThenSelectionUrl() {
+        assertEquals(
+            "https://yts.rs/movie/inception-2010",
+            magnetFallbackDetailUrl(
+                storeUrl = "https://yts.rs/movie/inception-2010",
+                selectionUrl = "https://other.example/movie",
+            ),
+        )
+        assertEquals(
+            "https://1337x.to/torrent/1/movie/",
+            magnetFallbackDetailUrl(storeUrl = null, selectionUrl = "https://1337x.to/torrent/1/movie/"),
+        )
+        assertNull(magnetFallbackDetailUrl(storeUrl = "  ", selectionUrl = null))
+    }
 }
