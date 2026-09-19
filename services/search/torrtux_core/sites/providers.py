@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from torrtux_core.base import TorrentSite
+from torrtux_core.genres import MOVIE_GENRES
 from torrtux_core.http_client import http_get
 
 APIBAY_SEARCH_URL = "https://apibay.org/q.php"
@@ -186,20 +187,7 @@ class X1337(TorrentSite):
     BROWSE_FALLBACKS: dict[str, str] = {
         "top-100-movies": "cat/Movies",
     }
-    MOVIE_GENRES: dict[str, str] = {
-        "action": "action movie",
-        "adventure": "adventure movie",
-        "animation": "animation movie",
-        "comedy": "comedy movie",
-        "crime": "crime movie",
-        "drama": "drama movie",
-        "fantasy": "fantasy movie",
-        "horror": "horror movie",
-        "mystery": "mystery movie",
-        "romance": "romance movie",
-        "sci-fi": "sci-fi movie",
-        "thriller": "thriller movie",
-    }
+    MOVIE_GENRES = MOVIE_GENRES
 
     def __init__(self):
         super().__init__(

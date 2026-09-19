@@ -18,6 +18,7 @@ from api.models import HealthResponse, MagnetResponse, MovieGroup, SearchRespons
 from metadata.grouping import build_movie_groups
 from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import filter_size_bytes
+from torrtux_core.genres import MOVIE_GENRES, genre_display_label
 from torrtux_core.searcher import TorrentSearcher
 from torrtux_core.sites.providers import X1337
 
@@ -101,6 +102,7 @@ def _build_search_response(
     group: bool,
     enrich: bool,
     tmdb_api_key: str | None,
+    max_enrich_groups: int = 50,
 ) -> SearchResponse:
     stored = _result_cache.put_many(raw_results)
     flat_results = [TorrentResult(**row) for row in stored]
@@ -115,7 +117,7 @@ def _build_search_response(
             stored,
             tmdb=tmdb_client,
             enrich_metadata=enrich,
-            max_groups=min(limit, 50),
+            max_groups=min(limit, max_enrich_groups),
         )
         groups = [MovieGroup(**g) for g in group_rows]
         if groups:
@@ -245,8 +247,6 @@ def browse_1337x(
     if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
         raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
 
-    if not _searcher.working_sites:
-        _refresh_sites_health(force=True)
     try:
         if max_size is not None:
             filter_size_bytes(max_size)
@@ -276,6 +276,69 @@ def browse_1337x(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
+        max_enrich_groups=12,
+    )
+
+
+@app.get("/v1/browse/genre/{genre}", response_model=SearchResponse)
+def browse_genre(
+    genre: str,
+    limit: int = Query(100, ge=1, le=200),
+    pages: int = Query(1, ge=1, le=5),
+    min_seeds: int | None = Query(None, ge=0),
+    max_seeds: int | None = Query(None, ge=0),
+    max_size: str | None = Query(None),
+    parallel: bool = Query(True),
+    movie_profile: bool = Query(True),
+    group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
+) -> SearchResponse:
+    normalized = genre.strip().lower()
+    if normalized not in MOVIE_GENRES:
+        raise HTTPException(status_code=400, detail="Unknown genre")
+    if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
+        raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
+
+    if not _searcher.working_sites:
+        _refresh_sites_health(force=True)
+    if not _searcher.working_sites:
+        raise HTTPException(status_code=503, detail="No working indexers")
+
+    try:
+        if max_size is not None:
+            filter_size_bytes(max_size)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid max_size")
+
+    outcome = _searcher.browse_genre(
+        normalized,
+        movie_profile=movie_profile,
+        page_limit=pages,
+        parallel=parallel,
+        min_seeds=min_seeds,
+        max_seeds=max_seeds,
+        max_size=max_size,
+        limit=limit,
+    )
+    if outcome.movie_indexers_unavailable:
+        raise HTTPException(status_code=503, detail="No movie indexers available")
+    if outcome.indexers_unavailable:
+        raise HTTPException(status_code=503, detail="Requested indexers unavailable")
+    if outcome.all_sources_failed:
+        _refresh_sites_health(force=True)
+        raise HTTPException(status_code=503, detail="No sources available")
+
+    label = genre_display_label(normalized)
+    return _build_search_response(
+        label,
+        outcome.results,
+        outcome.failed_sites,
+        limit=limit,
+        group=group,
+        enrich=enrich,
+        tmdb_api_key=tmdb_api_key,
+        max_enrich_groups=12,
     )
 
 
@@ -292,13 +355,11 @@ def browse_1337x_genre(
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     normalized = genre.strip().lower()
-    if normalized not in X1337.MOVIE_GENRES:
+    if normalized not in MOVIE_GENRES:
         raise HTTPException(status_code=400, detail="Unknown genre")
     if min_seeds is not None and max_seeds is not None and min_seeds > max_seeds:
         raise HTTPException(status_code=400, detail="min_seeds cannot exceed max_seeds")
 
-    if not _searcher.working_sites:
-        _refresh_sites_health(force=True)
     try:
         if max_size is not None:
             filter_size_bytes(max_size)
@@ -328,6 +389,7 @@ def browse_1337x_genre(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
+        max_enrich_groups=12,
     )
 
 

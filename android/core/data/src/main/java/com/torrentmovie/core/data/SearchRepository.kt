@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit
 class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .build()
     private var cachedBaseUrl: String? = null
     private var cachedApi: SearchApi? = null
@@ -91,13 +91,13 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             val response = api().browse1337x(
                 feed = feed,
-                limit = minOf(settings.searchPages * 50, 200),
-                pages = minOf(settings.searchPages, 5),
+                limit = 100,
+                pages = 1,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata,
+                enrich = false,
             )
             SearchResult(
                 results = response.results,
@@ -115,7 +115,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         }
     }
 
-    suspend fun browse1337xGenre(
+    suspend fun browseGenre(
         genre: String,
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
@@ -123,15 +123,16 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     ): SearchResult {
         val settings = settingsRepository.load()
         return try {
-            val response = api().browse1337xGenre(
+            val response = api().browseGenre(
                 genre = genre,
-                limit = minOf(settings.searchPages * 50, 200),
-                pages = minOf(settings.searchPages, 5),
+                limit = 100,
+                pages = 1,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
+                movieProfile = settings.movieSitesOnly,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata,
+                enrich = false,
             )
             SearchResult(
                 results = response.results,

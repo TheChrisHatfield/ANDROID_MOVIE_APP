@@ -13,6 +13,9 @@ from torrtux_core.sites import ALL_SITE_CLASSES
 
 logger = logging.getLogger(__name__)
 
+INDEXER_HTTP_TIMEOUT = 8
+SEARCH_FANOUT_TIMEOUT_SEC = 22
+
 
 @dataclass
 class SearchOutcome:
@@ -85,7 +88,7 @@ class TorrentSearcher:
                 break
             prev_url = search_url
             try:
-                response = http_get(search_url, timeout=15)
+                response = http_get(search_url, timeout=INDEXER_HTTP_TIMEOUT)
             except Exception as exc:
                 logger.debug("search request failed %s: %s", site.name, exc)
                 errored = page == 0 and not results
@@ -125,16 +128,27 @@ class TorrentSearcher:
                     pool.submit(self._search_site, site, query, page_limit): site
                     for site in active_sites
                 }
-                for future in as_completed(futures):
-                    site = futures[future]
-                    try:
-                        site_results, errored = future.result()
-                        if errored:
+                try:
+                    completed = as_completed(futures, timeout=SEARCH_FANOUT_TIMEOUT_SEC)
+                    for future in completed:
+                        site = futures[future]
+                        try:
+                            site_results, errored = future.result()
+                            if errored:
+                                failed_sites.append(site.name)
+                            all_results.extend(site_results)
+                        except Exception as exc:
+                            logger.warning("parallel search error %s: %s", site.name, exc)
                             failed_sites.append(site.name)
-                        all_results.extend(site_results)
-                    except Exception as exc:
-                        logger.warning("parallel search error %s: %s", site.name, exc)
-                        failed_sites.append(site.name)
+                except TimeoutError:
+                    pending = [site.name for future, site in futures.items() if not future.done()]
+                    if pending:
+                        logger.warning(
+                            "search fan-out timed out after %ss; skipping %s",
+                            SEARCH_FANOUT_TIMEOUT_SEC,
+                            ", ".join(pending),
+                        )
+                        failed_sites.extend(pending)
             return all_results, failed_sites
 
         all_results = []
@@ -183,7 +197,7 @@ class TorrentSearcher:
                 break
             prev_url = browse_url
             try:
-                response = http_get(browse_url, timeout=15)
+                response = http_get(browse_url, timeout=INDEXER_HTTP_TIMEOUT)
             except Exception as exc:
                 logger.debug("browse request failed %s: %s", site.name, exc)
                 errored = page == 0 and not results
@@ -274,7 +288,7 @@ class TorrentSearcher:
                 break
             prev_url = browse_url
             try:
-                response = http_get(browse_url, timeout=15)
+                response = http_get(browse_url, timeout=INDEXER_HTTP_TIMEOUT)
             except Exception as exc:
                 logger.debug("genre browse request failed %s: %s", site.name, exc)
                 errored = page == 0 and not results
@@ -292,6 +306,37 @@ class TorrentSearcher:
                 break
             results.extend(page_results)
         return results, errored
+
+    def browse_genre(
+        self,
+        genre: str,
+        *,
+        sites: list[str] | None = None,
+        movie_profile: bool = True,
+        page_limit: int = 1,
+        parallel: bool = True,
+        min_seeds: int | None = None,
+        max_seeds: int | None = None,
+        max_size: str | None = None,
+        limit: int | None = None,
+    ) -> SearchOutcome:
+        from torrtux_core.genres import genre_search_query
+
+        normalized = genre.strip().lower()
+        query = genre_search_query(normalized)
+        if not query:
+            return SearchOutcome([], [], indexers_unavailable=True)
+        return self.search(
+            query,
+            sites=sites,
+            movie_profile=movie_profile,
+            page_limit=page_limit,
+            parallel=parallel,
+            min_seeds=min_seeds,
+            max_seeds=max_seeds,
+            max_size=max_size,
+            limit=limit,
+        )
 
     def browse_1337x_genre(
         self,

@@ -85,5 +85,53 @@ def test_browse_1337x_genre_endpoint(mock_browse):
 
 
 def test_browse_genre_rejects_unknown():
+    response = client.get("/v1/browse/genre/not-a-genre")
+    assert response.status_code == 400
     response = client.get("/v1/browse/1337x/genre/not-a-genre")
     assert response.status_code == 400
+
+
+@patch.object(_searcher, "browse_genre")
+def test_browse_genre_endpoint_uses_all_indexers(mock_browse):
+    mock_browse.return_value = SearchOutcome(
+        results=[
+            {
+                "name": "Horror Movie 2024 1080p",
+                "site": "YTS",
+                "size": "2 GB",
+                "seeds": "100",
+                "leeches": "5",
+                "date": "Today",
+                "magnet": None,
+                "detail_url": "https://yts.mx/movies/horror/",
+            },
+            {
+                "name": "Scary Film 2023 720p",
+                "site": "1337x",
+                "size": "1.5 GB",
+                "seeds": "80",
+                "leeches": "3",
+                "date": "Yesterday",
+                "magnet": None,
+                "detail_url": "https://1337xx.to/torrent/2/horror/",
+            },
+        ],
+        failed_sites=["MagnetDL"],
+    )
+    response = client.get("/v1/browse/genre/horror", params={"group": False})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["query"] == "Horror"
+    assert body["count"] == 2
+    assert {row["site"] for row in body["results"]} == {"YTS", "1337x"}
+    assert body["failed_sites"] == ["MagnetDL"]
+    mock_browse.assert_called_once_with(
+        "horror",
+        movie_profile=True,
+        page_limit=1,
+        parallel=True,
+        min_seeds=None,
+        max_seeds=None,
+        max_size=None,
+        limit=100,
+    )

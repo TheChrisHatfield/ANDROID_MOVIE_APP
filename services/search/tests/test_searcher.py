@@ -1,6 +1,8 @@
+import time
 from unittest.mock import MagicMock, patch
 
-from torrtux_core.searcher import TorrentSearcher
+from torrtux_core import searcher as searcher_mod
+from torrtux_core.searcher import SearchOutcome, TorrentSearcher
 
 
 def test_search_applies_movie_profile_before_seed_filters():
@@ -148,6 +150,55 @@ def test_http_error_marks_site_failed():
         _, errored = searcher._search_site(mock_site, "test", 1)
 
     assert errored is True
+
+
+def test_browse_genre_fans_out_to_movie_indexers():
+    searcher = TorrentSearcher(site_classes=[])
+
+    with patch.object(searcher, "search") as mock_search:
+        mock_search.return_value = SearchOutcome(
+            results=[{"name": "Horror Movie", "seeds": "10", "size": "1 GB", "site": "YTS"}],
+            failed_sites=[],
+        )
+        out = searcher.browse_genre("horror", page_limit=1, limit=50)
+
+    mock_search.assert_called_once_with(
+        "horror movie",
+        sites=None,
+        movie_profile=True,
+        page_limit=1,
+        parallel=True,
+        min_seeds=None,
+        max_seeds=None,
+        max_size=None,
+        limit=50,
+    )
+    assert out.results[0]["name"] == "Horror Movie"
+
+
+def test_parallel_search_fanout_timeout_returns_partial_results():
+    searcher = TorrentSearcher(site_classes=[])
+
+    class NamedSite:
+        def __init__(self, name: str):
+            self.name = name
+
+    fast = NamedSite("Fast")
+    slow = NamedSite("Slow")
+
+    def search_side_effect(site, query, page_limit):
+        if site.name == "Slow":
+            time.sleep(0.3)
+            return [{"name": "slow", "seeds": "1", "size": "1 GB", "site": "Slow"}], False
+        time.sleep(0.05)
+        return [{"name": "fast", "seeds": "1", "size": "1 GB", "site": "Fast"}], False
+
+    with patch.object(searcher, "_search_site", side_effect=search_side_effect):
+        with patch.object(searcher_mod, "SEARCH_FANOUT_TIMEOUT_SEC", 0.1):
+            results, failed = searcher.search_all_sites("q", parallel=True, sites=[fast, slow])
+
+    assert any(row["name"] == "fast" for row in results)
+    assert "Slow" in failed
 
 
 def test_all_sources_failed_flag():

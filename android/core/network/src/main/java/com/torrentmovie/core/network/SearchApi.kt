@@ -36,6 +36,21 @@ interface SearchApi {
         @Query("tmdb_api_key") tmdbApiKey: String? = null,
     ): SearchResponseDto
 
+    @GET("/v1/browse/genre/{genre}")
+    suspend fun browseGenre(
+        @Path("genre") genre: String,
+        @Query("limit") limit: Int = 100,
+        @Query("pages") pages: Int = 2,
+        @Query("min_seeds") minSeeds: Int? = null,
+        @Query("max_seeds") maxSeeds: Int? = null,
+        @Query("max_size") maxSize: String? = null,
+        @Query("parallel") parallel: Boolean = true,
+        @Query("movie_profile") movieProfile: Boolean = true,
+        @Query("group") group: Boolean = true,
+        @Query("enrich") enrich: Boolean = true,
+        @Query("tmdb_api_key") tmdbApiKey: String? = null,
+    ): SearchResponseDto
+
     @GET("/v1/browse/1337x/genre/{genre}")
     suspend fun browse1337xGenre(
         @Path("genre") genre: String,

@@ -353,7 +353,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     searchSettingsKey() == settingsKeyAtStart
             }
             try {
-                val outcome = container.searchRepository.browse1337xGenre(
+                val outcome = container.searchRepository.browseGenre(
                     genre.id,
                     minSeeds = minSeeds,
                     maxSeeds = maxSeeds,
