@@ -1,8 +1,15 @@
 from unittest.mock import MagicMock, patch
 
+from api import genre_service as genre_service_mod
 from api.genre_pool_cache import GenrePoolCache
 from api.genre_service import GenreBrowseService, _serve_cached_rows
-from torrtux_core.searcher import SearchOutcome
+from metadata.genre_browse import BROAD_KEYWORD_PAGE_LIMIT
+from torrtux_core.searcher import SearchOutcome, search_fanout_timeout_sec
+
+
+def test_refresh_wait_outlives_default_genre_fanout():
+    assert genre_service_mod._REFRESH_WAIT_SECONDS >= search_fanout_timeout_sec(BROAD_KEYWORD_PAGE_LIMIT)
+    assert genre_service_mod._REFRESH_WAIT_SECONDS < 120
 
 
 def test_serve_cached_rows_applies_min_seeds():

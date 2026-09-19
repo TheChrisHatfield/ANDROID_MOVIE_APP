@@ -13,13 +13,14 @@ from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import apply_filters
 from torrtux_core.genres import MOVIE_GENRES
-from torrtux_core.searcher import SearchOutcome, TorrentSearcher
+from torrtux_core.searcher import SearchOutcome, TorrentSearcher, search_fanout_timeout_sec
 
 logger = logging.getLogger(__name__)
 
 # Build a wide pool for cache; per-request filters applied at serve time.
 _POOL_BUILD_LIMIT = 150
-_REFRESH_WAIT_SECONDS = 45.0
+# Outlive default 3-page indexer fan-out without exceeding Android's 120s read timeout.
+_REFRESH_WAIT_SECONDS = float(min(100, search_fanout_timeout_sec(BROAD_KEYWORD_PAGE_LIMIT) + 10))
 _REFRESH_POLL_SECONDS = 0.05
 
 def _discover_page_offset(genre_id: str, *, rotate: bool) -> int:
