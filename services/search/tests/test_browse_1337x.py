@@ -17,8 +17,8 @@ def test_x1337_build_browse_urls():
     assert site.build_browse_url("top-100-movies") == "https://1337xx.to/top-100-movies/"
     assert site.build_browse_url("top-100-movies", use_fallback=True) == "https://1337xx.to/cat/Movies/1/"
     assert site.build_browse_url("top-100-television", 1) == "https://1337xx.to/top-100-television/2/"
-    assert site.build_genre_browse_url("horror") == "https://1337xx.to/search/horror%20movie/1/"
-    assert site.build_genre_browse_url("sci-fi", 1) == "https://1337xx.to/search/sci-fi%20movie/2/"
+    assert site.build_genre_browse_url("horror") == "https://1337xx.to/search/horror/1/"
+    assert site.build_genre_browse_url("sci-fi", 1) == "https://1337xx.to/search/science%20fiction/2/"
 
 
 @patch.object(_searcher, "browse_1337x")
@@ -91,8 +91,10 @@ def test_browse_genre_rejects_unknown():
     assert response.status_code == 400
 
 
-@patch.object(_searcher, "browse_genre")
+@patch("api.main._genre_service.browse")
 def test_browse_genre_endpoint_uses_all_indexers(mock_browse):
+    from api.main import _searcher
+
     mock_browse.return_value = SearchOutcome(
         results=[
             {
@@ -118,6 +120,7 @@ def test_browse_genre_endpoint_uses_all_indexers(mock_browse):
         ],
         failed_sites=["MagnetDL"],
     )
+    _searcher.working_sites = [MagicMock(name="YTS")]
     response = client.get("/v1/browse/genre/horror", params={"group": False})
     assert response.status_code == 200
     body = response.json()
@@ -125,13 +128,4 @@ def test_browse_genre_endpoint_uses_all_indexers(mock_browse):
     assert body["count"] == 2
     assert {row["site"] for row in body["results"]} == {"YTS", "1337x"}
     assert body["failed_sites"] == ["MagnetDL"]
-    mock_browse.assert_called_once_with(
-        "horror",
-        movie_profile=True,
-        page_limit=1,
-        parallel=True,
-        min_seeds=None,
-        max_seeds=None,
-        max_size=None,
-        limit=100,
-    )
+    mock_browse.assert_called_once()

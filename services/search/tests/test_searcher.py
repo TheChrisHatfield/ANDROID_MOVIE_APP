@@ -163,7 +163,7 @@ def test_browse_genre_fans_out_to_movie_indexers():
         out = searcher.browse_genre("horror", page_limit=1, limit=50)
 
     mock_search.assert_called_once_with(
-        "horror movie",
+        "horror",
         sites=None,
         movie_profile=True,
         page_limit=1,

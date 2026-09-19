@@ -321,15 +321,33 @@ class TorrentSearcher:
         max_seeds: int | None = None,
         max_size: str | None = None,
         limit: int | None = None,
+        tmdb=None,
     ) -> SearchOutcome:
-        from torrtux_core.genres import genre_search_query
+        from metadata.genre_browse import curated_genre_search, keyword_genre_search
+        from torrtux_core.genres import tmdb_genre_id
 
         normalized = genre.strip().lower()
-        query = genre_search_query(normalized)
-        if not query:
+        if not tmdb_genre_id(normalized):
             return SearchOutcome([], [], indexers_unavailable=True)
-        return self.search(
-            query,
+
+        if tmdb is not None:
+            curated = curated_genre_search(
+                self,
+                normalized,
+                tmdb,
+                sites=sites,
+                movie_profile=movie_profile,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=limit,
+            )
+            if curated is not None:
+                return curated
+
+        return keyword_genre_search(
+            self,
+            normalized,
             sites=sites,
             movie_profile=movie_profile,
             page_limit=page_limit,
