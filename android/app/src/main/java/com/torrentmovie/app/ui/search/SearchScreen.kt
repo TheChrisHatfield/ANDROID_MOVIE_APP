@@ -45,7 +45,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.core.data.AppContainer
-import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.network.TorrentResultDto
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -137,12 +136,11 @@ fun SearchScreen(
     }
 
     fun isAlreadyUploaded(result: TorrentResultDto): Boolean {
-        val magnet = result.magnet?.takeIf { it.isNotBlank() }
-        if (magnet != null) {
-            val key = MagnetHashUtil.storageKey(magnet, result.name, result.site)
-            return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
-        }
-        return false
+        return isResultAlreadyUploaded(
+            result,
+            uploaded,
+            container.searchResultStore.get(result.id)?.magnet,
+        )
     }
 
     fun openDetail(result: TorrentResultDto) {
