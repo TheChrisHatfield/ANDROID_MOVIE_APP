@@ -44,4 +44,17 @@ class PhoneDetailHandoffTest {
         )
         assertNull(snapshotGenreAtDetailOpen(capturedGenreId = "  ", currentGenreId = null))
     }
+
+    @Test
+    fun rankingFeedbackFallsBackToLastSearchGenre() {
+        assertEquals(
+            "horror",
+            resolveGenreForRankingFeedback(override = null, activeGenre = null, lastSearchGenre = "horror"),
+        )
+        assertEquals(
+            "action",
+            resolveGenreForRankingFeedback(override = "action", activeGenre = "horror", lastSearchGenre = "comedy"),
+        )
+        assertNull(resolveGenreForRankingFeedback(override = "  ", activeGenre = null, lastSearchGenre = null))
+    }
 }

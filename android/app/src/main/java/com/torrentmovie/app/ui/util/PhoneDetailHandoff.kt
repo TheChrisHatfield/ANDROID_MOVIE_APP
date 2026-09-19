@@ -14,3 +14,9 @@ internal fun snapshotGenreAtDetailOpen(
     capturedGenreId: String?,
     currentGenreId: String?,
 ): String? = capturedGenreId?.takeIf { it.isNotBlank() } ?: currentGenreId?.takeIf { it.isNotBlank() }
+
+internal fun resolveGenreForRankingFeedback(
+    override: String?,
+    activeGenre: String?,
+    lastSearchGenre: String?,
+): String? = listOf(override, activeGenre, lastSearchGenre).firstOrNull { !it.isNullOrBlank() }

@@ -2,6 +2,7 @@ package com.torrentmovie.app.ui.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.torrentmovie.app.ui.util.resolveGenreForRankingFeedback
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MovieMetadata
 import com.torrentmovie.core.data.SearchException
@@ -166,7 +167,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         success: Boolean,
         genreIdOverride: String? = null,
     ) {
-        val genreId = genreIdOverride ?: _state.value.activeGenre ?: return
+        val genreId = resolveGenreForRankingFeedback(
+            genreIdOverride,
+            _state.value.activeGenre,
+            lastSearchActiveGenre,
+        ) ?: return
         val fromGroupRelease = _state.value.groups
             .flatMap { it.releases }
             .firstOrNull { it.id == resultId }
