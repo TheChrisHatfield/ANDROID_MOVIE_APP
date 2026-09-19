@@ -22,4 +22,10 @@ class GroupSelectionTest {
         assertFalse(groupContainsSelectedRelease(group, "other"))
         assertFalse(groupContainsSelectedRelease(group, null))
     }
+
+    @Test
+    fun listTrailerHiddenWhenGroupIsSelectedInTwoPane() {
+        assertTrue(shouldOfferListTrailer(groupSelected = false))
+        assertFalse(shouldOfferListTrailer(groupSelected = true))
+    }
 }

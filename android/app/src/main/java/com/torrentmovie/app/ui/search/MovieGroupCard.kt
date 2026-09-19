@@ -39,6 +39,8 @@ internal fun groupContainsSelectedRelease(
     return group.releases.any { it.id == selectedResultId }
 }
 
+internal fun shouldOfferListTrailer(groupSelected: Boolean): Boolean = !groupSelected
+
 @Composable
 fun MovieGroupCard(
     group: MovieGroupDto,
@@ -167,7 +169,7 @@ fun MovieGroupCard(
                             Text(if (expanded) "Hide releases" else "Show releases")
                         }
                     }
-                    playableTrailerId?.let {
+                    playableTrailerId?.takeIf { shouldOfferListTrailer(groupSelected) }?.let {
                         TextButton(onClick = onToggleTrailer) {
                             Icon(
                                 Icons.Default.PlayArrow,

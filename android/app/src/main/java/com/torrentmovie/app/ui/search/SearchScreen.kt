@@ -311,9 +311,6 @@ fun SearchScreen(
                                     }
                                 },
                                 onToggleTrailer = {
-                                    val selectedInGroup = selectedResultId != null &&
-                                        group.releases.any { it.id == selectedResultId }
-                                    if (selectedInGroup) return@MovieGroupCard
                                     playingTrailerGroupKey = if (playingTrailerGroupKey == group.groupKey) {
                                         null
                                     } else {
