@@ -24,7 +24,19 @@ class MovieMetadataStore {
 
     fun put(resultId: String, metadata: MovieMetadata) {
         synchronized(this) {
-            byResultId[resultId] = metadata
+            val existing = byResultId[resultId]
+            byResultId[resultId] = if (existing == null) {
+                metadata
+            } else {
+                MovieMetadata(
+                    title = metadata.title.ifBlank { existing.title },
+                    year = metadata.year ?: existing.year,
+                    overview = metadata.overview?.takeIf { it.isNotBlank() } ?: existing.overview,
+                    posterUrl = metadata.posterUrl?.takeIf { it.isNotBlank() } ?: existing.posterUrl,
+                    trailerYoutubeKey = metadata.trailerYoutubeKey?.takeIf { it.isNotBlank() }
+                        ?: existing.trailerYoutubeKey,
+                )
+            }
             while (byResultId.size > maxEntries) {
                 val oldest = byResultId.keys.firstOrNull() ?: break
                 byResultId.remove(oldest)
