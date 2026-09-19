@@ -159,7 +159,7 @@ fun SearchScreen(
                 vm.setMaxSeeds(maxSeeds)
                 vm.setMaxSize(maxSize)
                 if (state.activeGenre != null || state.activeBrowseFeed != null ||
-                    (state.hasSearched && state.query.isNotBlank() && !state.genrePanelExpanded)
+                    (state.hasSearched && state.query.isNotBlank())
                 ) {
                     vm.refreshCurrentResults()
                 }
