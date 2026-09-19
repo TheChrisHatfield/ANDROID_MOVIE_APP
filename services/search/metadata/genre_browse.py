@@ -163,6 +163,8 @@ def broad_indexer_genre_pool(
     *,
     sites: list | None = None,
     movie_profile: bool = True,
+    page_limit: int | None = None,
+    parallel: bool = True,
     min_seeds: int | None = None,
     max_seeds: int | None = None,
     max_size: str | None = None,
@@ -173,6 +175,8 @@ def broad_indexer_genre_pool(
     """
     normalized = genre_id.strip().lower()
     outcomes: list[SearchOutcome] = []
+    keyword_pages = max(1, min(page_limit or BROAD_KEYWORD_PAGE_LIMIT, 5))
+    x1337_pages = max(1, min(page_limit or BROAD_1337X_PAGE_LIMIT, 5))
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = {
@@ -182,8 +186,8 @@ def broad_indexer_genre_pool(
                 normalized,
                 sites=sites,
                 movie_profile=movie_profile,
-                page_limit=BROAD_KEYWORD_PAGE_LIMIT,
-                parallel=True,
+                page_limit=keyword_pages,
+                parallel=parallel,
                 min_seeds=min_seeds,
                 max_seeds=max_seeds,
                 max_size=max_size,
@@ -193,7 +197,7 @@ def broad_indexer_genre_pool(
                 searcher.browse_1337x_genre,
                 normalized,
                 movie_profile=movie_profile,
-                page_limit=BROAD_1337X_PAGE_LIMIT,
+                page_limit=x1337_pages,
                 min_seeds=min_seeds,
                 max_seeds=max_seeds,
                 max_size=max_size,

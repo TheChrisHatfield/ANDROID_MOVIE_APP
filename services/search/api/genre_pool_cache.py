@@ -96,4 +96,9 @@ class GenrePoolCache:
             entry = self._entries.get(key)
             if entry:
                 entry.refreshing = False
+
+    def invalidate(self, genre_id: str, *, movie_profile: bool = True) -> None:
+        key = _entry_key(genre_id, movie_profile)
+        with self._lock:
+            self._entries.pop(key, None)
 

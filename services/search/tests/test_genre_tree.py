@@ -1,8 +1,11 @@
 from unittest.mock import MagicMock
 
+import metadata.genre_tree as genre_tree
 from metadata.genre_tree import (
     build_genre_branches,
+    get_branch_feedback,
     rank_pool_thompson,
+    record_genre_branch_feedback,
     run_mct_simulations,
 )
 from torrtux_core.searcher import SearchOutcome
@@ -101,6 +104,17 @@ def test_thompson_rank_is_non_deterministic():
         first = ranked[0]["name"].split(" 2020")[0]
         orders.add(first)
     assert len(orders) > 1
+
+
+def test_feedback_persists_to_disk(tmp_path, monkeypatch):
+    feedback_file = tmp_path / "genre_branch_feedback.json"
+    monkeypatch.setattr(genre_tree, "_FEEDBACK_PATH", feedback_file)
+    monkeypatch.setattr(genre_tree, "_branch_feedback", {})
+    record_genre_branch_feedback("horror", "alpha-2020", True)
+    assert feedback_file.exists()
+    monkeypatch.setattr(genre_tree, "_branch_feedback", {})
+    genre_tree._load_persisted_feedback()
+    assert get_branch_feedback("horror")["alpha-2020"][0] > 1.0
 
 
 def test_mct_metadata_on_ranked_rows():

@@ -102,6 +102,8 @@ class GenreBrowseService:
         genre_id: str,
         *,
         movie_profile: bool = True,
+        page_limit: int | None = None,
+        parallel: bool = True,
         min_seeds: int | None = None,
         max_seeds: int | None = None,
         max_size: str | None = None,
@@ -139,12 +141,14 @@ class GenreBrowseService:
                 )
                 return SearchOutcome(
                     results=filtered,
-                    failed_sites=list(cached.failed_sites),
+                    failed_sites=[],
                 )
 
         return self._refresh_sync(
             normalized,
             movie_profile=movie_profile,
+            page_limit=page_limit,
+            parallel=parallel,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             max_size=max_size,
@@ -195,6 +199,8 @@ class GenreBrowseService:
         genre_id: str,
         *,
         movie_profile: bool,
+        page_limit: int | None = None,
+        parallel: bool = True,
         min_seeds: int | None,
         max_seeds: int | None,
         max_size: str | None,
@@ -211,6 +217,8 @@ class GenreBrowseService:
             genre_id,
             tmdb_client if use_tmdb else None,
             movie_profile=movie_profile,
+            page_limit=page_limit,
+            parallel=parallel,
             discover_page_offset=discover_page_offset,
         )
         if outcome.results:
@@ -221,6 +229,8 @@ class GenreBrowseService:
                 partial=partial_ok,
                 movie_profile=movie_profile,
             )
+        elif not partial_ok:
+            self._cache.invalidate(genre_id, movie_profile=movie_profile)
         filtered = _rank_and_serve_rows(
             outcome.results,
             genre_id,

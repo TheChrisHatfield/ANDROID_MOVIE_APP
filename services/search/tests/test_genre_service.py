@@ -85,6 +85,21 @@ def test_browse_reranks_on_cache_hit(mock_rank):
     mock_rank.assert_called_once()
 
 
+@patch("api.genre_service.fetch_genre_pool_rows")
+def test_force_refresh_empty_invalidates_cache(mock_fetch):
+    mock_fetch.return_value = SearchOutcome([], [])
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [{"name": "Stale 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+        movie_profile=True,
+    )
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service.browse("horror", movie_profile=True, force_refresh=True)
+    assert cache.get("horror", movie_profile=True) is None
+
+
 def test_browse_applies_filters_on_cache_hit():
     cache = GenrePoolCache()
     cache.put(

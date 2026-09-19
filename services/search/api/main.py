@@ -326,6 +326,8 @@ def browse_genre(
     outcome = _genre_service.browse(
         normalized,
         movie_profile=movie_profile,
+        page_limit=pages,
+        parallel=parallel,
         min_seeds=min_seeds,
         max_seeds=max_seeds,
         max_size=max_size,

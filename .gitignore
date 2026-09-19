@@ -1,3 +1,6 @@
+# Runtime genre feedback (local Thompson priors)
+services/search/data/
+
 # Python
 __pycache__/
 *.py[cod]

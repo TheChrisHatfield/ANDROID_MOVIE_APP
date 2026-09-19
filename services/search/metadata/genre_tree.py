@@ -1,10 +1,14 @@
 """MCT genre branching + Thompson sampling ranker for torrent pools."""
 from __future__ import annotations
 
+import json
+import logging
 import math
 import random
 import re
+import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
 from torrtux_core.filters import seed_count
@@ -64,7 +68,41 @@ class GenreBranch:
         return random.betavariate(max(self.alpha, 0.1), max(self.beta, 0.1))
 
 
+logger = logging.getLogger(__name__)
+_FEEDBACK_LOCK = threading.Lock()
+_FEEDBACK_PATH = Path(__file__).resolve().parents[1] / "data" / "genre_branch_feedback.json"
 _branch_feedback: dict[str, dict[str, tuple[float, float]]] = {}
+
+
+def _load_persisted_feedback() -> None:
+    if not _FEEDBACK_PATH.exists():
+        return
+    try:
+        raw = json.loads(_FEEDBACK_PATH.read_text(encoding="utf-8"))
+        for genre_id, branches in raw.items():
+            bucket: dict[str, tuple[float, float]] = {}
+            for key, pair in branches.items():
+                if isinstance(pair, (list, tuple)) and len(pair) == 2:
+                    bucket[str(key)] = (float(pair[0]), float(pair[1]))
+            if bucket:
+                _branch_feedback[genre_id.strip().lower()] = bucket
+    except Exception as exc:
+        logger.warning("genre feedback load failed: %s", exc)
+
+
+def _persist_feedback() -> None:
+    try:
+        _FEEDBACK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        serializable = {
+            genre_id: {key: [alpha, beta] for key, (alpha, beta) in branches.items()}
+            for genre_id, branches in _branch_feedback.items()
+        }
+        _FEEDBACK_PATH.write_text(
+            json.dumps(serializable, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        logger.warning("genre feedback save failed: %s", exc)
 
 
 def get_branch_feedback(genre_id: str) -> dict[str, tuple[float, float]]:
@@ -72,8 +110,13 @@ def get_branch_feedback(genre_id: str) -> dict[str, tuple[float, float]]:
 
 
 def record_genre_branch_feedback(genre_id: str, group_key: str, success: bool) -> None:
-    bucket = _branch_feedback.setdefault(genre_id.strip().lower(), {})
-    record_branch_feedback(bucket, group_key.strip().lower(), success)
+    with _FEEDBACK_LOCK:
+        bucket = _branch_feedback.setdefault(genre_id.strip().lower(), {})
+        record_branch_feedback(bucket, group_key.strip().lower(), success)
+        _persist_feedback()
+
+
+_load_persisted_feedback()
 
 
 def build_genre_branches(
