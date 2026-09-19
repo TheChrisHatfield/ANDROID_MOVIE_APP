@@ -98,6 +98,32 @@ def test_put_many_reuses_stable_id_for_same_release():
     assert cache.get(UUID(first["id"]))["magnet"] == "magnet:?xt=urn:btih:abc"
 
 
+def test_put_many_preserves_existing_metadata_on_reput():
+    cache = ResultCache(max_entries=10, ttl_seconds=60)
+    row = {
+        "name": "Inception 2010 1080p",
+        "site": "YTS",
+        "detail_url": "https://yts.mx/movies/inception-2010",
+        "poster_url": "https://image.tmdb.org/poster.jpg",
+        "overview": "Dream within a dream",
+    }
+    first = cache.put_many([row])[0]
+    second = cache.put_many(
+        [
+            {
+                "name": "Inception 2010 1080p",
+                "site": "YTS",
+                "detail_url": "https://yts.mx/movies/inception-2010",
+                "seeds": "99",
+            }
+        ]
+    )[0]
+    assert first["id"] == second["id"]
+    cached = cache.get(UUID(first["id"]))
+    assert cached["poster_url"] == "https://image.tmdb.org/poster.jpg"
+    assert cached["overview"] == "Dream within a dream"
+
+
 def test_stable_id_differs_for_same_name_different_size():
     cache = ResultCache(max_entries=10, ttl_seconds=60)
     first = cache.put_many(

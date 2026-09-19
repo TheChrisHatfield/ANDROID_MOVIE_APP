@@ -74,9 +74,18 @@ class ResultCache:
                 payload["id"] = str(result_id)
                 existing = self._store.get(result_id)
                 if existing is not None:
-                    old_magnet = existing.payload.get("magnet")
-                    if not payload.get("magnet") and old_magnet:
-                        payload["magnet"] = old_magnet
+                    old = existing.payload
+                    if not payload.get("magnet") and old.get("magnet"):
+                        payload["magnet"] = old["magnet"]
+                    for field in (
+                        "poster_url",
+                        "overview",
+                        "trailer_youtube_key",
+                        "_branch_key",
+                        "branch_key",
+                    ):
+                        if not payload.get(field) and old.get(field):
+                            payload[field] = old[field]
                     existing.payload = payload
                     existing.created_at = time.time()
                 else:
