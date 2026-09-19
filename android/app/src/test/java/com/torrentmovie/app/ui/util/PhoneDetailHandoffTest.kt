@@ -92,4 +92,12 @@ class PhoneDetailHandoffTest {
         assertTrue(shouldClearMagnetLoading(startedGeneration = 3, currentGeneration = 3))
         assertFalse(shouldClearMagnetLoading(startedGeneration = 2, currentGeneration = 3))
     }
+
+    @Test
+    fun rematchReplacesPhoneDetailInsteadOfStacking() {
+        assertEquals(PHONE_DETAIL_ROUTE_PATTERN, com.torrentmovie.app.ui.Routes.DETAIL)
+        assertTrue(shouldReplacePhoneDetail("old-id", "new-id"))
+        assertFalse(shouldReplacePhoneDetail("same", "same"))
+        assertFalse(shouldReplacePhoneDetail("old-id", ""))
+    }
 }

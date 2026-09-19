@@ -31,3 +31,10 @@ internal fun magnetFallbackDetailUrl(storeUrl: String?, selectionUrl: String?): 
 /** Ignore a cancelled magnet fetch's finally so Retry cannot drop the new request's loading flag. */
 internal fun shouldClearMagnetLoading(startedGeneration: Int, currentGeneration: Int): Boolean =
     startedGeneration == currentGeneration
+
+/** Magnet/rematch id changes must replace the current phone detail, not stack another. */
+internal const val PHONE_DETAIL_ROUTE_PATTERN = "detail/{resultId}?name={name}&site={site}"
+
+internal fun shouldReplacePhoneDetail(currentResultId: String, nextResultId: String): Boolean {
+    return nextResultId.isNotBlank() && nextResultId != currentResultId
+}

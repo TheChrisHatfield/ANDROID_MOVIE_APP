@@ -31,6 +31,7 @@ import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.app.ui.util.shouldClearPhoneFoldSelectionOnDetailDispose
 import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
+import com.torrentmovie.app.ui.util.shouldReplacePhoneDetail
 import com.torrentmovie.app.ui.util.snapshotGenreAtDetailOpen
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
@@ -72,6 +73,13 @@ fun AppNavGraph(
         detailUrl: String? = null,
     ): TorrentResultDto? {
         return SearchReleaseRematch.find(allReleases(), resultId, name, site, detailUrl)
+    }
+
+    fun replacePhoneDetail(resultId: String, name: String, site: String) {
+        navController.navigate(Routes.detail(resultId, name, site)) {
+            launchSingleTop = true
+            popUpTo(Routes.DETAIL) { inclusive = true }
+        }
     }
 
     fun openSettings() {
@@ -204,14 +212,11 @@ fun AppNavGraph(
                         matched
                     }
                     container.searchResultStore.put(merged)
-                    if (matched.id != resultId) {
+                    if (shouldReplacePhoneDetail(resultId, matched.id)) {
                         container.movieMetadataStore.get(resultId)?.let { meta ->
                             container.movieMetadataStore.put(matched.id, meta)
                         }
-                        navController.navigate(Routes.detail(matched.id, matched.name, matched.site)) {
-                            launchSingleTop = true
-                            popUpTo(Routes.SEARCH) { inclusive = false }
-                        }
+                        replacePhoneDetail(matched.id, matched.name, matched.site)
                     }
                     return@LaunchedEffect
                 }
@@ -277,9 +282,8 @@ fun AppNavGraph(
                     val stored = container.searchResultStore.get(newId)
                     val nextName = stored?.name?.takeIf { it.isNotBlank() } ?: cached?.name ?: navName
                     val nextSite = stored?.site?.takeIf { it.isNotBlank() } ?: cached?.site ?: navSite
-                    navController.navigate(Routes.detail(newId, nextName, nextSite)) {
-                        launchSingleTop = true
-                        popUpTo(Routes.SEARCH) { inclusive = false }
+                    if (shouldReplacePhoneDetail(resultId, newId)) {
+                        replacePhoneDetail(newId, nextName, nextSite)
                     }
                 },
                 onOpenUploaded = ::openUploaded,
