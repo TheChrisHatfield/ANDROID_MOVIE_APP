@@ -57,9 +57,17 @@ def test_browse_1337x_rejects_tv_feed_in_movie_profile():
 
 @patch.object(_searcher, "browse_1337x")
 def test_browse_rejects_pages_above_max(mock_browse):
-    response = client.get("/v1/browse/1337x/trending", params={"pages": 10})
+    response = client.get("/v1/browse/1337x/trending", params={"pages": 11})
     assert response.status_code == 422
     mock_browse.assert_not_called()
+
+
+@patch.object(_searcher, "browse_1337x")
+def test_browse_accepts_settings_max_pages(mock_browse):
+    mock_browse.return_value = SearchOutcome([], [])
+    response = client.get("/v1/browse/1337x/trending", params={"pages": 10, "group": False})
+    assert response.status_code == 200
+    mock_browse.assert_called_once()
 
 
 @patch.object(_searcher, "browse_1337x")
@@ -97,6 +105,18 @@ def test_browse_genre_rejects_unknown():
     assert response.status_code == 400
     response = client.get("/v1/browse/1337x/genre/not-a-genre")
     assert response.status_code == 400
+
+
+@patch("api.main._genre_service.browse")
+def test_browse_genre_accepts_settings_max_pages(mock_browse):
+    from api.main import _searcher
+
+    mock_browse.return_value = SearchOutcome([], [])
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    response = client.get("/v1/browse/genre/horror", params={"pages": 10, "group": False})
+    assert response.status_code == 200
+    mock_browse.assert_called_once()
+    assert mock_browse.call_args.kwargs.get("page_limit") == 10
 
 
 @patch("api.main._genre_service.browse")

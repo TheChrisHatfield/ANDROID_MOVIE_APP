@@ -240,7 +240,7 @@ def search(
 def browse_1337x(
     feed: BrowseFeed,
     limit: int = Query(100, ge=1, le=200),
-    pages: int = Query(1, ge=1, le=5),
+    pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
@@ -295,7 +295,7 @@ def browse_1337x(
 def browse_genre(
     genre: str,
     limit: int = Query(100, ge=1, le=200),
-    pages: int = Query(1, ge=1, le=5),
+    pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
@@ -393,7 +393,7 @@ def genre_branch_feedback(
 def browse_1337x_genre(
     genre: str,
     limit: int = Query(100, ge=1, le=200),
-    pages: int = Query(1, ge=1, le=5),
+    pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
