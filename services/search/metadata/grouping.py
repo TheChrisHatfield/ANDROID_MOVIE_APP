@@ -90,7 +90,7 @@ def build_movie_groups(
     for row in rows:
         title, _ = parse_torrent_movie_title(str(row.get("name") or ""))
         year = _year_from_row(row)
-        branch_key = str(row.get("_branch_key") or "").strip()
+        branch_key = str(row.get("_branch_key") or row.get("branch_key") or "").strip()
         key = branch_key if branch_key else group_key_for(title, year)
         if key not in buckets:
             buckets[key] = {
