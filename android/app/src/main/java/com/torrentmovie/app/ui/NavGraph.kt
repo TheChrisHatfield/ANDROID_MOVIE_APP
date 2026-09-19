@@ -70,7 +70,6 @@ fun AppNavGraph(
     }
 
     fun openSettings() {
-        container.foldActiveSelection = null
         navController.navigate(Routes.SETTINGS) {
             launchSingleTop = true
             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -79,7 +78,6 @@ fun AppNavGraph(
     }
 
     fun openUploaded(storageKey: String) {
-        container.foldActiveSelection = null
         container.requestUploadedHighlight(storageKey)
         navController.navigate(Routes.UPLOADED) {
             popUpTo(navController.graph.startDestinationId) { saveState = true }

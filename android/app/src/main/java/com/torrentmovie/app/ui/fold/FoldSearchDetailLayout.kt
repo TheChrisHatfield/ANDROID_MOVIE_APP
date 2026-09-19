@@ -41,6 +41,7 @@ fun FoldSearchDetailLayout(
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     var genreAtDetailOpen by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
+    val foldActive by container.foldActiveSelectionFlow.collectAsState()
 
     fun findRelease(id: String): TorrentResultDto? {
         val fromList = state.results.find { it.id == id }
@@ -99,18 +100,15 @@ fun FoldSearchDetailLayout(
         }
     }
 
-    LaunchedEffect(selectedId, restoredName, restoredSite) {
-        val id = selectedId
-        if (id != null) {
-            val result = findRelease(id)
-            syncFoldSelection(
-                id,
-                result?.name ?: restoredName ?: "",
-                result?.site ?: restoredSite ?: "",
-            )
-        } else {
-            syncFoldSelection(null, "", "")
-        }
+    LaunchedEffect(selectedId, restoredName, restoredSite, foldActive) {
+        val id = selectedId ?: return@LaunchedEffect
+        if (!needsFoldSelectionResync(id, foldActive?.resultId)) return@LaunchedEffect
+        val result = findRelease(id)
+        syncFoldSelection(
+            id,
+            result?.name ?: restoredName ?: "",
+            result?.site ?: restoredSite ?: "",
+        )
     }
 
     LaunchedEffect(selectedId) {
@@ -293,4 +291,8 @@ fun FoldSearchDetailLayout(
             }
         }
     }
+}
+
+internal fun needsFoldSelectionResync(selectedId: String?, activeResultId: String?): Boolean {
+    return !selectedId.isNullOrBlank() && activeResultId != selectedId
 }
