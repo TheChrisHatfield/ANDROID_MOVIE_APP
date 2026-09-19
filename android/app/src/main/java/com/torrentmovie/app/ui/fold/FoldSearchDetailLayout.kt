@@ -239,6 +239,7 @@ fun FoldSearchDetailLayout(
                 id,
                 matchName,
                 matchSite.orEmpty(),
+                detailUrl = anchor?.detail_url ?: container.searchResultStore.get(id)?.detail_url,
             )
             if (rematched != null) {
                 val oldId = selectedId
@@ -320,6 +321,17 @@ fun FoldSearchDetailLayout(
                             restoredName = null
                             restoredSite = null
                             syncFoldSelection(null, "", "")
+                        },
+                        onResultIdChanged = { newId ->
+                            val stored = container.searchResultStore.get(newId)
+                            selectedId = newId
+                            restoredName = stored?.name ?: restoredName
+                            restoredSite = stored?.site ?: restoredSite
+                            syncFoldSelection(
+                                newId,
+                                stored?.name ?: restoredName ?: "",
+                                stored?.site ?: restoredSite ?: "",
+                            )
                         },
                         onOpenUploaded = onOpenUploaded,
                     )

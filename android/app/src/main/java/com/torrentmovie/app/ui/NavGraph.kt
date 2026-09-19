@@ -57,8 +57,13 @@ fun AppNavGraph(
         return searchState.results + searchState.groups.flatMap { it.releases }
     }
 
-    fun rematchRelease(resultId: String, name: String, site: String): TorrentResultDto? {
-        return SearchReleaseRematch.find(allReleases(), resultId, name, site)
+    fun rematchRelease(
+        resultId: String,
+        name: String,
+        site: String,
+        detailUrl: String? = null,
+    ): TorrentResultDto? {
+        return SearchReleaseRematch.find(allReleases(), resultId, name, site, detailUrl)
     }
 
     fun openUploaded(storageKey: String) {
@@ -175,7 +180,12 @@ fun AppNavGraph(
                 if (resultId in releases.map { it.id }) return@LaunchedEffect
                 val storedSite = container.searchResultStore.get(resultId)?.site
                 val rematchSite = navSite.takeIf { it.isNotBlank() } ?: storedSite.orEmpty()
-                val matched = rematchRelease(resultId, navName, rematchSite)
+                val matched = rematchRelease(
+                    resultId,
+                    navName,
+                    rematchSite,
+                    detailUrl = container.searchResultStore.get(resultId)?.detail_url,
+                )
                 if (matched != null) {
                     val oldMagnet = container.searchResultStore.get(resultId)?.magnet?.takeIf { it.isNotBlank() }
                     val merged = if (!oldMagnet.isNullOrBlank() && matched.magnet.isNullOrBlank()) {
@@ -225,6 +235,12 @@ fun AppNavGraph(
                 onResultExpired = {
                     container.foldActiveSelection = null
                     navController.popBackStack(Routes.SEARCH, inclusive = false)
+                },
+                onResultIdChanged = { newId ->
+                    navController.navigate(Routes.detail(newId, navName, navSite)) {
+                        launchSingleTop = true
+                        popUpTo(Routes.SEARCH) { inclusive = false }
+                    }
                 },
                 onOpenUploaded = ::openUploaded,
             )

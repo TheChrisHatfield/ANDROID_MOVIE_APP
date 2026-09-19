@@ -41,6 +41,7 @@ fun TorrentDetailScreen(
     site: String,
     initialMagnet: String?,
     onResultExpired: (() -> Unit)? = null,
+    onResultIdChanged: ((String) -> Unit)? = null,
     onOpenUploaded: ((storageKey: String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -138,21 +139,34 @@ fun TorrentDetailScreen(
             magnet = resolved.magnet.takeIf { it.isNotBlank() }
             if (!magnet.isNullOrBlank()) {
                 val cached = container.searchResultStore.get(resultId)
-                container.searchResultStore.put(
-                    cached?.copy(magnet = magnet)
-                        ?: TorrentResultDto(
-                            id = resultId,
-                            name = name,
-                            site = site,
-                            magnet = magnet,
-                        ),
-                )
+                val stableId = resolved.id.takeIf { it.isNotBlank() } ?: resultId
+                val merged = (cached ?: TorrentResultDto(
+                    id = resultId,
+                    name = name,
+                    site = site,
+                )).copy(id = stableId, magnet = magnet)
+                container.searchResultStore.put(merged)
+                if (stableId != resultId) {
+                    container.searchResultStore.remove(resultId)
+                    container.movieMetadataStore.get(resultId)?.let { meta ->
+                        container.movieMetadataStore.put(stableId, meta)
+                        container.movieMetadataStore.remove(resultId)
+                    }
+                    container.foldActiveSelection
+                        ?.takeIf { it.resultId == resultId }
+                        ?.let { pending ->
+                            container.foldActiveSelection = pending.copy(resultId = stableId)
+                        }
+                    onResultIdChanged?.invoke(stableId)
+                }
             }
             if (magnet.isNullOrBlank()) {
                 magnetError = "Magnet unavailable — tap retry"
             }
         } catch (e: SearchException) {
-            magnet = null
+            if (magnet.isNullOrBlank()) {
+                magnet = null
+            }
             val expired = e.httpCode == 404 &&
                 (
                     e.message?.contains("not found or expired", ignoreCase = true) == true ||
@@ -171,7 +185,9 @@ fun TorrentDetailScreen(
                 else -> e.message ?: "Magnet fetch failed"
             }
         } catch (e: Exception) {
-            magnet = null
+            if (magnet.isNullOrBlank()) {
+                magnet = null
+            }
             magnetError = e.message ?: "Magnet fetch failed"
         } finally {
             magnetLoading = false
@@ -276,7 +292,7 @@ fun TorrentDetailScreen(
                 }
             },
             enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                magnetError == null && !magnet.isNullOrBlank() && !duplicate && !magnetLoading,
+                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
