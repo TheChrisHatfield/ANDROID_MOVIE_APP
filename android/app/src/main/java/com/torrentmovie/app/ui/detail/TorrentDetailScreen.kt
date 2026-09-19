@@ -43,6 +43,7 @@ fun TorrentDetailScreen(
     onResultExpired: (() -> Unit)? = null,
     onResultIdChanged: ((String) -> Unit)? = null,
     onOpenUploaded: ((storageKey: String) -> Unit)? = null,
+    onGenreBranchFeedback: ((success: Boolean) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -279,6 +280,7 @@ fun TorrentDetailScreen(
                                 if (!persistFailed) {
                                     duplicate = true
                                     justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
+                                    onGenreBranchFeedback?.invoke(true)
                                 } else {
                                     duplicate = false
                                 }

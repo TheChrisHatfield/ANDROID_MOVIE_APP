@@ -25,6 +25,7 @@ import com.torrentmovie.app.ui.search.SearchViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
+import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
@@ -49,6 +50,7 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
 ) {
     val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
+    val uploadedViewModel: UploadedViewModel = viewModel { UploadedViewModel(container) }
     val searchState by searchViewModel.state.collectAsState()
     val foldActiveSelection by container.foldActiveSelectionFlow.collectAsState()
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
@@ -78,7 +80,8 @@ fun AppNavGraph(
 
     var wasTwoPane by remember { mutableStateOf(useTwoPane) }
 
-    LaunchedEffect(useTwoPane) {
+    LaunchedEffect(useTwoPane, foldActiveSelection) {
+        val foldingToPhone = wasTwoPane && !useTwoPane
         if (useTwoPane) {
             val entry = navController.currentBackStackEntry
             val route = entry?.destination?.route
@@ -93,21 +96,19 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
+        } else if (foldingToPhone) {
+            val active = foldActiveSelection ?: return@LaunchedEffect
+            val route = navController.currentBackStackEntry?.destination?.route
+            if (route != null && !route.startsWith("detail/")) {
+                navController.navigate(
+                    Routes.detail(active.resultId, active.name, active.site),
+                ) {
+                    launchSingleTop = true
+                    popUpTo(Routes.SEARCH) { inclusive = false }
+                }
+            }
         }
         wasTwoPane = useTwoPane
-    }
-
-    LaunchedEffect(useTwoPane, foldActiveSelection) {
-        if (useTwoPane) return@LaunchedEffect
-        val active = foldActiveSelection ?: return@LaunchedEffect
-        val route = navController.currentBackStackEntry?.destination?.route
-        if (route != null && route.startsWith("detail/")) return@LaunchedEffect
-        navController.navigate(
-            Routes.detail(active.resultId, active.name, active.site),
-        ) {
-            launchSingleTop = true
-            popUpTo(Routes.SEARCH) { inclusive = false }
-        }
     }
 
     NavHost(navController, startDestination = Routes.SEARCH, modifier = modifier) {
@@ -206,8 +207,9 @@ fun AppNavGraph(
                     }
                     return@LaunchedEffect
                 }
-                if (container.searchResultStore.get(resultId) != null) return@LaunchedEffect
-                if (navName.isNotBlank()) return@LaunchedEffect
+                if (navName.isNotBlank() && container.searchResultStore.get(resultId) != null) {
+                    return@LaunchedEffect
+                }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
 
@@ -244,9 +246,14 @@ fun AppNavGraph(
                     }
                 },
                 onOpenUploaded = ::openUploaded,
+                onGenreBranchFeedback = { success ->
+                    searchViewModel.recordGenreBranchFeedback(resultId, success)
+                },
             )
         }
-        composable(Routes.UPLOADED) { UploadedScreen(container) }
+        composable(Routes.UPLOADED) {
+            UploadedScreen(container, sharedViewModel = uploadedViewModel)
+        }
         composable(Routes.SETTINGS) { SettingsScreen(container) }
         composable(Routes.HELP) { HelpScreen() }
     }

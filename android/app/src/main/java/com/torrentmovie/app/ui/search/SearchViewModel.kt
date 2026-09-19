@@ -147,10 +147,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         _state.value = _state.value.copy(maxSize = value?.takeIf { it.isNotBlank() })
     }
 
+    fun recordGenreBranchFeedback(resultId: String, success: Boolean) {
+        val genreId = _state.value.activeGenre ?: return
+        val groupKey = _state.value.groups.firstOrNull { group ->
+            group.releases.any { it.id == resultId }
+        }?.groupKey ?: return
+        viewModelScope.launch {
+            container.searchRepository.recordGenreBranchFeedback(genreId, groupKey, success)
+        }
+    }
+
     fun refreshCurrentResults() {
         val genre = X1337MovieGenre.fromId(_state.value.activeGenre)
         if (genre != null) {
-            loadGenreBrowse(genre)
+            loadGenreBrowse(genre, forceRefresh = true)
             return
         }
         val feed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
@@ -164,7 +174,16 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 search()
                 return
             }
-            _state.value = _state.value.copy(loading = false)
+            _state.value = _state.value.copy(loading = true)
+            viewModelScope.launch {
+                try {
+                    container.searchRepository.warmGenrePools()
+                } catch (_: Exception) {
+                    // Non-blocking prefetch
+                } finally {
+                    _state.value = _state.value.copy(loading = false)
+                }
+            }
             return
         }
         val q = _state.value.query.trim()
@@ -194,6 +213,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastExecutedQuery = "",
             loading = false,
         )
+        viewModelScope.launch {
+            try {
+                container.searchRepository.warmGenrePools()
+            } catch (_: Exception) {
+                // LOD-style background prefetch — non-blocking
+            }
+        }
     }
 
     fun collapseGenrePanel() {
@@ -306,7 +332,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun loadGenreBrowse(genre: X1337MovieGenre) {
+    fun loadGenreBrowse(genre: X1337MovieGenre, forceRefresh: Boolean = false) {
         searchJob?.cancel()
         val settings = container.settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) {
@@ -362,6 +388,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     minSeeds = minSeeds,
                     maxSeeds = maxSeeds,
                     maxSize = maxSize,
+                    forceRefresh = forceRefresh,
                 )
                 if (!requestStillCurrent()) return@launch
                 applySuccessfulOutcome(
@@ -474,7 +501,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             info = null,
             activeBrowseFeed = null,
             activeGenre = null,
-            genrePanelExpanded = false,
             results = emptyList(),
             groups = emptyList(),
         )

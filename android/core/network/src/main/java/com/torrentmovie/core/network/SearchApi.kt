@@ -1,8 +1,10 @@
 package com.torrentmovie.core.network
 
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface SearchApi {
     @GET("/v1/health")
@@ -36,6 +38,12 @@ interface SearchApi {
         @Query("tmdb_api_key") tmdbApiKey: String? = null,
     ): SearchResponseDto
 
+    @POST("/v1/browse/genre/warm")
+    suspend fun warmGenrePools(
+        @Query("genres") genres: String? = null,
+        @Query("movie_profile") movieProfile: Boolean = true,
+    ): WarmGenreResponseDto
+
     @GET("/v1/browse/genre/{genre}")
     suspend fun browseGenre(
         @Path("genre") genre: String,
@@ -49,20 +57,15 @@ interface SearchApi {
         @Query("group") group: Boolean = true,
         @Query("enrich") enrich: Boolean = true,
         @Query("tmdb_api_key") tmdbApiKey: String? = null,
+        @Query("force_refresh") forceRefresh: Boolean = false,
     ): SearchResponseDto
 
-    @GET("/v1/browse/1337x/genre/{genre}")
-    suspend fun browse1337xGenre(
-        @Path("genre") genre: String,
-        @Query("limit") limit: Int = 100,
-        @Query("pages") pages: Int = 2,
-        @Query("min_seeds") minSeeds: Int? = null,
-        @Query("max_seeds") maxSeeds: Int? = null,
-        @Query("max_size") maxSize: String? = null,
-        @Query("group") group: Boolean = true,
-        @Query("enrich") enrich: Boolean = true,
-        @Query("tmdb_api_key") tmdbApiKey: String? = null,
-    ): SearchResponseDto
+    @POST
+    suspend fun postGenreBranchFeedback(
+        @Url url: String,
+        @Query("group_key") groupKey: String,
+        @Query("success") success: Boolean = true,
+    ): WarmGenreResponseDto
 
     @GET("/v1/results/{id}/magnet")
     suspend fun getMagnet(@Path("id") resultId: String): MagnetResponseDto
@@ -125,6 +128,11 @@ data class SearchResponseDto(
 data class MagnetResponseDto(
     val id: String,
     val magnet: String,
+)
+
+data class WarmGenreResponseDto(
+    val status: String,
+    val count: Int,
 )
 
 data class HealthResponseDto(

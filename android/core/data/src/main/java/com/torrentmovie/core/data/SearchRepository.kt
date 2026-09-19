@@ -97,7 +97,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = false,
+                enrich = settings.fetchMovieMetadata,
             )
             SearchResult(
                 results = response.results,
@@ -115,11 +115,26 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         }
     }
 
+    suspend fun warmGenrePools(genreIds: List<String>? = null) {
+        val settings = settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) return
+        try {
+            val genres = genreIds?.joinToString(",")
+            api().warmGenrePools(
+                genres = genres,
+                movieProfile = settings.movieSitesOnly,
+            )
+        } catch (_: Exception) {
+            // Background prefetch — ignore failures
+        }
+    }
+
     suspend fun browseGenre(
         genre: String,
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
         maxSize: String? = null,
+        forceRefresh: Boolean = false,
     ): SearchResult {
         val settings = settingsRepository.load()
         return try {
@@ -132,7 +147,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 maxSize = maxSize,
                 movieProfile = settings.movieSitesOnly,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = false,
+                enrich = settings.fetchMovieMetadata,
+                forceRefresh = forceRefresh,
             )
             SearchResult(
                 results = response.results,
@@ -147,6 +163,24 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
             throw mapNetworkError(e)
+        }
+    }
+
+    suspend fun recordGenreBranchFeedback(
+        genreId: String,
+        groupKey: String,
+        success: Boolean,
+    ) {
+        val base = settingsRepository.load().searchApiBaseUrl.trim().removeSuffix("/")
+        if (base.isBlank()) return
+        try {
+            api().postGenreBranchFeedback(
+                url = "$base/v1/browse/genre/${genreId.trim().lowercase()}/feedback",
+                groupKey = groupKey,
+                success = success,
+            )
+        } catch (_: Exception) {
+            // Ranking feedback is best-effort
         }
     }
 

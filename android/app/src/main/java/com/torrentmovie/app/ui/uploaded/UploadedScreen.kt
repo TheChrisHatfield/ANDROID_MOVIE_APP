@@ -72,13 +72,24 @@ fun UploadedScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            vm.setScreenVisible(true)
+        }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                resumeTick += 1
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    resumeTick += 1
+                    vm.setScreenVisible(true)
+                }
+                Lifecycle.Event.ON_PAUSE -> vm.setScreenVisible(false)
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            vm.setScreenVisible(false)
+        }
     }
 
     LaunchedEffect(highlightSeq) {
@@ -108,14 +119,6 @@ fun UploadedScreen(
         }
         highlightKey = null
         container.pendingUploadedHighlight = null
-    }
-
-    LaunchedEffect(resumeTick, state.seedboxConfigured) {
-        if (resumeTick == 0 || !state.seedboxConfigured) return@LaunchedEffect
-        while (true) {
-            delay(15_000)
-            vm.refreshStatuses()
-        }
     }
 
     Scaffold(
