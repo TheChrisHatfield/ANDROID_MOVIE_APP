@@ -233,10 +233,11 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
-            remote != null && statusError == null -> buildString {
+            remote != null -> buildString {
                 append(remote.statusLabel())
                 remote.rateSummary()?.let { append(" · ").append(it) }
                 remote.etaSummary(elapsedSincePollSeconds)?.let { append(" · ").append(it) }
+                if (statusError != null) append(" · last known")
             }
             lookupHash != null && (recentlySent || (extendedPending && pollSucceeded)) ->
                 "Adding to seedbox…"
@@ -244,7 +245,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"
         }
-        val showProgress = remote != null && statusError == null && remote.isOpen &&
+        val showProgress = remote != null && remote.isOpen &&
             remote.sizeBytes > 0L && remote.leftBytes > 0L && !remote.isHashChecking
         return UploadedRowUi(
             entry = entry,
