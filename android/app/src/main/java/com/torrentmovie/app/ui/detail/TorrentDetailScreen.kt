@@ -223,7 +223,11 @@ fun TorrentDetailScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        val headerMetadata = metadata
+        val headerMetadata = detailHeaderMetadata(
+            metadata,
+            container.searchResultStore.get(resultId),
+            name,
+        )
         if (headerMetadata != null) {
             MovieDetailHeader(
                 metadata = headerMetadata,
