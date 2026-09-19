@@ -457,11 +457,24 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             return
         }
         val generation = ++searchGeneration
+        val minSeeds = _state.value.minSeeds
+        val maxSeeds = _state.value.maxSeeds
+        val maxSize = _state.value.maxSize
+        val settingsKeyAtStart = searchSettingsKey()
+        val previousResults = _state.value.results
+        val previousGroups = _state.value.groups
+        _state.value = _state.value.copy(
+            loading = true,
+            error = null,
+            errorCode = null,
+            info = null,
+            activeBrowseFeed = null,
+            activeGenre = null,
+            genrePanelExpanded = false,
+            results = emptyList(),
+            groups = emptyList(),
+        )
         searchJob = viewModelScope.launch {
-            val minSeeds = _state.value.minSeeds
-            val maxSeeds = _state.value.maxSeeds
-            val maxSize = _state.value.maxSize
-            val settingsKeyAtStart = searchSettingsKey()
             fun requestStillCurrent(): Boolean {
                 return generation == searchGeneration &&
                     _state.value.query.trim() == q &&
@@ -470,20 +483,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.maxSize == maxSize &&
                     searchSettingsKey() == settingsKeyAtStart
             }
-            val previousResults = _state.value.results
-            val previousGroups = _state.value.groups
             try {
-                _state.value = _state.value.copy(
-                    loading = true,
-                    error = null,
-                    errorCode = null,
-                    info = null,
-                    activeBrowseFeed = null,
-                    activeGenre = null,
-                    genrePanelExpanded = false,
-                    results = emptyList(),
-                    groups = emptyList(),
-                )
                 val outcome = container.searchRepository.search(
                     q,
                     minSeeds = minSeeds,
