@@ -436,19 +436,28 @@ def resolve_web_poster(
 
 def fill_missing_posters(buckets: list[dict], *, limit: int = _MAX_PER_REQUEST) -> int:
     """Fill `poster_url` on group buckets that still lack one. Returns fill count."""
+    filled = 0
     pending: list[dict] = []
     for bucket in buckets:
         if bucket.get("poster_url"):
             continue
-        if not str(bucket.get("title") or "").strip():
+        title = str(bucket.get("title") or "").strip()
+        if not title:
+            continue
+        year = coerce_year(bucket.get("year"))
+        poster_id = poster_id_for(title, year)
+        if cached_poster_path(poster_id):
+            bucket["poster_url"] = poster_public_path(poster_id)
+            filled += 1
+            continue
+        if _is_recent_miss(poster_id):
             continue
         pending.append(bucket)
         if len(pending) >= limit:
             break
     if not pending:
-        return 0
+        return filled
 
-    filled = 0
     workers = min(4, len(pending))
 
     def _one(bucket: dict) -> tuple[dict, str | None]:

@@ -89,6 +89,61 @@ def test_resolve_uses_cache_without_network(tmp_path, monkeypatch):
     assert url == poster_public_path(poster_id)
 
 
+def test_fill_attaches_disk_cache_then_searches_uncached_titles(tmp_path, monkeypatch):
+    monkeypatch.setenv("POSTER_CACHE_DIR", str(tmp_path))
+    buckets = [
+        {"title": f"Cached {i}", "year": 2000 + i, "poster_url": None, "releases": []}
+        for i in range(8)
+    ] + [
+        {
+            "title": "Needs Network",
+            "year": 2011,
+            "poster_url": None,
+            "releases": [{"name": "Needs.Network.2011.1080p"}],
+        },
+    ]
+    for i in range(8):
+        poster_id = poster_id_for(f"Cached {i}", 2000 + i)
+        dest = Path(tmp_path) / f"{poster_id}.jpg"
+        dest.write_bytes(encode_poster_jpeg(_rgb_image(40, 60)))
+
+    searched: list[str] = []
+
+    def fake_resolve(title, year, **kwargs):
+        searched.append(title)
+        return "/v1/posters/newtitle.jpg"
+
+    with patch("metadata.web_poster.resolve_web_poster", side_effect=fake_resolve):
+        filled = fill_missing_posters(buckets)
+    assert filled == 9
+    assert searched == ["Needs Network"]
+    assert buckets[0]["poster_url"].startswith("/v1/posters/")
+    assert buckets[8]["poster_url"] == "/v1/posters/newtitle.jpg"
+
+
+def test_fill_skips_recent_misses_so_later_titles_can_search(monkeypatch):
+    from metadata import web_poster as web_poster_mod
+
+    miss_id = poster_id_for("Known Miss", 1999)
+    web_poster_mod._memory_miss[miss_id] = time.time()
+    buckets = [
+        {"title": "Known Miss", "year": 1999, "poster_url": None, "releases": []},
+        {"title": "Later Title", "year": 2012, "poster_url": None, "releases": []},
+    ]
+    searched: list[str] = []
+
+    def fake_resolve(title, year, **kwargs):
+        searched.append(title)
+        return "/v1/posters/later.jpg"
+
+    with patch("metadata.web_poster.resolve_web_poster", side_effect=fake_resolve):
+        fill_missing_posters(buckets)
+    assert searched == ["Later Title"]
+    assert buckets[0].get("poster_url") is None
+    assert buckets[1]["poster_url"] == "/v1/posters/later.jpg"
+    web_poster_mod._memory_miss.pop(miss_id, None)
+
+
 def test_fill_missing_posters_skips_existing_and_fills_blank(tmp_path, monkeypatch):
     monkeypatch.setenv("POSTER_CACHE_DIR", str(tmp_path))
     buckets = [
