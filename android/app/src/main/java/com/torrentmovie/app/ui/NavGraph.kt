@@ -28,6 +28,7 @@ import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
+import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
@@ -201,7 +202,12 @@ fun AppNavGraph(
                     }
                     return@LaunchedEffect
                 }
-                if (container.searchResultStore.get(resultId) != null) {
+                if (!shouldPopExpiredPhoneDetail(
+                        storeHit = container.searchResultStore.get(resultId) != null,
+                        rematchHit = false,
+                        navName = navName,
+                    )
+                ) {
                     return@LaunchedEffect
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
