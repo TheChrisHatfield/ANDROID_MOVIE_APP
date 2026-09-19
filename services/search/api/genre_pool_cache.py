@@ -44,6 +44,8 @@ class GenrePoolCache:
             entry = self._entries.get(key)
             if entry and entry.is_usable():
                 return entry
+            if entry is not None:
+                self._entries.pop(key, None)
             return None
 
     def put(

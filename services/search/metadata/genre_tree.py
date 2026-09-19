@@ -445,6 +445,7 @@ def rank_pool_thompson(
     """
     if not rows:
         return rows
+    rows = [dict(row) for row in rows]
     branches = build_genre_branches(rows, feedback=feedback)
     if not branches:
         return rows
@@ -469,16 +470,21 @@ def rank_pool_thompson(
     scored.sort(key=lambda item: (-item[0], item[1]))
 
     ranked: list[dict] = []
+    used_ids: set[int] = set()
     for _, _, branch in scored:
         branch.releases.sort(
             key=lambda row: -(seed_count(row.get("seeds", "-")) or 0),
         )
         for idx, row in enumerate(branch.releases):
+            used_ids.add(id(row))
             row["_branch_key"] = branch.group_key
             row["_branch_order"] = len(ranked) + idx
             row["_mct_visits"] = branch.visits
             row["_mct_mean_reward"] = round(branch.mean_reward(), 4)
         ranked.extend(branch.releases)
+    for row in rows:
+        if id(row) not in used_ids:
+            ranked.append(dict(row))
     return ranked
 
 

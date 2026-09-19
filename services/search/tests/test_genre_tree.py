@@ -106,6 +106,16 @@ def test_thompson_rank_is_non_deterministic():
     assert len(orders) > 1
 
 
+def test_rank_pool_keeps_unparseable_rows():
+    rows = [
+        {"name": "Alpha 2020 1080p", "seeds": "10", "site": "YTS", "_genre_rank": 0},
+        {"name": "---", "seeds": "1", "site": "1337x"},
+    ]
+    ranked = rank_pool_thompson(rows, genre_id="action", mct_iterations=5)
+    assert any(row["name"].startswith("Alpha") for row in ranked)
+    assert any(row["name"] == "---" for row in ranked)
+
+
 def test_feedback_persists_to_disk(tmp_path, monkeypatch):
     feedback_file = tmp_path / "genre_branch_feedback.json"
     monkeypatch.setattr(genre_tree, "_FEEDBACK_PATH", feedback_file)
