@@ -33,8 +33,14 @@ class PhoneDetailHandoffTest {
     @Test
     fun clearsFoldSelectionWhenLeavingPhoneDetail() {
         assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose("search"))
-        assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose("settings"))
-        assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose(null))
+    }
+
+    @Test
+    fun keepsFoldSelectionWhenOpeningSettingsOrUploadedFromDetail() {
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose("settings"))
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose("uploaded"))
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose("help"))
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose(null))
     }
 
     @Test
