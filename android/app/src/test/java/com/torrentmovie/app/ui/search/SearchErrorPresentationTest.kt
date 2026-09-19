@@ -27,4 +27,10 @@ class SearchErrorPresentationTest {
         assertTrue(shouldSnackbarSearchError(hasVisibleResults = true))
         assertFalse(shouldSnackbarSearchError(hasVisibleResults = false))
     }
+
+    @Test
+    fun enrichmentCapMentionsPostersAndTrailers() {
+        assertTrue(ENRICHMENT_CAPPED_MESSAGE.contains("trailer", ignoreCase = true))
+        assertTrue(ENRICHMENT_CAPPED_MESSAGE.contains("poster", ignoreCase = true))
+    }
 }

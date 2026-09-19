@@ -1,5 +1,8 @@
 package com.torrentmovie.app.ui.search
 
+internal const val ENRICHMENT_CAPPED_MESSAGE =
+    "Poster and trailer enrichment limited to first 50 movie groups — later groups may lack art or trailers."
+
 internal fun searchEmptyStateMessage(errorCode: Int?, error: String?): String {
     return when (errorCode) {
         503 -> {

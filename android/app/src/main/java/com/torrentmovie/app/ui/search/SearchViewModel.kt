@@ -646,7 +646,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             infoMessages += "If the list is empty, relax filters — they may hide all genre results."
         }
         if (outcome.tmdbEnrichmentCapped) {
-            infoMessages += "Poster enrichment limited to first 50 movie groups — later groups may lack posters."
+            infoMessages += ENRICHMENT_CAPPED_MESSAGE
         }
         if (outcome.tmdbKeyRejected) {
             infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
