@@ -18,6 +18,7 @@ class GenrePoolEntry:
     partial: bool = False
     refreshing: bool = False
     movie_profile: bool = True
+    page_limit: int = 0
 
     def age_seconds(self) -> float:
         return time.time() - self.created_at
@@ -61,6 +62,7 @@ class GenrePoolCache:
         *,
         partial: bool = False,
         movie_profile: bool = True,
+        page_limit: int | None = None,
     ) -> GenrePoolEntry:
         key = _entry_key(genre_id, movie_profile)
         with self._lock:
@@ -76,6 +78,7 @@ class GenrePoolCache:
                 partial=partial,
                 refreshing=still_refreshing,
                 movie_profile=movie_profile,
+                page_limit=int(page_limit or 0),
             )
             self._entries[key] = entry
         return entry

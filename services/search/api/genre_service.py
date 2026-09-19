@@ -7,6 +7,7 @@ import time
 from typing import Callable
 
 from api.genre_pool_cache import GenrePoolCache, GenrePoolEntry
+from metadata.genre_browse import BROAD_KEYWORD_PAGE_LIMIT
 from metadata.genre_pool import fetch_genre_pool_rows, pool_rows_from_ranked, rank_genre_pool_rows
 from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
@@ -27,6 +28,15 @@ def _discover_page_offset(genre_id: str, *, rotate: bool) -> int:
         return 1
     bucket = (hash(genre_id.strip().lower()) + int(time.time()) // 1800) % 3
     return bucket + 1
+
+
+def _effective_pool_pages(page_limit: int | None) -> int:
+    return max(1, min(page_limit or BROAD_KEYWORD_PAGE_LIMIT, 10))
+
+
+def _pool_too_narrow(entry: GenrePoolEntry, page_limit: int | None) -> bool:
+    stored = entry.page_limit if entry.page_limit > 0 else BROAD_KEYWORD_PAGE_LIMIT
+    return _effective_pool_pages(page_limit) > stored
 
 
 def record_genre_feedback(genre_id: str, group_key: str, success: bool) -> None:
@@ -115,38 +125,35 @@ class GenreBrowseService:
         force_refresh: bool = False,
     ) -> SearchOutcome:
         normalized = genre_id.strip().lower()
+        need_wider_pool = False
         if not force_refresh:
             cached = self._cache.get(normalized, movie_profile=movie_profile)
             if cached and cached.rows:
-                if not cached.is_fresh():
-                    self._schedule_refresh(
+                need_wider_pool = _pool_too_narrow(cached, page_limit)
+                if not need_wider_pool:
+                    if not cached.is_fresh():
+                        self._schedule_refresh(
+                            normalized,
+                            movie_profile=movie_profile,
+                            page_limit=page_limit,
+                            parallel=parallel,
+                            min_seeds=min_seeds,
+                            max_seeds=max_seeds,
+                            max_size=max_size,
+                            limit=limit,
+                            tmdb_api_key=tmdb_api_key,
+                            enrich=enrich,
+                            partial_ok=False,
+                        )
+                    return self._outcome_from_cached_rows(
+                        cached,
                         normalized,
                         movie_profile=movie_profile,
-                        page_limit=page_limit,
-                        parallel=parallel,
                         min_seeds=min_seeds,
                         max_seeds=max_seeds,
                         max_size=max_size,
                         limit=limit,
-                        tmdb_api_key=tmdb_api_key,
-                        enrich=enrich,
-                        partial_ok=False,
                     )
-                filtered = _rank_and_serve_rows(
-                    cached.rows,
-                    normalized,
-                    self._searcher,
-                    movie_profile=movie_profile,
-                    min_seeds=min_seeds,
-                    max_seeds=max_seeds,
-                    max_size=max_size,
-                    limit=limit,
-                    mct_live=False,
-                )
-                return SearchOutcome(
-                    results=filtered,
-                    failed_sites=list(cached.failed_sites),
-                )
 
         owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
         if not owned_refresh:
@@ -157,13 +164,18 @@ class GenreBrowseService:
                 max_seeds=max_seeds,
                 max_size=max_size,
                 limit=limit,
-                wait_for_completion=force_refresh,
+                wait_for_completion=force_refresh or need_wider_pool,
             )
             if served is not None:
-                return served
+                cached_after = self._cache.get(normalized, movie_profile=movie_profile)
+                still_narrow = bool(
+                    cached_after and cached_after.rows and _pool_too_narrow(cached_after, page_limit)
+                )
+                if not still_narrow:
+                    return served
             owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
             if not owned_refresh:
-                return SearchOutcome([], [])
+                return served or SearchOutcome([], [])
 
         try:
             return self._refresh_sync(
@@ -348,6 +360,7 @@ class GenreBrowseService:
                 outcome.failed_sites,
                 partial=partial_ok,
                 movie_profile=movie_profile,
+                page_limit=_effective_pool_pages(page_limit),
             )
         elif not partial_ok:
             self._cache.invalidate(genre_id, movie_profile=movie_profile)

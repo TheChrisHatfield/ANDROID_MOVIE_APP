@@ -175,3 +175,25 @@ def test_browse_applies_filters_on_cache_hit():
     outcome = service.browse("horror", min_seeds=10, movie_profile=True)
     assert len(outcome.results) == 1
     assert "High" in outcome.results[0]["name"]
+
+
+@patch("api.genre_service.fetch_genre_pool_rows")
+def test_browse_refetches_when_cached_pool_has_fewer_pages(mock_fetch):
+    mock_fetch.return_value = SearchOutcome(
+        results=[{"name": "Wide 2021 1080p", "seeds": "20", "site": "YTS"}],
+        failed_sites=[],
+    )
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [{"name": "Narrow 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+        movie_profile=True,
+        page_limit=2,
+    )
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    outcome = service.browse("horror", movie_profile=True, page_limit=10)
+    mock_fetch.assert_called_once()
+    assert mock_fetch.call_args.kwargs["page_limit"] == 10
+    assert "Wide" in outcome.results[0]["name"]
+    assert cache.get("horror", movie_profile=True).page_limit == 10
