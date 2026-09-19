@@ -1,6 +1,8 @@
 package com.torrentmovie.app.ui.util
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -20,5 +22,26 @@ class PhoneDetailHandoffTest {
     fun popsOnlyWhenNothingCanRebuildTheDetailShell() {
         assertTrue(shouldPopExpiredPhoneDetail(storeHit = false, rematchHit = false, navName = ""))
         assertTrue(shouldPopExpiredPhoneDetail(storeHit = false, rematchHit = false, navName = "   "))
+    }
+
+    @Test
+    fun prefersGenreCapturedWhenOpeningDetail() {
+        assertEquals(
+            "horror",
+            snapshotGenreAtDetailOpen(capturedGenreId = "horror", currentGenreId = null),
+        )
+        assertEquals(
+            "horror",
+            snapshotGenreAtDetailOpen(capturedGenreId = "horror", currentGenreId = "action"),
+        )
+    }
+
+    @Test
+    fun fallsBackToCurrentGenreWhenOpenDidNotCaptureOne() {
+        assertEquals(
+            "action",
+            snapshotGenreAtDetailOpen(capturedGenreId = null, currentGenreId = "action"),
+        )
+        assertNull(snapshotGenreAtDetailOpen(capturedGenreId = "  ", currentGenreId = null))
     }
 }

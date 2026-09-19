@@ -9,3 +9,8 @@ internal fun shouldPopExpiredPhoneDetail(
     rematchHit: Boolean,
     navName: String,
 ): Boolean = !storeHit && !rematchHit && navName.isBlank()
+
+internal fun snapshotGenreAtDetailOpen(
+    capturedGenreId: String?,
+    currentGenreId: String?,
+): String? = capturedGenreId?.takeIf { it.isNotBlank() } ?: currentGenreId?.takeIf { it.isNotBlank() }

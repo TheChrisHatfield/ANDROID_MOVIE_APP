@@ -89,6 +89,7 @@ fun FoldSearchDetailLayout(
             selectedId = pending.resultId
             restoredName = pending.name.takeIf { it.isNotBlank() }
             restoredSite = pending.site.takeIf { it.isNotBlank() }
+            genreAtDetailOpen = pending.genreId ?: genreAtDetailOpen
             syncFoldSelection(pending.resultId, pending.name, pending.site)
             container.pendingFoldDetail = null
         } else if (selectedId == null) {

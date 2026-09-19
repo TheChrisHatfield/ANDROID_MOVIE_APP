@@ -4,4 +4,5 @@ data class PendingFoldDetail(
     val resultId: String,
     val name: String = "",
     val site: String = "",
+    val genreId: String? = null,
 )

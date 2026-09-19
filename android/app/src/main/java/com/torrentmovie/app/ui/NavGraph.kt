@@ -29,6 +29,7 @@ import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
+import com.torrentmovie.app.ui.util.snapshotGenreAtDetailOpen
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.PendingFoldDetail
 import com.torrentmovie.core.network.TorrentResultDto
@@ -102,6 +103,10 @@ fun AppNavGraph(
                         resultId = resultId,
                         name = entry.arguments?.getString("name") ?: "",
                         site = entry.arguments?.getString("site") ?: "",
+                        genreId = snapshotGenreAtDetailOpen(
+                            foldActiveSelection?.genreId,
+                            searchState.activeGenre,
+                        ),
                     )
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
@@ -138,6 +143,7 @@ fun AppNavGraph(
                             resultId = r.id,
                             name = r.name,
                             site = r.site,
+                            genreId = searchState.activeGenre,
                         )
                         navController.navigate(Routes.detail(r.id, r.name, r.site)) {
                             launchSingleTop = true
@@ -215,10 +221,14 @@ fun AppNavGraph(
 
             DisposableEffect(resultId, useTwoPane) {
                 if (!useTwoPane) {
+                    val priorGenre = container.foldActiveSelection
+                        ?.takeIf { it.resultId == resultId }
+                        ?.genreId
                     container.foldActiveSelection = PendingFoldDetail(
                         resultId = resultId,
                         name = navName,
                         site = navSite,
+                        genreId = snapshotGenreAtDetailOpen(priorGenre, searchState.activeGenre),
                     )
                 }
                 onDispose {
@@ -229,7 +239,12 @@ fun AppNavGraph(
             }
 
             val cached = container.searchResultStore.get(resultId)
-            val genreAtOpen = remember(resultId) { searchState.activeGenre }
+            val genreAtOpen = remember(resultId) {
+                snapshotGenreAtDetailOpen(
+                    foldActiveSelection?.takeIf { it.resultId == resultId }?.genreId,
+                    searchState.activeGenre,
+                )
+            }
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
