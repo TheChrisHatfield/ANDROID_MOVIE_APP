@@ -73,6 +73,28 @@ class SearchResultStoreTest {
     }
 
     @Test
+    fun putPreservesExistingPosterWhenIncomingRowHasNone() {
+        val store = SearchResultStore()
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 2020 1080p",
+                site = "YTS",
+                poster_url = "https://image.tmdb.org/poster.jpg",
+            ),
+        )
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 2020 1080p",
+                site = "YTS",
+                magnet = "magnet:?xt=urn:btih:abc",
+            ),
+        )
+        assertEquals("https://image.tmdb.org/poster.jpg", store.get("a")?.posterUrl)
+    }
+
+    @Test
     fun putPreservesExistingSiteWhenIncomingRowHasBlankSite() {
         val store = SearchResultStore()
         store.put(

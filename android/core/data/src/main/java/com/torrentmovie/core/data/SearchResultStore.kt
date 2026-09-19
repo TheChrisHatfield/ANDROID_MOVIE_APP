@@ -22,6 +22,7 @@ class SearchResultStore {
                     detail_url = result.detail_url?.takeIf { it.isNotBlank() } ?: existing.detail_url,
                     site = result.site.takeIf { it.isNotBlank() } ?: existing.site,
                     branch_key = result.branch_key?.takeIf { it.isNotBlank() } ?: existing.branch_key,
+                    poster_url = result.poster_url?.takeIf { it.isNotBlank() } ?: existing.poster_url,
                 )
             }
             byId[merged.id] = Entry(merged, now)
