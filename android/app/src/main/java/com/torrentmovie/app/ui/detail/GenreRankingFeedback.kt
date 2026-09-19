@@ -11,3 +11,7 @@ internal fun isGenreRankingSendFailure(message: String): Boolean {
     )
     return ignored.none { message.contains(it, ignoreCase = true) }
 }
+
+/** ruTorrent add already counted; persist-retry must not boost Thompson again. */
+internal fun shouldRecordGenreRankingSuccess(wasRetryingPersist: Boolean): Boolean = !wasRetryingPersist
+

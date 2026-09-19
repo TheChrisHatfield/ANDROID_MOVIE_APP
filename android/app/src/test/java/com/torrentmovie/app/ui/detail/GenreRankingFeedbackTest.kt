@@ -26,4 +26,10 @@ class GenreRankingFeedbackTest {
         assertTrue(isGenreRankingSendFailure("ruTorrent rejected magnet"))
         assertTrue(isGenreRankingSendFailure("Connection failed"))
     }
+
+    @Test
+    fun persistRetryDoesNotRecordRankingSuccessAgain() {
+        assertTrue(shouldRecordGenreRankingSuccess(wasRetryingPersist = false))
+        assertFalse(shouldRecordGenreRankingSuccess(wasRetryingPersist = true))
+    }
 }

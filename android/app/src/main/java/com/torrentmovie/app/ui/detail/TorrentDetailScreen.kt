@@ -284,8 +284,11 @@ fun TorrentDetailScreen(
                                     "history save failed",
                                     ignoreCase = true,
                                 )
+                                val wasRetryingPersist = pendingPersist
                                 pendingPersist = persistFailed
-                                onGenreBranchFeedback?.invoke(true)
+                                if (shouldRecordGenreRankingSuccess(wasRetryingPersist)) {
+                                    onGenreBranchFeedback?.invoke(true)
+                                }
                                 if (!persistFailed) {
                                     duplicate = true
                                     justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
