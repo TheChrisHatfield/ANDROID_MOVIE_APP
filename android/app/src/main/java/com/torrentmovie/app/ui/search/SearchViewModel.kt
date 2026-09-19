@@ -204,14 +204,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 search()
                 return
             }
+            searchJob?.cancel()
+            val generation = ++searchGeneration
             _state.value = _state.value.copy(loading = true)
-            viewModelScope.launch {
+            searchJob = viewModelScope.launch {
                 try {
                     container.searchRepository.warmGenrePools()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     // Non-blocking prefetch
                 } finally {
-                    _state.value = _state.value.copy(loading = false)
+                    if (generation == searchGeneration && _state.value.loading) {
+                        _state.value = _state.value.copy(loading = false)
+                    }
                 }
             }
             return
