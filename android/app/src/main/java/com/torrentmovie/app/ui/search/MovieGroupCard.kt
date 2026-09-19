@@ -21,11 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.torrentmovie.app.ui.util.InlineYoutubePlayer
+import com.torrentmovie.app.ui.util.RemoteMoviePoster
 import com.torrentmovie.app.ui.util.normalizeYoutubeVideoId
 import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.network.MovieGroupDto
@@ -92,31 +91,13 @@ fun MovieGroupCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            if (!posterUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = posterUrl,
-                    contentDescription = group.title,
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(108.dp),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Card(
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(108.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                ) {
-                    Text(
-                        text = group.title.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                }
-            }
+            RemoteMoviePoster(
+                url = posterUrl,
+                title = group.title,
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(108.dp),
+            )
             Column(
                 modifier = Modifier
                     .weight(1f)

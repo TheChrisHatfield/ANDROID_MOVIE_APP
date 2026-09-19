@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,12 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.torrentmovie.app.ui.util.InlineYoutubePlayer
+import com.torrentmovie.app.ui.util.RemoteMoviePoster
 import com.torrentmovie.app.ui.util.normalizeYoutubeVideoId
 import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.data.MovieMetadata
@@ -45,13 +42,12 @@ fun MovieDetailHeader(
     Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Top) {
             if (!metadata.posterUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = metadata.posterUrl,
-                    contentDescription = metadata.title,
+                RemoteMoviePoster(
+                    url = metadata.posterUrl,
+                    title = metadata.title,
                     modifier = Modifier
                         .width(96.dp)
                         .height(144.dp),
-                    contentScale = ContentScale.Crop,
                 )
             }
             Column(
@@ -110,19 +106,5 @@ fun MovieDetailHeader(
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
-    }
-}
-
-@Composable
-fun MoviePosterPlaceholder(title: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Text(
-            text = title.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-            modifier = Modifier.padding(12.dp),
-            style = MaterialTheme.typography.headlineMedium,
-        )
     }
 }
