@@ -40,6 +40,7 @@ data class UploadedUiState(
 class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     private companion object {
         const val ADDING_GRACE_MS = 120_000L
+        const val ADDING_EXTENDED_MS = ADDING_GRACE_MS * 3
         const val POLL_IDLE_MS = 15_000L
         const val POLL_ACTIVE_MS = 5_000L
         const val ETA_TICK_MS = 1_000L
@@ -91,7 +92,6 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     )
 
     init {
-        refreshStatuses()
         viewModelScope.launch {
             container.uploadedRepository.observeAll()
                 .map { entries -> entries.map { it.infoHash }.toSet() }
@@ -221,7 +221,9 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     ): UploadedRowUi {
         val lookupHash = lookupHash(entry)
         val remote = lookupHash?.let { remoteByHash[it] }
-        val recentlySent = System.currentTimeMillis() - entry.sentAt < ADDING_GRACE_MS
+        val ageMs = System.currentTimeMillis() - entry.sentAt
+        val recentlySent = ageMs < ADDING_GRACE_MS
+        val extendedPending = ageMs < ADDING_EXTENDED_MS
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
@@ -230,7 +232,8 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 remote.rateSummary()?.let { append(" · ").append(it) }
                 remote.etaSummary(elapsedSincePollSeconds)?.let { append(" · ").append(it) }
             }
-            recentlySent && lookupHash != null -> "Adding to seedbox…"
+            lookupHash != null && (recentlySent || (extendedPending && pollSucceeded)) ->
+                "Adding to seedbox…"
             statusError != null -> "Status unavailable"
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"

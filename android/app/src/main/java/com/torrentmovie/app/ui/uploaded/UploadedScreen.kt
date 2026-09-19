@@ -68,7 +68,6 @@ fun UploadedScreen(
     val listState = rememberLazyListState()
     val highlightSeq by container.uploadedHighlightSeq.collectAsState()
     var highlightKey by remember { mutableStateOf(container.pendingUploadedHighlight) }
-    var resumeTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -78,7 +77,6 @@ fun UploadedScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
-                    resumeTick += 1
                     vm.setScreenVisible(true)
                 }
                 Lifecycle.Event.ON_PAUSE -> vm.setScreenVisible(false)
@@ -95,12 +93,6 @@ fun UploadedScreen(
     LaunchedEffect(highlightSeq) {
         if (highlightSeq == 0L) return@LaunchedEffect
         container.pendingUploadedHighlight?.let { highlightKey = it }
-    }
-
-    LaunchedEffect(resumeTick) {
-        if (resumeTick > 0) {
-            vm.refreshStatuses()
-        }
     }
 
     LaunchedEffect(highlightKey, state.rows) {

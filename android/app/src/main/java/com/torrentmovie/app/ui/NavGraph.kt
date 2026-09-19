@@ -70,6 +70,7 @@ fun AppNavGraph(
     }
 
     fun openUploaded(storageKey: String) {
+        container.foldActiveSelection = null
         container.requestUploadedHighlight(storageKey)
         navController.navigate(Routes.UPLOADED) {
             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -99,7 +100,7 @@ fun AppNavGraph(
         } else if (foldingToPhone) {
             val active = foldActiveSelection ?: return@LaunchedEffect
             val route = navController.currentBackStackEntry?.destination?.route
-            if (route != null && !route.startsWith("detail/")) {
+            if (route == Routes.SEARCH) {
                 navController.navigate(
                     Routes.detail(active.resultId, active.name, active.site),
                 ) {
@@ -229,7 +230,9 @@ fun AppNavGraph(
             }
 
             val cached = container.searchResultStore.get(resultId)
-            val genreAtOpen = searchState.activeGenre
+            val genreAtOpen = remember(resultId, searchState.activeGenre) {
+                searchState.activeGenre
+            }
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,

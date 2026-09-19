@@ -277,10 +277,10 @@ fun TorrentDetailScreen(
                                     ignoreCase = true,
                                 )
                                 pendingPersist = persistFailed
+                                onGenreBranchFeedback?.invoke(true)
                                 if (!persistFailed) {
                                     duplicate = true
                                     justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
-                                    onGenreBranchFeedback?.invoke(true)
                                 } else {
                                     duplicate = false
                                 }
@@ -309,11 +309,16 @@ fun TorrentDetailScreen(
                 }
             },
             enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired &&
-                !pendingPersist,
+                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
-            Text(if (loading) "Sending…" else "Send to seedbox")
+            Text(
+                when {
+                    loading -> "Sending…"
+                    pendingPersist -> "Retry save to Uploaded"
+                    else -> "Send to seedbox"
+                },
+            )
         }
         if (duplicate && onOpenUploaded != null && uploadedNavigationKey() != null) {
             TextButton(
