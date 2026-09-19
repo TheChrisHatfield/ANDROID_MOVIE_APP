@@ -61,11 +61,7 @@ fun FoldSearchDetailLayout(
     }
 
     fun syncFoldSelection(id: String?, name: String, site: String) {
-        container.foldActiveSelection = if (id != null) {
-            PendingFoldDetail(resultId = id, name = name, site = site)
-        } else {
-            null
-        }
+        container.foldActiveSelection = foldActivePayload(id, name, site, genreAtDetailOpen)
     }
 
     val selected: TorrentResultDto? = selectedId?.let { id ->
@@ -303,3 +299,18 @@ internal fun shouldRestorePhoneDetailOnFold(
     foldingToPhone: Boolean,
     selectedResultId: String?,
 ): Boolean = foldingToPhone && !selectedResultId.isNullOrBlank()
+
+internal fun foldActivePayload(
+    resultId: String?,
+    name: String,
+    site: String,
+    genreId: String?,
+): PendingFoldDetail? {
+    if (resultId.isNullOrBlank()) return null
+    return PendingFoldDetail(
+        resultId = resultId,
+        name = name,
+        site = site,
+        genreId = genreId,
+    )
+}

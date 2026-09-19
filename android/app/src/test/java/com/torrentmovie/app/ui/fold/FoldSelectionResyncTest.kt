@@ -1,6 +1,8 @@
 package com.torrentmovie.app.ui.fold
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,5 +39,13 @@ class FoldSelectionResyncTest {
         assertFalse(shouldRestorePhoneDetailOnFold(true, null))
         assertFalse(shouldRestorePhoneDetailOnFold(true, ""))
         assertFalse(shouldRestorePhoneDetailOnFold(false, "abc"))
+    }
+
+    @Test
+    fun twoPaneSelectionPayloadKeepsGenreSnapshot() {
+        val payload = foldActivePayload("abc", "Movie", "YTS", "horror")
+        assertEquals("horror", payload?.genreId)
+        assertNull(foldActivePayload(null, "Movie", "YTS", "horror"))
+        assertNull(foldActivePayload("", "Movie", "YTS", "horror"))
     }
 }
