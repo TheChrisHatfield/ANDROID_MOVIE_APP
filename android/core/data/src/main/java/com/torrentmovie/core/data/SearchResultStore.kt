@@ -10,7 +10,7 @@ class SearchResultStore {
     private val maxEntries = 500
     private val ttlMs = 3_600_000L
 
-    fun put(result: TorrentResultDto) {
+    fun put(result: TorrentResultDto, replaceBlankPoster: Boolean = false) {
         synchronized(this) {
             pruneExpired()
             val now = System.currentTimeMillis()
@@ -22,7 +22,8 @@ class SearchResultStore {
                     detail_url = result.detail_url?.takeIf { it.isNotBlank() } ?: existing.detail_url,
                     site = result.site.takeIf { it.isNotBlank() } ?: existing.site,
                     branch_key = result.branch_key?.takeIf { it.isNotBlank() } ?: existing.branch_key,
-                    poster_url = result.poster_url?.takeIf { it.isNotBlank() } ?: existing.poster_url,
+                    poster_url = result.poster_url?.takeIf { it.isNotBlank() }
+                        ?: existing.poster_url.takeUnless { replaceBlankPoster },
                 )
             }
             byId[merged.id] = Entry(merged, now)

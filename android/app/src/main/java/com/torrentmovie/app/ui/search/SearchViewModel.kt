@@ -674,7 +674,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
         val allReleases = display.groups.flatMap { it.releases }
-        allReleases.forEach { container.searchResultStore.put(it) }
+        allReleases.forEach { container.searchResultStore.put(it, replaceBlankPoster = true) }
         display.groups.forEach { group ->
             val releasePoster = group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
             val metadata = MovieMetadata(
