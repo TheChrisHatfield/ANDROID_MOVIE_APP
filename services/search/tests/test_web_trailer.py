@@ -58,6 +58,24 @@ def test_score_prefers_official_trailer_and_rejects_reviews():
     assert score_trailer_candidate(review, title="Inception", year=2010) < 0
 
 
+def test_wikidata_score_does_not_invent_official_trailer():
+    entity_video = TrailerCandidate(
+        video_id="dQw4w9WgXcQ",
+        title="Inception",
+        snippet="2010 science fiction film",
+        source="wikidata",
+    )
+    blob_score = score_trailer_candidate(entity_video, title="Inception", year=2010)
+    assert blob_score >= 5.0
+    fake = TrailerCandidate(
+        video_id="dQw4w9WgXcQ",
+        title="Inception official trailer",
+        snippet="2010 science fiction film",
+        source="wikidata",
+    )
+    assert score_trailer_candidate(fake, title="Inception", year=2010) > blob_score
+
+
 def test_fill_replaces_invalid_indexer_trailer():
     buckets = [
         {

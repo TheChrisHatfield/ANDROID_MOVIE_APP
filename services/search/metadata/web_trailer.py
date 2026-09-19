@@ -147,8 +147,10 @@ def score_trailer_candidate(
         score += 4.0
     if "teaser" in blob:
         score += 2.0
-    if candidate.source in {"wikidata", "wikipedia"}:
-        score += 2.5
+    if candidate.source == "wikidata":
+        score += 4.0
+    elif candidate.source == "wikipedia":
+        score += 3.5
     if candidate.source == "youtube":
         score += 1.5
     for hint in overview_hint_tokens(overview):
@@ -240,7 +242,7 @@ def _wikidata_candidates(
                 out.append(
                     TrailerCandidate(
                         video_id=video_id,
-                        title=f"{label} official trailer",
+                        title=label,
                         snippet=description,
                         source="wikidata",
                     )
@@ -300,7 +302,7 @@ def _wikipedia_candidates(session: requests.Session, query: str) -> list[Trailer
                 out.append(
                     TrailerCandidate(
                         video_id=video_id,
-                        title=f"{page_title} trailer",
+                        title=page_title,
                         snippet=f"{snippet} {href}",
                         source="wikipedia",
                     )
