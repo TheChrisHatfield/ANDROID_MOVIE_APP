@@ -51,6 +51,28 @@ class SearchResultStoreTest {
     }
 
     @Test
+    fun putPreservesExistingBranchKeyWhenIncomingRowHasNone() {
+        val store = SearchResultStore()
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 2020 1080p",
+                site = "YTS",
+                branch_key = "movie-2020",
+            ),
+        )
+        store.put(
+            TorrentResultDto(
+                id = "a",
+                name = "Movie 2020 1080p",
+                site = "YTS",
+                magnet = "magnet:?xt=urn:btih:abc",
+            ),
+        )
+        assertEquals("movie-2020", store.get("a")?.branchKey)
+    }
+
+    @Test
     fun putPreservesExistingSiteWhenIncomingRowHasBlankSite() {
         val store = SearchResultStore()
         store.put(

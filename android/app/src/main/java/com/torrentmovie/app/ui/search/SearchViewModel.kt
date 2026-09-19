@@ -516,6 +516,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val settingsKeyAtStart = searchSettingsKey()
         val previousResults = _state.value.results
         val previousGroups = _state.value.groups
+        val keepStaleResults = _state.value.hasSearched && _state.value.query.trim() == q
         _state.value = _state.value.copy(
             loading = true,
             error = null,
@@ -524,8 +525,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             activeBrowseFeed = null,
             activeGenre = null,
             genrePanelExpanded = false,
-            results = emptyList(),
-            groups = emptyList(),
+            results = if (keepStaleResults) previousResults else emptyList(),
+            groups = if (keepStaleResults) previousGroups else emptyList(),
         )
         searchJob = viewModelScope.launch {
             fun requestStillCurrent(): Boolean {
