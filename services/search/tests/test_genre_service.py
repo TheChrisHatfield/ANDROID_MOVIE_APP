@@ -100,6 +100,18 @@ def test_force_refresh_empty_invalidates_cache(mock_fetch):
     assert cache.get("horror", movie_profile=True) is None
 
 
+def test_pool_rows_from_ranked_dedupes_live_discoveries():
+    from metadata.genre_pool import pool_rows_from_ranked
+
+    ranked = [
+        {"name": "Alpha 2020 1080p", "seeds": "10", "site": "YTS", "detail_url": "a1"},
+        {"name": "Alpha 2020 720p", "seeds": "5", "site": "1337x", "detail_url": "a2"},
+        {"name": "Beta 2021 1080p", "seeds": "8", "site": "YTS", "detail_url": "b1"},
+    ]
+    pool = pool_rows_from_ranked(ranked)
+    assert len(pool) == 3
+
+
 def test_browse_applies_filters_on_cache_hit():
     cache = GenrePoolCache()
     cache.put(

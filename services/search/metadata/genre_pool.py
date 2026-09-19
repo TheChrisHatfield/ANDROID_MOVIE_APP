@@ -55,6 +55,22 @@ def _merge_outcomes(*outcomes: SearchOutcome | None) -> tuple[list[dict], list[s
     return list(merged.values()), list(dict.fromkeys(failed))
 
 
+def pool_rows_from_ranked(ranked: list[dict]) -> list[dict]:
+    """Rebuild cacheable pool rows from ranked output (includes live MCT discoveries)."""
+    merged: dict[str, dict] = {}
+    for row in ranked:
+        key = _stable_row_key(row)
+        existing = merged.get(key)
+        if existing is None:
+            merged[key] = dict(row)
+        else:
+            if not existing.get("magnet") and row.get("magnet"):
+                existing["magnet"] = row["magnet"]
+            if not existing.get("poster_url") and row.get("poster_url"):
+                existing["poster_url"] = row["poster_url"]
+    return _diversify_unique_movies(list(merged.values()))
+
+
 def _diversify_unique_movies(rows: list[dict], max_per_movie: int = MAX_RELEASES_PER_MOVIE) -> list[dict]:
     """Limit releases per parsed movie title so shelves show more unique films."""
     counts: dict[str, int] = {}

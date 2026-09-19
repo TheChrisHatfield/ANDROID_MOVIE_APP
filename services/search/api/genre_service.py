@@ -7,7 +7,7 @@ import time
 from typing import Callable
 
 from api.genre_pool_cache import GenrePoolCache
-from metadata.genre_pool import fetch_genre_pool_rows, rank_genre_pool_rows
+from metadata.genre_pool import fetch_genre_pool_rows, pool_rows_from_ranked, rank_genre_pool_rows
 from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import apply_filters
@@ -221,26 +221,31 @@ class GenreBrowseService:
             parallel=parallel,
             discover_page_offset=discover_page_offset,
         )
-        if outcome.results:
+        ranked = rank_genre_pool_rows(
+            outcome.results,
+            genre_id,
+            self._searcher,
+            movie_profile=movie_profile,
+            limit=None,
+            mct_live=True,
+        )
+        if ranked:
+            pool_rows = pool_rows_from_ranked(ranked)
             self._cache.put(
                 genre_id,
-                outcome.results,
+                pool_rows,
                 outcome.failed_sites,
                 partial=partial_ok,
                 movie_profile=movie_profile,
             )
         elif not partial_ok:
             self._cache.invalidate(genre_id, movie_profile=movie_profile)
-        filtered = _rank_and_serve_rows(
-            outcome.results,
-            genre_id,
-            self._searcher,
-            movie_profile=movie_profile,
+        filtered = _serve_cached_rows(
+            ranked,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             max_size=max_size,
             limit=limit,
-            mct_live=True,
         )
         return SearchOutcome(
             results=filtered,
