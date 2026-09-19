@@ -41,7 +41,6 @@ fun FoldSearchDetailLayout(
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
     var genreAtDetailOpen by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
-    val settingsRevision by container.settingsRepository.revision.collectAsState()
 
     fun findRelease(id: String): TorrentResultDto? {
         val fromList = state.results.find { it.id == id }
@@ -121,27 +120,6 @@ fun FoldSearchDetailLayout(
         }
     }
 
-    var lastSearchFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
-    var lastSearchSettingsKey by rememberSaveable { mutableStateOf<String?>(null) }
-
-    fun currentSearchSettingsKey(): String {
-        val settings = container.settingsRepository.load()
-        return listOf(
-            settings.searchApiBaseUrl,
-            settings.tmdbApiKey,
-            settings.searchPages.toString(),
-            settings.movieSitesOnly.toString(),
-            settings.fetchMovieMetadata.toString(),
-            state.minSeeds?.toString().orEmpty(),
-            state.maxSeeds?.toString().orEmpty(),
-            state.maxSize.orEmpty(),
-        ).joinToString("|")
-    }
-
-    LaunchedEffect(settingsRevision, state.minSeeds, state.maxSeeds, state.maxSize) {
-        lastSearchSettingsKey = currentSearchSettingsKey()
-    }
-
     var lastBrowseGenreKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(
@@ -173,29 +151,6 @@ fun FoldSearchDetailLayout(
             restoredSite = null
             syncFoldSelection(null, "", "")
         }
-    }
-
-    LaunchedEffect(
-        state.minSeeds,
-        state.maxSeeds,
-        state.maxSize,
-        state.hasSearched,
-        state.loading,
-        state.query,
-    ) {
-        if (state.loading || !state.hasSearched || state.query.isBlank()) return@LaunchedEffect
-        val filterKey = listOf(
-            state.minSeeds?.toString().orEmpty(),
-            state.maxSeeds?.toString().orEmpty(),
-            state.maxSize.orEmpty(),
-        ).joinToString("|")
-        if (lastSearchFilterKey != null && lastSearchFilterKey != filterKey) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            syncFoldSelection(null, "", "")
-        }
-        lastSearchFilterKey = filterKey
     }
 
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
