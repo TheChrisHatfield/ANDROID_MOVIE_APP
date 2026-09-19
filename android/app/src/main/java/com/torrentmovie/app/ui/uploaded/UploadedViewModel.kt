@@ -97,7 +97,11 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 .map { entries -> entries.map { it.infoHash }.toSet() }
                 .distinctUntilChanged()
                 .drop(1)
-                .collect { refreshStatuses() }
+                .collect {
+                    if (_screenVisible.value) {
+                        refreshStatuses()
+                    }
+                }
         }
         viewModelScope.launch {
             container.settingsRepository.revision.drop(1).collect {

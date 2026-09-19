@@ -59,6 +59,9 @@ fun MainScaffold(container: AppContainer) {
     }
 
     fun navigate(destinationRoute: String) {
+        if (destinationRoute == Routes.SETTINGS) {
+            container.foldActiveSelection = null
+        }
         navigateTo(navController, destinationRoute)
     }
 

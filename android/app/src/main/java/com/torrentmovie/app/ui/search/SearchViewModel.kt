@@ -76,15 +76,17 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.genrePanelExpanded ||
                     _state.value.activeBrowseFeed != null ||
                     _state.value.activeGenre != null
-                if (key != lastSearchSettingsKey && modeActive) {
+                if (key != lastSearchSettingsKey) {
                     lastSearchSettingsKey = key
-                    _state.value = _state.value.copy(
-                        loading = true,
-                        error = null,
-                        errorCode = null,
-                        info = null,
-                    )
-                    refreshCurrentResults()
+                    if (modeActive) {
+                        _state.value = _state.value.copy(
+                            loading = true,
+                            error = null,
+                            errorCode = null,
+                            info = null,
+                        )
+                        refreshCurrentResults()
+                    }
                 }
             }
         }
@@ -456,6 +458,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val q = _state.value.query.trim()
         searchJob?.cancel()
         if (q.isEmpty()) {
+            if (
+                _state.value.genrePanelExpanded &&
+                _state.value.activeGenre == null &&
+                _state.value.activeBrowseFeed == null
+            ) {
+                _state.value = _state.value.copy(loading = false)
+                return
+            }
             searchGeneration += 1
             lastSearchedQuery = null
             _state.value = _state.value.copy(

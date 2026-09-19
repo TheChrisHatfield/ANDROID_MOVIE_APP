@@ -139,24 +139,7 @@ fun FoldSearchDetailLayout(
     }
 
     LaunchedEffect(settingsRevision, state.minSeeds, state.maxSeeds, state.maxSize) {
-        val key = currentSearchSettingsKey()
-        if (lastSearchSettingsKey != null && lastSearchSettingsKey != key && state.hasSearched) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            syncFoldSelection(null, "", "")
-        }
-        lastSearchSettingsKey = key
-    }
-
-    LaunchedEffect(state.query, state.lastExecutedQuery) {
-        val query = state.query.trim()
-        if (state.lastExecutedQuery.isNotBlank() && query != state.lastExecutedQuery.trim()) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            syncFoldSelection(null, "", "")
-        }
+        lastSearchSettingsKey = currentSearchSettingsKey()
     }
 
     var lastBrowseGenreKey by rememberSaveable { mutableStateOf<String?>(null) }

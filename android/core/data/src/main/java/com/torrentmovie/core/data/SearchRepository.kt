@@ -141,8 +141,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             val response = api().browseGenre(
                 genre = genre,
-                limit = 100,
-                pages = 1,
+                limit = minOf(settings.searchPages * 50, 200),
+                pages = settings.searchPages,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
