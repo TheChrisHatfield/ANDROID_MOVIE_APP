@@ -11,7 +11,8 @@ from uuid import UUID
 
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 
 from api.cache import ResultCache
 from api.genre_pool_cache import GenrePoolCache
@@ -19,6 +20,7 @@ from api.genre_service import GenreBrowseService, record_genre_feedback
 from api.models import HealthResponse, MagnetResponse, MovieGroup, SearchResponse, SitesHealthResponse, TorrentResult
 from metadata.grouping import build_movie_groups
 from metadata.tmdb_client import TmdbClient
+from metadata.web_poster import POSTER_PATH_PREFIX, cached_poster_path, is_poster_id
 from torrtux_core.filters import filter_size_bytes
 from torrtux_core.genres import MOVIE_GENRES, genre_display_label
 from torrtux_core.searcher import TorrentSearcher
@@ -99,6 +101,14 @@ def _refresh_sites_health(force: bool = False) -> list[str]:
     return working
 
 
+def _absolutize_poster_url(url: str | None, base: str) -> str | None:
+    if not url:
+        return None
+    if url.startswith(POSTER_PATH_PREFIX):
+        return base.rstrip("/") + url
+    return url
+
+
 def _build_search_response(
     query: str,
     raw_results: list[dict],
@@ -109,6 +119,7 @@ def _build_search_response(
     enrich: bool,
     tmdb_api_key: str | None,
     max_enrich_groups: int = 50,
+    poster_base_url: str = "",
 ) -> SearchResponse:
     stored = _result_cache.put_many(raw_results)
     flat_results = [TorrentResult(**row) for row in stored]
@@ -125,6 +136,15 @@ def _build_search_response(
             enrich_metadata=enrich,
             max_groups=min(limit, max_enrich_groups),
         )
+        if poster_base_url:
+            for group_row in group_rows:
+                group_row["poster_url"] = _absolutize_poster_url(
+                    group_row.get("poster_url"), poster_base_url,
+                )
+                for release in group_row.get("releases") or []:
+                    release["poster_url"] = _absolutize_poster_url(
+                        release.get("poster_url"), poster_base_url,
+                    )
         groups = [MovieGroup(**g) for g in group_rows]
         if groups:
             display_results = [TorrentResult(**row) for row in ungrouped_rows]
@@ -170,6 +190,7 @@ def sites_health(refresh: bool = Query(False)) -> SitesHealthResponse:
 
 @app.get("/v1/search", response_model=SearchResponse)
 def search(
+    request: Request,
     q: str = Query(..., min_length=1),
     sites: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
@@ -180,7 +201,7 @@ def search(
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     q = q.strip()
@@ -233,12 +254,14 @@ def search(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
+        poster_base_url=str(request.base_url),
     )
 
 
 @app.get("/v1/browse/1337x/{feed}", response_model=SearchResponse)
 def browse_1337x(
     feed: BrowseFeed,
+    request: Request,
     limit: int = Query(100, ge=1, le=200),
     pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
@@ -246,7 +269,7 @@ def browse_1337x(
     max_size: str | None = Query(None),
     movie_profile: bool = Query(True, description="Movie indexers and title filter (no TV/software)"),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     if feed not in X1337.BROWSE_FEEDS:
@@ -288,12 +311,14 @@ def browse_1337x(
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
         max_enrich_groups=50,
+        poster_base_url=str(request.base_url),
     )
 
 
 @app.get("/v1/browse/genre/{genre}", response_model=SearchResponse)
 def browse_genre(
     genre: str,
+    request: Request,
     limit: int = Query(100, ge=1, le=200),
     pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
@@ -302,7 +327,7 @@ def browse_genre(
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
     force_refresh: bool = Query(False, description="Bypass genre pool cache (pull-to-refresh)"),
 ) -> SearchResponse:
@@ -356,6 +381,7 @@ def browse_genre(
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
         max_enrich_groups=50,
+        poster_base_url=str(request.base_url),
     )
 
 
@@ -394,13 +420,14 @@ def genre_branch_feedback(
 @app.get("/v1/browse/1337x/genre/{genre}", response_model=SearchResponse)
 def browse_1337x_genre(
     genre: str,
+    request: Request,
     limit: int = Query(100, ge=1, le=200),
     pages: int = Query(1, ge=1, le=10),
     min_seeds: int | None = Query(None, ge=0),
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     normalized = genre.strip().lower()
@@ -439,6 +466,7 @@ def browse_1337x_genre(
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
         max_enrich_groups=50,
+        poster_base_url=str(request.base_url),
     )
 
 
@@ -466,6 +494,16 @@ def _fetch_magnet_for_row(row: dict) -> str | None:
     if magnet and str(magnet).strip():
         return str(magnet).strip()
     return None
+
+
+@app.get("/v1/posters/{poster_id}.jpg")
+def get_web_poster(poster_id: str):
+    if not is_poster_id(poster_id):
+        raise HTTPException(status_code=404, detail="Poster not found")
+    path = cached_poster_path(poster_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Poster not found")
+    return FileResponse(path, media_type="image/jpeg")
 
 
 @app.get("/v1/results/{result_id}/magnet", response_model=MagnetResponse)

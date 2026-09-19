@@ -139,6 +139,7 @@ As a user searching for a movie, I see **one card per film** (poster, title, yea
 2. **Given** TMDB is configured (`TMDB_API_KEY` on search service), **When** a group is shown, **Then** poster image and short overview (≤3 lines) appear on the card.
 3. **Given** TMDB returns a YouTube trailer, **When** the user taps the trailer control, **Then** the trailer opens in YouTube (or browser).
 4. **Given** a grouped movie card, **When** the user expands releases, **Then** each row shows site, size, and seeds in one compact line; tap opens detail/send flow unchanged.
+5. **Given** TMDB and indexer rows have no poster, **When** grouped results load with `enrich=true`, **Then** the search service web-searches using parsed title, year, overview, and torrent name tokens, cross-correlates candidate images, resizes a match to TMDB poster size (342×513), and returns `poster_url` on the group.
 
 ---
 
@@ -232,6 +233,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-034**: Fixes SHOULD land in shared code first; fold-only wiring changes MUST include fold-lane validation evidence in the cycle summary.
 - **FR-035**: Search API MUST support `group=true` (default) to merge torrent rows for the same film (parsed title + year) into `groups[]` with compact `releases[]` per indexer.
 - **FR-036**: When `TMDB_API_KEY` is set on the search service, grouped results SHOULD include `poster_url`, `overview` (short plot), and `trailer_youtube_key` from TMDB.
+- **FR-036a**: When a grouped title still has no poster after indexer metadata and TMDB, and `enrich=true`, the search service SHOULD build web image queries from torrent title, year, overview, date, and release name; rank candidates against those tokens; fetch a correlated still/poster; crop-resize to **342×513** JPEG; cache and serve at `/v1/posters/{id}.jpg`. Wikipedia/Wikimedia is the default source; Google Programmable Search images MAY be used when `GOOGLE_CSE_ID` and `GOOGLE_CSE_API_KEY` (or `GOOGLE_API_KEY`) are set. MUST NOT scrape Google HTML. Missing posters MUST NOT fail the search.
 - **FR-037**: Android search UI MUST render movie group cards (poster, title, year, overview, trailer affordance) and expandable compact release rows; detail/send flow unchanged per release.
 - **FR-038**: Torrent detail screen MUST show movie metadata (poster, overview, trailer) when available from grouped search; Settings MAY store optional TMDB API key passed to search API as `tmdb_api_key`.
 

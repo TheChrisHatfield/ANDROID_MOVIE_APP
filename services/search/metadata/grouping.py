@@ -4,6 +4,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
+from metadata.web_poster import fill_missing_posters
 
 _MAX_TMDB_WORKERS = 4
 
@@ -59,6 +60,11 @@ def _year_from_row(row: dict) -> int | None:
 
 
 def _append_group(bucket: dict, releases: list[dict], groups: list[dict]) -> None:
+    poster = bucket["poster_url"]
+    if poster:
+        for release in releases:
+            if not release.get("poster_url"):
+                release["poster_url"] = poster
     groups.append(
         {
             "group_key": bucket["group_key"],
@@ -139,6 +145,9 @@ def build_movie_groups(
     if enrich_metadata and tmdb and tmdb.configured:
         tmdb_buckets = [buckets[key] for key in primary_keys]
         _enrich_buckets_parallel(tmdb_buckets, tmdb)
+
+    if enrich_metadata:
+        fill_missing_posters([buckets[key] for key in primary_keys])
 
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)

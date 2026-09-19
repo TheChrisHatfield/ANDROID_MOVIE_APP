@@ -173,6 +173,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 - [x] T036 Update `docs/change-impact/project-map.md` with new modules
 - [x] T037 Run `py -3.11 -m hive_planner spec-drift-check` and `ci-check`
 - [x] T038 Wiring audit attestation for P1 flows (search + seedbox)
+- [x] T052 [US8] Web poster fallback when TMDB/indexer have no image (FR-036a) — Wikipedia/Wikimedia (+ optional Google CSE), resize 342×513, `/v1/posters/{id}.jpg`
 
 ---
 

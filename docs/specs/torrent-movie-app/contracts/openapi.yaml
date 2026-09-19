@@ -201,6 +201,28 @@ paths:
         '503':
           description: 1337x unavailable
 
+  /v1/posters/{posterId}.jpg:
+    get:
+      summary: Cached web-fallback movie poster (TMDB w342 size)
+      operationId: getWebPoster
+      parameters:
+        - name: posterId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{16,64}$'
+      responses:
+        '200':
+          description: JPEG poster 342×513
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Poster not in cache
+
   /v1/results/{resultId}/magnet:
     get:
       summary: Resolve magnet link for a cached result
