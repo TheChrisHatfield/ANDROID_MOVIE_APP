@@ -134,6 +134,29 @@ def build_movie_groups(
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)
 
+    if any(
+        release.get("_branch_order") is not None
+        for bucket, releases in staged
+        for release in releases
+    ):
+        groups.sort(
+            key=lambda group: min(
+                int(release.get("_branch_order", 9999))
+                for release in group.get("releases", [])
+            ),
+        )
+    elif any(
+        release.get("_genre_rank") is not None
+        for bucket, releases in staged
+        for release in releases
+    ):
+        groups.sort(
+            key=lambda group: min(
+                int(release.get("_genre_rank", 9999))
+                for release in group.get("releases", [])
+            ),
+        )
+
     return groups, ungrouped, bool(
         overflow_keys and enrich_metadata and tmdb and tmdb.configured
     )
