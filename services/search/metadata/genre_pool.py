@@ -132,6 +132,8 @@ def fetch_genre_pool_rows(
     rows, failed = _merge_outcomes(indexer, enrich)
     rows = _diversify_unique_movies(rows)
     if not rows:
+        if indexer and indexer.movie_indexers_unavailable:
+            return SearchOutcome([], failed, movie_indexers_unavailable=True)
         if indexer and indexer.indexers_unavailable:
             return SearchOutcome([], [], indexers_unavailable=True)
         return SearchOutcome([], failed, all_sources_failed=bool(failed))
@@ -153,6 +155,7 @@ def rank_genre_pool_rows(
     sites: list | None = None,
     movie_profile: bool = True,
     limit: int | None = None,
+    mct_live: bool = False,
 ) -> list[dict]:
     """MCT + Thompson rank on each request — non-deterministic shelf order."""
     ranked = rank_pool_thompson(
@@ -162,7 +165,7 @@ def rank_genre_pool_rows(
         searcher=searcher,
         sites=sites,
         movie_profile=movie_profile,
-        mct_live=True,
+        mct_live=mct_live,
     )
     if limit is not None:
         ranked = ranked[:limit]
@@ -204,6 +207,7 @@ def build_genre_pool(
         sites=sites,
         movie_profile=movie_profile,
         limit=limit,
+        mct_live=True,
     )
     return SearchOutcome(
         results=ranked,

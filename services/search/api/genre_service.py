@@ -59,6 +59,7 @@ def _rank_and_serve_rows(
     max_seeds: int | None,
     max_size: str | None,
     limit: int | None,
+    mct_live: bool = False,
 ) -> list[dict]:
     """Re-rank with MCT + Thompson on each request, then apply filters."""
     ranked = rank_genre_pool_rows(
@@ -67,6 +68,7 @@ def _rank_and_serve_rows(
         searcher,
         movie_profile=movie_profile,
         limit=None,
+        mct_live=mct_live,
     )
     return _serve_cached_rows(
         ranked,
@@ -93,7 +95,7 @@ class GenreBrowseService:
             normalized = genre_id.strip().lower()
             if normalized not in MOVIE_GENRES:
                 continue
-            self._schedule_refresh(normalized, movie_profile=movie_profile, partial_ok=True)
+            self._schedule_refresh(normalized, movie_profile=movie_profile, partial_ok=False)
 
     def browse(
         self,
@@ -111,7 +113,7 @@ class GenreBrowseService:
         normalized = genre_id.strip().lower()
         if not force_refresh:
             cached = self._cache.get(normalized, movie_profile=movie_profile)
-            if cached and cached.rows and not cached.partial:
+            if cached and cached.rows:
                 if not cached.is_fresh():
                     self._schedule_refresh(
                         normalized,
@@ -122,6 +124,7 @@ class GenreBrowseService:
                         limit=limit,
                         tmdb_api_key=tmdb_api_key,
                         enrich=enrich,
+                        partial_ok=False,
                     )
                 filtered = _rank_and_serve_rows(
                     cached.rows,
@@ -132,6 +135,7 @@ class GenreBrowseService:
                     max_seeds=max_seeds,
                     max_size=max_size,
                     limit=limit,
+                    mct_live=False,
                 )
                 return SearchOutcome(
                     results=filtered,
@@ -162,7 +166,7 @@ class GenreBrowseService:
         limit: int | None = None,
         tmdb_api_key: str | None = None,
         enrich: bool = True,
-        partial_ok: bool = True,
+        partial_ok: bool = False,
     ) -> None:
         if not self._cache.mark_refreshing(genre_id, movie_profile=movie_profile):
             return
@@ -214,7 +218,7 @@ class GenreBrowseService:
                 genre_id,
                 outcome.results,
                 outcome.failed_sites,
-                partial=partial_ok and len(outcome.results) < _POOL_BUILD_LIMIT,
+                partial=partial_ok,
                 movie_profile=movie_profile,
             )
         filtered = _rank_and_serve_rows(
@@ -226,6 +230,7 @@ class GenreBrowseService:
             max_seeds=max_seeds,
             max_size=max_size,
             limit=limit,
+            mct_live=True,
         )
         return SearchOutcome(
             results=filtered,

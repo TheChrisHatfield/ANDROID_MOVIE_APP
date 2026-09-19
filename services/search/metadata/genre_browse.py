@@ -192,6 +192,7 @@ def broad_indexer_genre_pool(
             "1337x": pool.submit(
                 searcher.browse_1337x_genre,
                 normalized,
+                movie_profile=movie_profile,
                 page_limit=BROAD_1337X_PAGE_LIMIT,
                 min_seeds=min_seeds,
                 max_seeds=max_seeds,

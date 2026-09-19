@@ -28,11 +28,7 @@ def test_genre_cache_misses_on_movie_profile_mismatch():
 
 
 @patch("api.genre_service.fetch_genre_pool_rows")
-def test_browse_skips_partial_cache_entry(mock_fetch):
-    mock_fetch.return_value = SearchOutcome(
-        [{"name": "Full 2020 1080p", "seeds": "10", "site": "YTS"}],
-        [],
-    )
+def test_browse_serves_partial_cache_entry(mock_fetch):
     cache = GenrePoolCache()
     cache.put(
         "horror",
@@ -42,8 +38,30 @@ def test_browse_skips_partial_cache_entry(mock_fetch):
         movie_profile=True,
     )
     service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
-    service.browse("horror", movie_profile=True)
-    mock_fetch.assert_called_once()
+    outcome = service.browse("horror", movie_profile=True)
+    mock_fetch.assert_not_called()
+    assert outcome.results
+
+
+def test_cache_put_never_downgrades_full_to_partial():
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [{"name": "Full 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+        partial=False,
+        movie_profile=True,
+    )
+    cache.put(
+        "horror",
+        [{"name": "Smaller 2020 1080p", "seeds": "5", "site": "YTS"}],
+        [],
+        partial=True,
+        movie_profile=True,
+    )
+    entry = cache.get("horror", movie_profile=True)
+    assert entry is not None
+    assert not entry.partial
 
 
 @patch("api.genre_service.rank_genre_pool_rows")

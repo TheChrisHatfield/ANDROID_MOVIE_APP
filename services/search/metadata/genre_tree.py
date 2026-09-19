@@ -109,14 +109,28 @@ def build_genre_branches(
             order.append(key)
         else:
             branch.genre_rank = min(branch.genre_rank, int(row.get("_genre_rank", 9999)))
-            seeds = seed_count(row.get("seeds", "-")) or 0
-            branch.alpha = max(branch.alpha, 1.0 + min(seeds / 50.0, 5.0))
+            if not feedback or key not in feedback:
+                seeds = seed_count(row.get("seeds", "-")) or 0
+                branch.alpha = max(branch.alpha, 1.0 + min(seeds / 50.0, 5.0))
         branch.releases.append(row)
 
     branches = [buckets[key] for key in order if key in buckets]
     if auto_merge:
         _merge_similar_branches(branches, threshold=_PRE_MERGE_THRESHOLD)
+    if feedback:
+        _apply_feedback_aliases(branches, feedback)
     return branches
+
+
+def _apply_feedback_aliases(
+    branches: list[GenreBranch],
+    feedback: dict[str, tuple[float, float]],
+) -> None:
+    """Apply feedback recorded under merged alias keys to surviving branches."""
+    for branch in branches:
+        for alias, (alpha, beta) in feedback.items():
+            if alias == branch.group_key or alias in branch.merged_keys:
+                branch.alpha, branch.beta = alpha, beta
 
 
 def _merge_similar_branches(branches: list[GenreBranch], threshold: float = 0.55) -> None:
@@ -142,6 +156,7 @@ def _merge_similar_branches(branches: list[GenreBranch], threshold: float = 0.55
                 winner.genre_rank = min(winner.genre_rank, loser.genre_rank)
                 winner.alpha = max(winner.alpha, loser.alpha)
                 winner.merged_keys.add(loser.group_key)
+                winner.merged_keys.update(loser.merged_keys)
                 branches.remove(loser)
                 merged = True
                 break
@@ -291,6 +306,7 @@ def _expand_branch(
     selected.genre_rank = min(selected.genre_rank, best_candidate.genre_rank)
     selected.alpha = max(selected.alpha, best_candidate.alpha)
     selected.merged_keys.add(best_candidate.group_key)
+    selected.merged_keys.update(best_candidate.merged_keys)
     branches.remove(best_candidate)
     return True
 

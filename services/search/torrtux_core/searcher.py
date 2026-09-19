@@ -368,6 +368,7 @@ class TorrentSearcher:
         self,
         genre: str,
         *,
+        movie_profile: bool = True,
         page_limit: int = 1,
         min_seeds: int | None = None,
         max_seeds: int | None = None,
@@ -393,8 +394,9 @@ class TorrentSearcher:
             return SearchOutcome([], [], indexers_unavailable=True)
 
         raw, errored = self._browse_genre_pages(site, genre, page_limit)
+        scoped = filter_movie_profile(raw) if movie_profile else raw
         filtered = apply_filters(
-            filter_movie_profile(raw),
+            scoped,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             max_size=max_size,
