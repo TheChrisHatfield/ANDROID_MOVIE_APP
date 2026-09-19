@@ -46,6 +46,33 @@ data class SeedboxTorrentStatus(
         return parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
     }
 
+    fun isActivelyDownloading(): Boolean {
+        if (isHashChecking || !isOpen) return false
+        if (sizeBytes > 0L && leftBytes == 0L && bytesDone >= sizeBytes) return false
+        return downRate > 0L || leftBytes > 0L
+    }
+
+    /** Seconds until complete at current down-rate (snapshot at poll time). */
+    fun etaSeconds(): Long? {
+        if (!isActivelyDownloading() || downRate <= 0L || leftBytes <= 0L) return null
+        return (leftBytes + downRate - 1) / downRate
+    }
+
+    fun etaSummary(elapsedSincePollSeconds: Long): String? {
+        if (
+            isOpen &&
+            !isHashChecking &&
+            leftBytes > 0L &&
+            downRate <= 0L &&
+            sizeBytes > 0L &&
+            bytesDone < sizeBytes
+        ) {
+            return "waiting for peers"
+        }
+        val base = etaSeconds() ?: return null
+        return formatEta((base - elapsedSincePollSeconds).coerceAtLeast(0L))
+    }
+
     companion object {
         fun isTrackableInfoHash(infoHash: String): Boolean {
             return infoHash.length == 40 &&
@@ -61,6 +88,20 @@ data class SeedboxTorrentStatus(
                 String.format(Locale.US, "%.1f MB/s", kb / 1024.0)
             } else {
                 String.format(Locale.US, "%.0f KB/s", kb)
+            }
+        }
+
+        fun formatEta(remainingSeconds: Long): String {
+            if (remainingSeconds <= 0L) return "<1m left"
+            if (remainingSeconds < 60L) return "~${remainingSeconds}s left"
+            val totalMinutes = remainingSeconds / 60L
+            if (totalMinutes < 60L) return "~${totalMinutes}m left"
+            val hours = totalMinutes / 60L
+            val minutes = totalMinutes % 60L
+            return if (minutes == 0L) {
+                "~${hours}h left"
+            } else {
+                "~${hours}h ${minutes}m left"
             }
         }
     }
