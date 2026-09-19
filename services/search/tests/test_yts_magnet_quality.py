@@ -22,3 +22,15 @@ def test_yts_magnet_payload_respects_quality():
     assert "CE9156EB" in magnet_720
     magnet_1080 = site._magnet_from_movie_payload(payload, quality="1080p")
     assert "224BF458" in magnet_1080
+
+
+def test_yts_magnet_fetch_uses_spec_timeout():
+    from unittest.mock import MagicMock, patch
+
+    site = YTS()
+    site.working_url = "https://yts.rs"
+    response = MagicMock(status_code=404, content=b"")
+    with patch("torrtux_core.sites.providers.http_get", return_value=response) as mock_get:
+        site.get_magnet_link("https://yts.rs/movie/inception-2010")
+    mock_get.assert_called_once()
+    assert mock_get.call_args.kwargs["timeout"] == 15

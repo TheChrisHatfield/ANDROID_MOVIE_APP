@@ -462,7 +462,7 @@ class YTS(TorrentSite):
         if not detail_url:
             return None
         try:
-            response = http_get(detail_url, timeout=20)
+            response = http_get(detail_url, timeout=15)
             if response.status_code != 200:
                 return None
             payload = _extract_next_data(response.content)
