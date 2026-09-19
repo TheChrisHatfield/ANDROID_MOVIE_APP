@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
-from torrtux_core.sites.providers import PirateBay, YTS
+from unittest.mock import MagicMock, patch
+
+from torrtux_core.base import TorrentSite
+from torrtux_core.sites.providers import LimeTorrents, PirateBay, YTS
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -52,6 +55,39 @@ def test_yts_current_detail_url_rewrites_stale_mirror_host():
     site.working_url = "https://yts.rs"
     stale = "https://old-yts.example/movie/inception-2010_123"
     assert site.current_detail_url(stale) == "https://yts.rs/movie/inception-2010_123"
+
+
+def test_limetorrents_magnet_rewrites_known_mirror_without_torrent_path():
+    site = LimeTorrents()
+    site.working_url = "https://www.limetorrents.pro"
+    stale = "https://www.limetorrents.lol/Inception-2010-1080p-torrent-12345.html"
+    assert (
+        site.current_detail_url(stale)
+        == "https://www.limetorrents.pro/Inception-2010-1080p-torrent-12345.html"
+    )
+
+
+def test_piratebay_current_detail_url_preserves_query():
+    site = PirateBay()
+    site.working_url = "https://tpb.party"
+    stale = "https://thepiratebay.org/description.php?id=42"
+    assert site.current_detail_url(stale) == "https://tpb.party/description.php?id=42"
+
+
+def test_base_magnet_fetch_uses_rewritten_mirror():
+    site = TorrentSite("Demo", ["https://a.example", "https://b.example"])
+    site.working_url = "https://b.example"
+    html = b"<html><body><a href='magnet:?xt=urn:btih:abcd'>m</a></body></html>"
+    seen: list[str] = []
+
+    def fake_get(url, **kwargs):
+        seen.append(url)
+        return MagicMock(status_code=200, content=html)
+
+    with patch("torrtux_core.base.http_get", side_effect=fake_get):
+        magnet = site.get_magnet_link("https://a.example/file/inception.html")
+    assert magnet == "magnet:?xt=urn:btih:abcd"
+    assert seen == ["https://b.example/file/inception.html"]
 
 
 def test_tpb_skips_apibay_no_results_placeholder():

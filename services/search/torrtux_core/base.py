@@ -52,10 +52,33 @@ class TorrentSite:
         if not absolute or not self.working_url:
             return absolute
         parsed = urlparse(absolute)
-        if not any(marker in parsed.path for marker in ("/torrent/", "/movie/", "/movies/")):
+        path = parsed.path.lower()
+        known_hosts = {urlparse(url).netloc.lower() for url in self.base_urls if url}
+        known_hosts.add(urlparse(self.working_url).netloc.lower())
+        looks_like_detail = any(
+            marker in path
+            for marker in (
+                "/torrent/",
+                "/torrents.php",
+                "/movie/",
+                "/movies/",
+                "/description.php",
+                "/file/",
+            )
+        )
+        if parsed.netloc.lower() not in known_hosts and not looks_like_detail:
             return absolute
         working = urlparse(self.working_url.rstrip("/"))
-        return urlunparse((working.scheme, working.netloc, parsed.path, "", "", ""))
+        return urlunparse(
+            (
+                working.scheme,
+                working.netloc,
+                parsed.path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment,
+            )
+        )
 
     def make_result(
         self,
@@ -80,7 +103,7 @@ class TorrentSite:
         }
 
     def get_magnet_link(self, detail_url: str | None, quality: str | None = None) -> str | None:
-        detail_url = self.absolute_detail_url(detail_url)
+        detail_url = self.current_detail_url(detail_url)
         if not detail_url:
             return None
         try:
