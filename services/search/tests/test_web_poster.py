@@ -148,6 +148,24 @@ def test_fill_attaches_disk_cache_then_searches_uncached_titles(tmp_path, monkey
     assert buckets[8]["poster_url"] == "/v1/posters/newtitle.jpg"
 
 
+def test_fill_applies_cached_posters_after_pending_limit(tmp_path, monkeypatch):
+    monkeypatch.setenv("POSTER_CACHE_DIR", str(tmp_path))
+    poster_id = poster_id_for("Later Cached", 2012)
+    dest = Path(tmp_path) / f"{poster_id}.jpg"
+    dest.write_bytes(encode_poster_jpeg(_rgb_image(40, 60)))
+    buckets = [
+        {"title": f"Need Network {i}", "year": 2000 + i, "poster_url": None, "releases": []}
+        for i in range(8)
+    ] + [{"title": "Later Cached", "year": 2012, "poster_url": None, "releases": []}]
+
+    def fake_resolve(title, year, **kwargs):
+        return "/v1/posters/net.jpg"
+
+    with patch("metadata.web_poster.resolve_web_poster", side_effect=fake_resolve):
+        fill_missing_posters(buckets, limit=8)
+    assert buckets[-1]["poster_url"] == poster_public_path(poster_id)
+
+
 def test_fill_skips_recent_misses_so_later_titles_can_search(monkeypatch):
     from metadata import web_poster as web_poster_mod
 
