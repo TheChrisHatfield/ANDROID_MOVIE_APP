@@ -20,4 +20,11 @@ class SeedboxPendingPersistTest {
     fun credentialChangeClearsPendingPersist() {
         assertTrue(seedboxAuthChanged("url|user|pass|basic", "url|other|pass|basic"))
     }
+
+    @Test
+    fun restoredAuthAfterRestartDetectsCredentialChange() {
+        val restored = "url|user|pass|basic"
+        assertTrue(seedboxAuthChanged(restored, "url|newbox|pass|basic"))
+        assertFalse(seedboxAuthChanged(restored, restored))
+    }
 }

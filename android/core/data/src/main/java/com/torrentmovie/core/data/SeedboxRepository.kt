@@ -20,15 +20,15 @@ class SeedboxRepository(
     private val sentWithoutPersist = mutableSetOf<String>()
     private val pendingPersistPrefs =
         context.applicationContext.getSharedPreferences(PREFS_PENDING_PERSIST, Context.MODE_PRIVATE)
+    private var cachedClient: RuTorrentClient? = null
+    private var cachedClientRevision = -1
+    private var lastSeedboxAuthKey: String? = pendingPersistPrefs.getString(KEY_AUTH, null)
 
     init {
         sentWithoutPersist.addAll(
             pendingPersistPrefs.getStringSet(KEY_PENDING, emptySet()).orEmpty(),
         )
     }
-    private var cachedClient: RuTorrentClient? = null
-    private var cachedClientRevision = -1
-    private var lastSeedboxAuthKey: String? = null
 
     private fun seedboxAuthKey(settings: AppSettings): String = listOf(
         settings.rutorrentBaseUrl,
@@ -65,6 +65,7 @@ class SeedboxRepository(
             clearSentWithoutPersistCache()
         }
         lastSeedboxAuthKey = authKey
+        persistLastSeedboxAuth()
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
         if (MagnetHashUtil.extractInfoHash(magnet) == null) {
             return SeedboxResult.Failure("Magnet missing info hash — cannot send or track status")
@@ -129,10 +130,27 @@ class SeedboxRepository(
         pendingPersistPrefs.edit().remove(KEY_PENDING).apply()
     }
 
+    private fun persistLastSeedboxAuth() {
+        val auth = lastSeedboxAuthKey
+        val editor = pendingPersistPrefs.edit()
+        if (auth == null) {
+            editor.remove(KEY_AUTH)
+        } else {
+            editor.putString(KEY_AUTH, auth)
+        }
+        editor.apply()
+    }
+
     private fun persistSentWithoutPersistCache() {
-        pendingPersistPrefs.edit()
+        val editor = pendingPersistPrefs.edit()
             .putStringSet(KEY_PENDING, sentWithoutPersist.toSet())
-            .apply()
+        val auth = lastSeedboxAuthKey
+        if (auth == null) {
+            editor.remove(KEY_AUTH)
+        } else {
+            editor.putString(KEY_AUTH, auth)
+        }
+        editor.apply()
     }
 
     private suspend fun persistUploadedMagnet(
@@ -236,6 +254,7 @@ class SeedboxRepository(
     companion object {
         private const val PREFS_PENDING_PERSIST = "seedbox_pending_persist"
         private const val KEY_PENDING = "keys"
+        private const val KEY_AUTH = "last_auth"
     }
 }
 
