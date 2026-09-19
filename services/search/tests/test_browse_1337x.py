@@ -157,3 +157,14 @@ def test_browse_genre_endpoint_uses_all_indexers(mock_browse):
     assert {row["site"] for row in body["results"]} == {"YTS", "1337x"}
     assert body["failed_sites"] == ["MagnetDL"]
     mock_browse.assert_called_once()
+
+
+def test_genre_feedback_returns_count():
+    response = client.post(
+        "/v1/browse/genre/horror/feedback",
+        params={"group_key": "insidious|2015", "success": True},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["count"] == 1

@@ -381,12 +381,12 @@ def genre_branch_feedback(
     genre: str,
     group_key: str = Query(..., min_length=1),
     success: bool = Query(True),
-) -> dict[str, str]:
+) -> dict:
     normalized = genre.strip().lower()
     if normalized not in MOVIE_GENRES:
         raise HTTPException(status_code=400, detail="Unknown genre")
     record_genre_feedback(normalized, group_key, success)
-    return {"status": "ok"}
+    return {"status": "ok", "count": 1}
 
 
 @app.get("/v1/browse/1337x/genre/{genre}", response_model=SearchResponse)
