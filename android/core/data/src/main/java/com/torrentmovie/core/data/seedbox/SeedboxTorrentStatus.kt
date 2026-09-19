@@ -62,6 +62,11 @@ data class SeedboxTorrentStatus(
         return downRate > 0L || leftBytes > 0L
     }
 
+    /** Progress bar is for an in-progress started torrent, not paused leftover bytes. */
+    fun showsDownloadProgress(): Boolean {
+        return isOpen && isStarted && !isHashChecking && sizeBytes > 0L && leftBytes > 0L
+    }
+
     /** Seconds until complete at current down-rate (snapshot at poll time). */
     fun etaSeconds(): Long? {
         if (!isActivelyDownloading() || downRate <= 0L || leftBytes <= 0L) return null

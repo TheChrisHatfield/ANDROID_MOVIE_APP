@@ -88,4 +88,13 @@ class SeedboxTorrentStatusTest {
         ).copy(isStarted = false)
         assertEquals("Paused", pausedComplete.statusLabel())
     }
+
+    @Test
+    fun downloadProgressHiddenWhenPaused() {
+        assertTrue(downloading().showsDownloadProgress())
+        assertTrue(!downloading(downRate = 0L, leftBytes = 500L).copy(isStarted = false).showsDownloadProgress())
+        assertTrue(
+            !downloading(leftBytes = 0L, bytesDone = 1000L, sizeBytes = 1000L).showsDownloadProgress(),
+        )
+    }
 }
