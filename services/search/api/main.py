@@ -287,7 +287,7 @@ def browse_1337x(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
-        max_enrich_groups=12,
+        max_enrich_groups=50,
     )
 
 
@@ -353,7 +353,7 @@ def browse_genre(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
-        max_enrich_groups=12,
+        max_enrich_groups=50,
     )
 
 
@@ -436,7 +436,7 @@ def browse_1337x_genre(
         group=group,
         enrich=enrich,
         tmdb_api_key=tmdb_api_key,
-        max_enrich_groups=12,
+        max_enrich_groups=50,
     )
 
 
