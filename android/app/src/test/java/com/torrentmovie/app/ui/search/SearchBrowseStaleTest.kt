@@ -16,4 +16,10 @@ class SearchBrowseStaleTest {
         assertFalse(keepStaleBrowseResults(previousId = null, nextId = "comedy"))
         assertFalse(keepStaleBrowseResults(previousId = "popular", nextId = "top"))
     }
+
+    @Test
+    fun newSearchQueryClearsPreviousTitleCards() {
+        assertFalse(keepStaleBrowseResults(previousId = "Inception", nextId = "Dune"))
+        assertTrue(keepStaleBrowseResults(previousId = "Dune", nextId = "Dune"))
+    }
 }

@@ -535,9 +535,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val maxSeeds = _state.value.maxSeeds
         val maxSize = _state.value.maxSize
         val settingsKeyAtStart = searchSettingsKey()
-        val previousResults = _state.value.results
-        val previousGroups = _state.value.groups
-        val keepStaleResults = _state.value.hasSearched && _state.value.query.trim() == q
+        val keepStaleResults = keepStaleBrowseResults(lastSearchedQuery, q)
+        val previousResults = if (keepStaleResults) _state.value.results else emptyList()
+        val previousGroups = if (keepStaleResults) _state.value.groups else emptyList()
         _state.value = _state.value.copy(
             loading = true,
             error = null,
@@ -546,8 +546,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             activeBrowseFeed = null,
             activeGenre = null,
             genrePanelExpanded = false,
-            results = if (keepStaleResults) previousResults else emptyList(),
-            groups = if (keepStaleResults) previousGroups else emptyList(),
+            results = previousResults,
+            groups = previousGroups,
         )
         searchJob = viewModelScope.launch {
             fun requestStillCurrent(): Boolean {
