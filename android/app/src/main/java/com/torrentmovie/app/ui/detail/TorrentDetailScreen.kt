@@ -53,6 +53,7 @@ fun TorrentDetailScreen(
     var magnetError by remember(resultId) { mutableStateOf<String?>(null) }
     var magnetLoading by remember(resultId) { mutableStateOf(false) }
     var resultExpired by remember(resultId) { mutableStateOf(false) }
+    var pendingPersist by remember(resultId) { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
     val settings = remember(settingsRevision) { container.settingsRepository.load() }
     val seedboxConfigured = settings.rutorrentBaseUrl.isNotBlank() &&
@@ -82,6 +83,12 @@ fun TorrentDetailScreen(
             magnet = initialMagnet
             magnetError = null
         }
+    }
+
+    LaunchedEffect(magnet, name, site) {
+        val current = magnet ?: initialMagnet
+        pendingPersist = !current.isNullOrBlank() &&
+            container.seedboxRepository.isPendingPersist(current, name, site)
     }
 
     fun resolveUploadedKey(magnetValue: String? = magnet): String? {
@@ -214,6 +221,8 @@ fun TorrentDetailScreen(
         }
         if (duplicate) {
             Text("Sent", color = MaterialTheme.colorScheme.error)
+        } else if (pendingPersist) {
+            Text("Sent to seedbox — saving history…", color = MaterialTheme.colorScheme.primary)
         }
         if (magnetLoading) {
             Text("Loading magnet…")
@@ -266,9 +275,12 @@ fun TorrentDetailScreen(
                                     "history save failed",
                                     ignoreCase = true,
                                 )
+                                pendingPersist = persistFailed
                                 if (!persistFailed) {
                                     duplicate = true
                                     justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
+                                } else {
+                                    duplicate = false
                                 }
                                 val length = if (persistFailed) {
                                     Toast.LENGTH_LONG
@@ -292,7 +304,8 @@ fun TorrentDetailScreen(
                 }
             },
             enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
+                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired &&
+                !pendingPersist,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Text(if (loading) "Sending…" else "Send to seedbox")
