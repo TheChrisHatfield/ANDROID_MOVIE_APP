@@ -124,6 +124,42 @@ def test_browse_does_not_steal_in_flight_refresh(mock_fetch):
     assert cache.is_refreshing("horror", movie_profile=True)
 
 
+@patch("api.genre_service._REFRESH_WAIT_SECONDS", 0.3)
+@patch("api.genre_service._REFRESH_POLL_SECONDS", 0.01)
+@patch("api.genre_service.fetch_genre_pool_rows")
+def test_force_refresh_waits_for_in_flight_instead_of_serving_stale(mock_fetch):
+    import threading
+    import time
+
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [{"name": "Stale 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+        movie_profile=True,
+    )
+    assert cache.mark_refreshing("horror", movie_profile=True)
+
+    def complete_in_flight() -> None:
+        time.sleep(0.05)
+        cache.put(
+            "horror",
+            [{"name": "Fresh 2021 1080p", "seeds": "50", "site": "YTS"}],
+            [],
+            movie_profile=True,
+        )
+        cache.clear_refreshing("horror", movie_profile=True)
+
+    worker = threading.Thread(target=complete_in_flight)
+    worker.start()
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    outcome = service.browse("horror", movie_profile=True, force_refresh=True)
+    worker.join()
+    mock_fetch.assert_not_called()
+    assert len(outcome.results) == 1
+    assert "Fresh" in outcome.results[0]["name"]
+
+
 def test_browse_applies_filters_on_cache_hit():
     cache = GenrePoolCache()
     cache.put(

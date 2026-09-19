@@ -6,7 +6,7 @@ import threading
 import time
 from typing import Callable
 
-from api.genre_pool_cache import GenrePoolCache
+from api.genre_pool_cache import GenrePoolCache, GenrePoolEntry
 from metadata.genre_pool import fetch_genre_pool_rows, pool_rows_from_ranked, rank_genre_pool_rows
 from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
@@ -157,6 +157,7 @@ class GenreBrowseService:
                 max_seeds=max_seeds,
                 max_size=max_size,
                 limit=limit,
+                wait_for_completion=force_refresh,
             )
             if served is not None:
                 return served
@@ -192,47 +193,78 @@ class GenreBrowseService:
         max_seeds: int | None,
         max_size: str | None,
         limit: int | None,
+        wait_for_completion: bool = False,
     ) -> SearchOutcome | None:
         deadline = time.time() + _REFRESH_WAIT_SECONDS
         while time.time() < deadline:
+            refreshing = self._cache.is_refreshing(genre_id, movie_profile=movie_profile)
             cached = self._cache.get(genre_id, movie_profile=movie_profile)
-            if cached and cached.rows:
-                filtered = _rank_and_serve_rows(
-                    cached.rows,
-                    genre_id,
-                    self._searcher,
-                    movie_profile=movie_profile,
-                    min_seeds=min_seeds,
-                    max_seeds=max_seeds,
-                    max_size=max_size,
-                    limit=limit,
-                    mct_live=False,
-                )
-                return SearchOutcome(
-                    results=filtered,
-                    failed_sites=list(cached.failed_sites),
-                )
-            if not self._cache.is_refreshing(genre_id, movie_profile=movie_profile):
-                break
+            if wait_for_completion:
+                if not refreshing:
+                    if cached and cached.rows:
+                        return self._outcome_from_cached_rows(
+                            cached,
+                            genre_id,
+                            movie_profile=movie_profile,
+                            min_seeds=min_seeds,
+                            max_seeds=max_seeds,
+                            max_size=max_size,
+                            limit=limit,
+                        )
+                    return None
+            else:
+                if cached and cached.rows:
+                    return self._outcome_from_cached_rows(
+                        cached,
+                        genre_id,
+                        movie_profile=movie_profile,
+                        min_seeds=min_seeds,
+                        max_seeds=max_seeds,
+                        max_size=max_size,
+                        limit=limit,
+                    )
+                if not refreshing:
+                    break
             time.sleep(_REFRESH_POLL_SECONDS)
         cached = self._cache.get(genre_id, movie_profile=movie_profile)
         if cached and cached.rows:
-            filtered = _rank_and_serve_rows(
-                cached.rows,
+            return self._outcome_from_cached_rows(
+                cached,
                 genre_id,
-                self._searcher,
                 movie_profile=movie_profile,
                 min_seeds=min_seeds,
                 max_seeds=max_seeds,
                 max_size=max_size,
                 limit=limit,
-                mct_live=False,
-            )
-            return SearchOutcome(
-                results=filtered,
-                failed_sites=list(cached.failed_sites),
             )
         return None
+
+    def _outcome_from_cached_rows(
+        self,
+        cached: GenrePoolEntry,
+        genre_id: str,
+        *,
+        movie_profile: bool,
+        min_seeds: int | None,
+        max_seeds: int | None,
+        max_size: str | None,
+        limit: int | None,
+    ) -> SearchOutcome:
+        filtered = _rank_and_serve_rows(
+            cached.rows,
+            genre_id,
+            self._searcher,
+            movie_profile=movie_profile,
+            min_seeds=min_seeds,
+            max_seeds=max_seeds,
+            max_size=max_size,
+            limit=limit,
+            mct_live=False,
+        )
+        return SearchOutcome(
+            results=filtered,
+            failed_sites=list(cached.failed_sites),
+        )
 
     def _schedule_refresh(
         self,
