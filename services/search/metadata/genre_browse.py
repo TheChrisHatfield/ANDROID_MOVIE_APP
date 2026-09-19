@@ -11,9 +11,11 @@ from torrtux_core.searcher import SearchOutcome, TorrentSearcher
 
 logger = logging.getLogger(__name__)
 
-GENRE_TITLE_SEARCH_LIMIT = 12
-GENRE_TITLE_FANOUT_TIMEOUT_SEC = 28
-GENRE_RELEASES_PER_TITLE = 6
+GENRE_TITLE_SEARCH_LIMIT = 28
+GENRE_TITLE_FANOUT_TIMEOUT_SEC = 45
+GENRE_RELEASES_PER_TITLE = 3
+GENRE_DISCOVER_MAX_PAGES = 3
+GENRE_KEYWORD_PAGE_LIMIT = 2
 
 
 def _attach_discover_metadata(row: dict, rank: int, movie: TmdbDiscoverMovie) -> None:
@@ -22,6 +24,32 @@ def _attach_discover_metadata(row: dict, rank: int, movie: TmdbDiscoverMovie) ->
         row["poster_url"] = movie.poster_url
     if movie.overview and not row.get("overview"):
         row["overview"] = movie.overview
+
+
+def _discover_genre_movies(
+    tmdb: TmdbClient,
+    tmdb_id: int,
+    *,
+    title_limit: int,
+    page_offset: int = 1,
+) -> list[TmdbDiscoverMovie]:
+    """Fetch multiple TMDB discover pages for broader unique title coverage."""
+    movies: list[TmdbDiscoverMovie] = []
+    seen_ids: set[int] = set()
+    page = max(page_offset, 1)
+    while len(movies) < title_limit and page < page_offset + GENRE_DISCOVER_MAX_PAGES:
+        batch = tmdb.discover_movies(tmdb_id, page=page, limit=20)
+        if not batch:
+            break
+        for movie in batch:
+            if movie.tmdb_id in seen_ids:
+                continue
+            seen_ids.add(movie.tmdb_id)
+            movies.append(movie)
+            if len(movies) >= title_limit:
+                break
+        page += 1
+    return movies
 
 
 def _sort_genre_rows(rows: list[dict]) -> list[dict]:
@@ -45,6 +73,7 @@ def curated_genre_search(
     max_size: str | None = None,
     limit: int | None = None,
     title_limit: int = GENRE_TITLE_SEARCH_LIMIT,
+    discover_page_offset: int = 1,
 ) -> SearchOutcome | None:
     """
     Discover popular movies in genre via TMDB, search torrents per title across indexers.
@@ -55,7 +84,12 @@ def curated_genre_search(
     if not tmdb_id or not tmdb.configured:
         return None
 
-    movies = tmdb.discover_movies(tmdb_id, limit=title_limit)
+    movies = _discover_genre_movies(
+        tmdb,
+        tmdb_id,
+        title_limit=title_limit,
+        page_offset=discover_page_offset,
+    )
     if not movies:
         return None
 

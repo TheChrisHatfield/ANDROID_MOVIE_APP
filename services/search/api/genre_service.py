@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from typing import Callable
 
 from api.genre_pool_cache import GenrePoolCache
@@ -17,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 # Build a wide pool for cache; per-request filters applied at serve time.
 _POOL_BUILD_LIMIT = 150
+
+def _discover_page_offset(genre_id: str, *, rotate: bool) -> int:
+    """Rotate TMDB discover pages on refresh so genre shelves surface new titles."""
+    if not rotate:
+        return 1
+    bucket = (hash(genre_id.strip().lower()) + int(time.time()) // 1800) % 3
+    return bucket + 1
+
 
 def record_genre_feedback(genre_id: str, group_key: str, success: bool) -> None:
     record_genre_branch_feedback(genre_id, group_key, success)
@@ -108,6 +117,7 @@ class GenreBrowseService:
             tmdb_api_key=tmdb_api_key,
             enrich=enrich,
             partial_ok=False,
+            discover_page_offset=_discover_page_offset(normalized, rotate=force_refresh),
         )
 
     def _schedule_refresh(
@@ -138,6 +148,7 @@ class GenreBrowseService:
                     tmdb_api_key=tmdb_api_key,
                     enrich=enrich,
                     partial_ok=partial_ok,
+                    discover_page_offset=_discover_page_offset(genre_id, rotate=True),
                 )
             finally:
                 self._cache.clear_refreshing(genre_id, movie_profile=movie_profile)
@@ -156,6 +167,7 @@ class GenreBrowseService:
         tmdb_api_key: str | None,
         enrich: bool,
         partial_ok: bool,
+        discover_page_offset: int = 1,
     ) -> SearchOutcome:
         tmdb_client, _ = self._tmdb_resolver(tmdb_api_key)
         use_tmdb = enrich and tmdb_client.configured and tmdb_client.validate_key()
@@ -165,6 +177,7 @@ class GenreBrowseService:
             tmdb_client if use_tmdb else None,
             movie_profile=movie_profile,
             limit=_POOL_BUILD_LIMIT,
+            discover_page_offset=discover_page_offset,
         )
         if outcome.results:
             self._cache.put(

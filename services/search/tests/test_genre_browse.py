@@ -16,6 +16,20 @@ def _movie(title: str, rank: int = 0) -> TmdbDiscoverMovie:
     )
 
 
+def test_discover_genre_movies_fetches_multiple_pages():
+    from metadata.genre_browse import _discover_genre_movies
+
+    tmdb = MagicMock()
+    tmdb.discover_movies.side_effect = [
+        [_movie(f"Film{i}", i) for i in range(20)],
+        [_movie(f"More{i}", i + 20) for i in range(20)],
+        [],
+    ]
+    movies = _discover_genre_movies(tmdb, 27, title_limit=28)
+    assert len(movies) == 28
+    assert tmdb.discover_movies.call_count >= 2
+
+
 @patch.object(TorrentSearcher, "search")
 def test_curated_genre_search_orders_by_discover_rank(mock_search):
     searcher = TorrentSearcher(site_classes=[])
