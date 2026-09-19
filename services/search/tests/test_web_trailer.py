@@ -156,6 +156,29 @@ def test_resolve_picks_live_oembed_candidate():
     web_trailer_mod._memory_hit.pop(trailer_id_for("Inception", 2010), None)
 
 
+def test_empty_oembed_title_skips_candidate():
+    candidate = TrailerCandidate(
+        video_id="dQw4w9WgXcQ",
+        title="Inception Official Trailer (2010)",
+        snippet="film",
+        source="wikipedia",
+    )
+    cache_id = trailer_id_for("Inception", 2010)
+    web_trailer_mod._memory_hit.pop(cache_id, None)
+    web_trailer_mod._memory_miss.pop(cache_id, None)
+    with patch("metadata.web_trailer._wikidata_candidates", return_value=[candidate]), patch(
+        "metadata.web_trailer._wikipedia_candidates", return_value=[]
+    ), patch(
+        "metadata.web_trailer._youtube_api_candidates", return_value=[]
+    ), patch(
+        "metadata.web_trailer._google_cse_youtube_candidates", return_value=[]
+    ), patch(
+        "metadata.web_trailer._oembed_title", return_value=""
+    ):
+        assert resolve_web_trailer("Inception", 2010) is None
+    web_trailer_mod._memory_miss.pop(cache_id, None)
+
+
 def test_grouping_attaches_web_trailer_key():
     rows = [{"id": "1", "name": "Obscure Film 2020 1080p", "site": "1337x"}]
     with patch("metadata.grouping.fill_missing_posters", return_value=0), patch(

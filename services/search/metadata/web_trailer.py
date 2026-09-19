@@ -404,7 +404,8 @@ def _oembed_title(session: requests.Session, video_id: str) -> str | None:
         )
         if resp.status_code != 200:
             return None
-        return str((resp.json() or {}).get("title") or "") or ""
+        title = str((resp.json() or {}).get("title") or "").strip()
+        return title or None
     except Exception:
         return None
 
@@ -467,19 +468,18 @@ def resolve_web_trailer(
         ranked.sort(key=lambda item: item[0], reverse=True)
         for _, candidate in ranked[:_MAX_CANDIDATES]:
             oembed_title = _oembed_title(session, candidate.video_id)
-            if oembed_title is None:
+            if not oembed_title:
                 continue
-            if oembed_title:
-                rescored = TrailerCandidate(
-                    video_id=candidate.video_id,
-                    title=oembed_title,
-                    snippet=candidate.snippet,
-                    source=candidate.source,
-                )
-                if score_trailer_candidate(
-                    rescored, title=title, year=year, overview=overview,
-                ) < _MIN_SCORE:
-                    continue
+            rescored = TrailerCandidate(
+                video_id=candidate.video_id,
+                title=oembed_title,
+                snippet=candidate.snippet,
+                source=candidate.source,
+            )
+            if score_trailer_candidate(
+                rescored, title=title, year=year, overview=overview,
+            ) < _MIN_SCORE:
+                continue
             _note_hit(cache_id, candidate.video_id)
             return candidate.video_id
         _note_miss(cache_id)
