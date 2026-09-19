@@ -53,6 +53,8 @@ fun FoldSearchDetailLayout(
                 magnet = fromList.magnet?.takeIf { it.isNotBlank() } ?: fromStore.magnet,
                 detail_url = fromList.detail_url?.takeIf { it.isNotBlank() } ?: fromStore.detail_url,
                 site = fromList.site.takeIf { it.isNotBlank() } ?: fromStore.site,
+                poster_url = fromList.poster_url?.takeIf { it.isNotBlank() } ?: fromStore.poster_url,
+                branch_key = fromList.branch_key?.takeIf { it.isNotBlank() } ?: fromStore.branch_key,
             )
         }
     }
@@ -138,6 +140,7 @@ fun FoldSearchDetailLayout(
             selectedId = null
             restoredName = null
             restoredSite = null
+            genreAtDetailOpen = null
             syncFoldSelection(null, "", "")
         }
         lastBrowseGenreKey = key
@@ -149,6 +152,7 @@ fun FoldSearchDetailLayout(
             selectedId = null
             restoredName = null
             restoredSite = null
+            genreAtDetailOpen = null
             syncFoldSelection(null, "", "")
         }
     }
@@ -159,6 +163,7 @@ fun FoldSearchDetailLayout(
             selectedId = null
             restoredName = null
             restoredSite = null
+            genreAtDetailOpen = null
             syncFoldSelection(null, "", "")
         }
     }
@@ -208,6 +213,7 @@ fun FoldSearchDetailLayout(
         selectedId = null
         restoredName = null
         restoredSite = null
+        genreAtDetailOpen = null
         syncFoldSelection(null, "", "")
     }
 
@@ -260,6 +266,7 @@ fun FoldSearchDetailLayout(
                             selectedId = null
                             restoredName = null
                             restoredSite = null
+                            genreAtDetailOpen = null
                             syncFoldSelection(null, "", "")
                         },
                         onResultIdChanged = { newId ->
