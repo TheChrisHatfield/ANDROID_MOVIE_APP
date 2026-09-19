@@ -91,7 +91,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             val response = api().browse1337x(
                 feed = feed,
-                limit = 100,
+                limit = minOf(settings.searchPages * 50, 200),
                 pages = settings.searchPages,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
