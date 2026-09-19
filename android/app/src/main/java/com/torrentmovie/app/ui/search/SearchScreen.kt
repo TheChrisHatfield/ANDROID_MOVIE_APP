@@ -139,7 +139,7 @@ fun SearchScreen(
             val key = MagnetHashUtil.storageKey(magnet, result.name, result.site)
             return uploaded.any { it.infoHash.equals(key, ignoreCase = true) }
         }
-        return uploaded.any { it.displayName == result.name && it.site == result.site }
+        return false
     }
 
     fun openDetail(result: TorrentResultDto) {
