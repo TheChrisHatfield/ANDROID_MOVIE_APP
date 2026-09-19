@@ -14,7 +14,13 @@ from torrtux_core.sites import ALL_SITE_CLASSES
 logger = logging.getLogger(__name__)
 
 INDEXER_HTTP_TIMEOUT = 15
-SEARCH_FANOUT_TIMEOUT_SEC = 22
+SEARCH_FANOUT_TIMEOUT_CAP_SEC = 110
+
+
+def search_fanout_timeout_sec(page_limit: int) -> int:
+    """Give each indexer time for sequential pages without exceeding the Android read timeout."""
+    pages = max(1, int(page_limit or 1))
+    return min(SEARCH_FANOUT_TIMEOUT_CAP_SEC, INDEXER_HTTP_TIMEOUT * pages + 5)
 
 
 @dataclass
@@ -129,8 +135,9 @@ class TorrentSearcher:
                     pool.submit(self._search_site, site, query, page_limit): site
                     for site in active_sites
                 }
+                fanout_timeout = search_fanout_timeout_sec(page_limit)
                 try:
-                    completed = as_completed(futures, timeout=SEARCH_FANOUT_TIMEOUT_SEC)
+                    completed = as_completed(futures, timeout=fanout_timeout)
                     for future in completed:
                         site = futures[future]
                         try:
@@ -148,7 +155,7 @@ class TorrentSearcher:
                     if pending:
                         logger.warning(
                             "search fan-out timed out after %ss; skipping %s",
-                            SEARCH_FANOUT_TIMEOUT_SEC,
+                            fanout_timeout,
                             ", ".join(pending),
                         )
                         failed_sites.extend(pending)

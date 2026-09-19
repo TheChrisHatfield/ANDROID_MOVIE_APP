@@ -197,7 +197,7 @@ def test_parallel_search_fanout_timeout_returns_partial_results():
         return [{"name": "fast", "seeds": "1", "size": "1 GB", "site": "Fast"}], False
 
     with patch.object(searcher, "_search_site", side_effect=search_side_effect):
-        with patch.object(searcher_mod, "SEARCH_FANOUT_TIMEOUT_SEC", 0.1):
+        with patch.object(searcher_mod, "search_fanout_timeout_sec", return_value=0.1):
             results, failed = searcher.search_all_sites("q", parallel=True, sites=[fast, slow])
 
     assert any(row["name"] == "fast" for row in results)
@@ -219,3 +219,8 @@ def test_all_sources_failed_flag():
 
 def test_indexer_http_timeout_matches_fr020():
     assert searcher_mod.INDEXER_HTTP_TIMEOUT == 15
+
+
+def test_search_fanout_timeout_covers_default_two_pages():
+    assert searcher_mod.search_fanout_timeout_sec(2) >= searcher_mod.INDEXER_HTTP_TIMEOUT * 2
+    assert searcher_mod.search_fanout_timeout_sec(10) <= searcher_mod.SEARCH_FANOUT_TIMEOUT_CAP_SEC
