@@ -31,3 +31,16 @@ def test_get_does_not_evict_refreshing_placeholder():
     assert cache.get("horror", movie_profile=True) is None
     assert cache.is_refreshing("horror", movie_profile=True)
     assert cache.mark_refreshing("horror", movie_profile=True) is False
+
+
+def test_expired_rows_still_served_while_refreshing():
+    cache = GenrePoolCache()
+    cache.put("horror", [{"name": "Film 2020 1080p", "site": "YTS"}], [])
+    assert cache.mark_refreshing("horror")
+    entry = cache.get("horror")
+    assert entry is not None
+    entry.created_at = time.time() - STALE_TTL_SECONDS - 1
+    served = cache.get("horror")
+    assert served is not None
+    assert served.rows
+    assert cache.is_refreshing("horror")

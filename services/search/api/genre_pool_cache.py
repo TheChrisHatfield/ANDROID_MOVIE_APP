@@ -26,7 +26,11 @@ class GenrePoolEntry:
         return self.age_seconds() < FRESH_TTL_SECONDS
 
     def is_usable(self) -> bool:
-        return self.rows and self.age_seconds() < STALE_TTL_SECONDS
+        if not self.rows:
+            return False
+        if self.refreshing:
+            return True
+        return self.age_seconds() < STALE_TTL_SECONDS
 
 
 def _entry_key(genre_id: str, movie_profile: bool) -> str:
