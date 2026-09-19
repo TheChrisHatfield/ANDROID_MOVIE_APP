@@ -114,10 +114,9 @@ fun SearchScreen(
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.error, state.info, state.errorCode, state.results.size, state.groups.size) {
-        val inlineErrorCode = state.errorCode == 503 || state.errorCode == 400
         val hasVisibleResults = state.results.isNotEmpty() || state.groups.isNotEmpty()
         state.error
-            ?.takeIf { !inlineErrorCode && hasVisibleResults }
+            ?.takeIf { shouldSnackbarSearchError(hasVisibleResults) }
             ?.let { msg ->
                 val key = "err:$msg:${state.errorCode}"
                 if (key != lastSnackbarKey) {
@@ -281,11 +280,7 @@ fun SearchScreen(
                 }
                 state.hasSearched && state.groups.isEmpty() &&
                     state.results.isEmpty() && !state.loading -> {
-                    val message = when (state.errorCode) {
-                        503 -> "No sources available. Check the search API and try again."
-                        400 -> state.error ?: "Invalid search request. Check filters and try again."
-                        else -> state.error ?: "No results found. Try another title or adjust filters."
-                    }
+                    val message = searchEmptyStateMessage(state.errorCode, state.error)
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
