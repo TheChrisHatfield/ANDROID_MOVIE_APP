@@ -13,7 +13,7 @@ from torrtux_core.sites import ALL_SITE_CLASSES
 
 logger = logging.getLogger(__name__)
 
-INDEXER_HTTP_TIMEOUT = 8
+INDEXER_HTTP_TIMEOUT = 15
 SEARCH_FANOUT_TIMEOUT_SEC = 22
 
 

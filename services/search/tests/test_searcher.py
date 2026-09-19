@@ -215,3 +215,7 @@ def test_all_sources_failed_flag():
 
     assert out.results == []
     assert out.all_sources_failed is True
+
+
+def test_indexer_http_timeout_matches_fr020():
+    assert searcher_mod.INDEXER_HTTP_TIMEOUT == 15
