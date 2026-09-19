@@ -25,6 +25,19 @@ class PhoneDetailHandoffTest {
     }
 
     @Test
+    fun keepsFoldSelectionWhenRematchStaysOnDetail() {
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose("detail/{resultId}?name={name}&site={site}"))
+        assertFalse(shouldClearPhoneFoldSelectionOnDetailDispose("detail/abc?name=Inception&site=YTS"))
+    }
+
+    @Test
+    fun clearsFoldSelectionWhenLeavingPhoneDetail() {
+        assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose("search"))
+        assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose("settings"))
+        assertTrue(shouldClearPhoneFoldSelectionOnDetailDispose(null))
+    }
+
+    @Test
     fun prefersGenreCapturedWhenOpeningDetail() {
         assertEquals(
             "horror",

@@ -28,6 +28,7 @@ import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
+import com.torrentmovie.app.ui.util.shouldClearPhoneFoldSelectionOnDetailDispose
 import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
 import com.torrentmovie.app.ui.util.snapshotGenreAtDetailOpen
 import com.torrentmovie.core.data.AppContainer
@@ -221,9 +222,7 @@ fun AppNavGraph(
 
             DisposableEffect(resultId, useTwoPane) {
                 if (!useTwoPane) {
-                    val priorGenre = container.foldActiveSelection
-                        ?.takeIf { it.resultId == resultId }
-                        ?.genreId
+                    val priorGenre = container.foldActiveSelection?.genreId
                     container.foldActiveSelection = PendingFoldDetail(
                         resultId = resultId,
                         name = navName,
@@ -232,7 +231,12 @@ fun AppNavGraph(
                     )
                 }
                 onDispose {
-                    if (!useTwoPane) {
+                    if (
+                        !useTwoPane &&
+                        shouldClearPhoneFoldSelectionOnDetailDispose(
+                            navController.currentBackStackEntry?.destination?.route,
+                        )
+                    ) {
                         container.foldActiveSelection = null
                     }
                 }
@@ -241,7 +245,7 @@ fun AppNavGraph(
             val cached = container.searchResultStore.get(resultId)
             val genreAtOpen = remember(resultId) {
                 snapshotGenreAtDetailOpen(
-                    foldActiveSelection?.takeIf { it.resultId == resultId }?.genreId,
+                    foldActiveSelection?.genreId,
                     searchState.activeGenre,
                 )
             }

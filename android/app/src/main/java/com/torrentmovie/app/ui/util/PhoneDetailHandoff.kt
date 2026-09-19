@@ -10,6 +10,10 @@ internal fun shouldPopExpiredPhoneDetail(
     navName: String,
 ): Boolean = !storeHit && !rematchHit && navName.isBlank()
 
+internal fun shouldClearPhoneFoldSelectionOnDetailDispose(currentRoute: String?): Boolean {
+    return currentRoute?.startsWith("detail/") != true
+}
+
 internal fun snapshotGenreAtDetailOpen(
     capturedGenreId: String?,
     currentGenreId: String?,
