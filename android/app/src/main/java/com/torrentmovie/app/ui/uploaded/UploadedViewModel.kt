@@ -7,13 +7,17 @@ import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.db.UploadedMagnet
 import com.torrentmovie.core.data.seedbox.SeedboxTorrentStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -36,28 +40,48 @@ data class UploadedUiState(
 class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     private companion object {
         const val ADDING_GRACE_MS = 120_000L
+        const val POLL_IDLE_MS = 15_000L
+        const val POLL_ACTIVE_MS = 5_000L
+        const val ETA_TICK_MS = 1_000L
     }
 
     private val _refreshing = MutableStateFlow(false)
     private val _statusError = MutableStateFlow<String?>(null)
     private val _remoteByHash = MutableStateFlow<Map<String, SeedboxTorrentStatus>>(emptyMap())
     private val _pollSucceeded = MutableStateFlow(false)
+    private val _syncClock = MutableStateFlow(SyncClock())
+    private val _screenVisible = MutableStateFlow(false)
     private var refreshGeneration = 0
+    private var pollLoopJob: Job? = null
+    private var etaTickJob: Job? = null
 
-    val uiState: StateFlow<UploadedUiState> = kotlinx.coroutines.flow.combine(
-        container.uploadedRepository.observeAll(),
-        _refreshing,
-        _statusError,
-        _remoteByHash,
-        _pollSucceeded,
-    ) { entries, refreshing, statusError, remoteByHash, pollSucceeded ->
+    val uiState: StateFlow<UploadedUiState> = combine(
+        combine(
+            container.uploadedRepository.observeAll(),
+            _refreshing,
+            _statusError,
+            _remoteByHash,
+            _pollSucceeded,
+        ) { entries, refreshing, statusError, remoteByHash, pollSucceeded ->
+            PollUiInputs(entries, refreshing, statusError, remoteByHash, pollSucceeded)
+        },
+        _syncClock,
+    ) { inputs, clock ->
         val configured = container.settingsRepository.isSeedboxConfigured()
+        val elapsedSincePollSeconds = clock.elapsedSincePollSeconds()
         UploadedUiState(
-            rows = entries.map { entry ->
-                toRow(entry, remoteByHash, configured, pollSucceeded, statusError)
+            rows = inputs.entries.map { entry ->
+                toRow(
+                    entry,
+                    inputs.remoteByHash,
+                    configured,
+                    inputs.pollSucceeded,
+                    inputs.statusError,
+                    elapsedSincePollSeconds,
+                )
             },
-            refreshing = refreshing,
-            statusError = statusError,
+            refreshing = inputs.refreshing,
+            statusError = inputs.statusError,
             seedboxConfigured = configured,
         )
     }.stateIn(
@@ -80,9 +104,41 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 if (!container.settingsRepository.isSeedboxConfigured()) {
                     _remoteByHash.value = emptyMap()
                     _pollSucceeded.value = false
+                    _syncClock.value = SyncClock()
                 }
                 refreshStatuses()
             }
+        }
+        startEtaTicker()
+    }
+
+    private data class PollUiInputs(
+        val entries: List<UploadedMagnet>,
+        val refreshing: Boolean,
+        val statusError: String?,
+        val remoteByHash: Map<String, SeedboxTorrentStatus>,
+        val pollSucceeded: Boolean,
+    )
+
+    private data class SyncClock(
+        val lastPollAtMs: Long = 0L,
+        val displayTickMs: Long = 0L,
+    ) {
+        fun elapsedSincePollSeconds(): Long {
+            if (lastPollAtMs <= 0L) return 0L
+            return ((displayTickMs.coerceAtLeast(lastPollAtMs) - lastPollAtMs) / 1_000L)
+        }
+    }
+
+    fun setScreenVisible(visible: Boolean) {
+        if (_screenVisible.value == visible) return
+        _screenVisible.value = visible
+        if (visible) {
+            refreshStatuses()
+            startPollLoop()
+        } else {
+            pollLoopJob?.cancel()
+            pollLoopJob = null
         }
     }
 
@@ -99,6 +155,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 if (!container.settingsRepository.isSeedboxConfigured()) {
                     _remoteByHash.value = emptyMap()
                     _pollSucceeded.value = false
+                    _syncClock.value = SyncClock()
                     return@launch
                 }
                 val (statuses, error) = withContext(Dispatchers.IO) {
@@ -106,15 +163,47 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 if (generation != refreshGeneration) return@launch
                 if (error == null) {
+                    val now = System.currentTimeMillis()
                     _remoteByHash.value = statuses
                     _pollSucceeded.value = true
+                    _syncClock.value = SyncClock(lastPollAtMs = now, displayTickMs = now)
                 } else {
                     _statusError.value = error
                     _pollSucceeded.value = false
+                    _remoteByHash.value = emptyMap()
+                    _syncClock.value = SyncClock()
                 }
             } finally {
                 if (generation == refreshGeneration) {
                     _refreshing.value = false
+                }
+            }
+        }
+    }
+
+    private fun startPollLoop() {
+        pollLoopJob?.cancel()
+        pollLoopJob = viewModelScope.launch {
+            while (isActive && _screenVisible.value) {
+                val hasActiveDownloads = _remoteByHash.value.values.any { it.isActivelyDownloading() }
+                delay(if (hasActiveDownloads) POLL_ACTIVE_MS else POLL_IDLE_MS)
+                if (_screenVisible.value) {
+                    refreshStatuses()
+                }
+            }
+        }
+    }
+
+    private fun startEtaTicker() {
+        if (etaTickJob?.isActive == true) return
+        etaTickJob = viewModelScope.launch {
+            while (isActive) {
+                delay(ETA_TICK_MS)
+                if (_remoteByHash.value.values.any { it.isActivelyDownloading() && it.etaSeconds() != null }) {
+                    val clock = _syncClock.value
+                    if (clock.lastPollAtMs > 0L) {
+                        _syncClock.value = clock.copy(displayTickMs = System.currentTimeMillis())
+                    }
                 }
             }
         }
@@ -130,6 +219,7 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
         seedboxConfigured: Boolean,
         pollSucceeded: Boolean,
         statusError: String?,
+        elapsedSincePollSeconds: Long,
     ): UploadedRowUi {
         val lookupHash = lookupHash(entry)
         val remote = lookupHash?.let { remoteByHash[it] }
@@ -137,9 +227,10 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
         val statusLine = when {
             !seedboxConfigured -> "Sent locally · configure seedbox for live status"
             lookupHash == null -> "Sent · status unavailable (no info hash in magnet)"
-            remote != null -> buildString {
+            remote != null && statusError == null -> buildString {
                 append(remote.statusLabel())
                 remote.rateSummary()?.let { append(" · ").append(it) }
+                remote.etaSummary(elapsedSincePollSeconds)?.let { append(" · ").append(it) }
             }
             recentlySent && lookupHash != null -> "Adding to seedbox…"
             statusError != null -> "Status unavailable"

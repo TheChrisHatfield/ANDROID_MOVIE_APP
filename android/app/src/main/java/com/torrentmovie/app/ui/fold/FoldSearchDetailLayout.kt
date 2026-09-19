@@ -266,9 +266,6 @@ fun FoldSearchDetailLayout(
                 return@LaunchedEffect
             }
         }
-        if (container.searchResultStore.get(id) != null) {
-            return@LaunchedEffect
-        }
         selectedId = null
         restoredName = null
         restoredSite = null
@@ -337,6 +334,9 @@ fun FoldSearchDetailLayout(
                             )
                         },
                         onOpenUploaded = onOpenUploaded,
+                        onGenreBranchFeedback = { success ->
+                            searchViewModel.recordGenreBranchFeedback(result.id, success)
+                        },
                     )
                 }
             }
