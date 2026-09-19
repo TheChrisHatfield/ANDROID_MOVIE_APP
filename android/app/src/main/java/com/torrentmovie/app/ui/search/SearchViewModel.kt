@@ -294,8 +294,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         val label = feed.label
-        val previousResults = _state.value.results
-        val previousGroups = _state.value.groups
+        val keepStale = keepStaleBrowseResults(_state.value.activeBrowseFeed, feed.id)
+        val previousResults = if (keepStale) _state.value.results else emptyList()
+        val previousGroups = if (keepStale) _state.value.groups else emptyList()
         _state.value = _state.value.copy(
             query = label,
             activeBrowseFeed = feed.id,
@@ -306,6 +307,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             error = null,
             errorCode = null,
             info = null,
+            results = previousResults,
+            groups = previousGroups,
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -382,8 +385,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
         val generation = ++searchGeneration
         val label = genre.label
-        val previousResults = _state.value.results
-        val previousGroups = _state.value.groups
+        val keepStale = keepStaleBrowseResults(_state.value.activeGenre, genre.id)
+        val previousResults = if (keepStale) _state.value.results else emptyList()
+        val previousGroups = if (keepStale) _state.value.groups else emptyList()
         _state.value = _state.value.copy(
             query = label,
             activeBrowseFeed = null,
@@ -394,6 +398,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             error = null,
             errorCode = null,
             info = null,
+            results = previousResults,
+            groups = previousGroups,
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
