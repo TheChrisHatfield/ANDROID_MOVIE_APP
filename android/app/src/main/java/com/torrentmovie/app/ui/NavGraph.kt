@@ -227,9 +227,7 @@ fun AppNavGraph(
             }
 
             val cached = container.searchResultStore.get(resultId)
-            val genreAtOpen = remember(resultId, searchState.activeGenre) {
-                searchState.activeGenre
-            }
+            val genreAtOpen = remember(resultId) { searchState.activeGenre }
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
