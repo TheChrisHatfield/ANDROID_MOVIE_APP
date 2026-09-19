@@ -35,6 +35,7 @@ class SeedboxRepository(
         settings.username,
         settings.password,
         settings.authScheme,
+        settings.downloadDirectory,
     ).joinToString("|")
 
     @Synchronized
@@ -105,6 +106,11 @@ class SeedboxRepository(
             return persisted
         }
         result
+    }
+
+    fun isPendingPersist(magnet: String, displayName: String, site: String): Boolean {
+        val key = MagnetHashUtil.storageKey(magnet, displayName, site)
+        return key in sentWithoutPersist
     }
 
     fun clearSentWithoutPersist(infoHash: String) {

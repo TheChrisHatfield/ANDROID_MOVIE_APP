@@ -11,7 +11,13 @@ class AppContainer(context: Context) {
     var pendingFoldDetail: PendingFoldDetail? = null
 
     /** Latest fold two-pane selection (survives layout disposal on width change). */
-    var foldActiveSelection: PendingFoldDetail? = null
+    private val _foldActiveSelection = MutableStateFlow<PendingFoldDetail?>(null)
+    val foldActiveSelectionFlow: StateFlow<PendingFoldDetail?> = _foldActiveSelection.asStateFlow()
+    var foldActiveSelection: PendingFoldDetail?
+        get() = _foldActiveSelection.value
+        set(value) {
+            _foldActiveSelection.value = value
+        }
 
     /** Scroll/highlight target when opening Uploaded from detail after send. */
     var pendingUploadedHighlight: String? = null

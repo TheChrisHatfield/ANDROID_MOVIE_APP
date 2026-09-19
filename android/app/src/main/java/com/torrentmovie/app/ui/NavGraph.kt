@@ -50,6 +50,7 @@ fun AppNavGraph(
 ) {
     val searchViewModel: SearchViewModel = viewModel { SearchViewModel(container) }
     val searchState by searchViewModel.state.collectAsState()
+    val foldActiveSelection by container.foldActiveSelectionFlow.collectAsState()
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val useTwoPane = AdaptiveLayout.useTwoPaneSearchDetail(screenWidthDp)
 
@@ -96,9 +97,9 @@ fun AppNavGraph(
         wasTwoPane = useTwoPane
     }
 
-    LaunchedEffect(useTwoPane, container.foldActiveSelection) {
+    LaunchedEffect(useTwoPane, foldActiveSelection) {
         if (useTwoPane) return@LaunchedEffect
-        val active = container.foldActiveSelection ?: return@LaunchedEffect
+        val active = foldActiveSelection ?: return@LaunchedEffect
         val route = navController.currentBackStackEntry?.destination?.route
         if (route != null && route.startsWith("detail/")) return@LaunchedEffect
         navController.navigate(
