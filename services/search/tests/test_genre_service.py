@@ -1,7 +1,8 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from api.genre_pool_cache import GenrePoolCache
 from api.genre_service import GenreBrowseService, _serve_cached_rows
+from torrtux_core.searcher import SearchOutcome
 
 
 def test_serve_cached_rows_applies_min_seeds():
@@ -24,6 +25,25 @@ def test_genre_cache_misses_on_movie_profile_mismatch():
     )
     assert cache.get("horror", movie_profile=True) is not None
     assert cache.get("horror", movie_profile=False) is None
+
+
+@patch("api.genre_service.build_genre_pool")
+def test_browse_skips_partial_cache_entry(mock_build):
+    mock_build.return_value = SearchOutcome(
+        [{"name": "Full 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+    )
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [{"name": "Partial 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+        partial=True,
+        movie_profile=True,
+    )
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service.browse("horror", movie_profile=True)
+    mock_build.assert_called_once()
 
 
 def test_browse_applies_filters_on_cache_hit():

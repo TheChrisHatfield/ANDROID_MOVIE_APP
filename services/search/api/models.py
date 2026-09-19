@@ -25,6 +25,9 @@ class TorrentResult(BaseModel):
     magnet: str | None = None
     detail_url: str | None = None
     poster_url: str | None = None
+    branch_key: str | None = Field(default=None, alias="_branch_key")
+
+    model_config = {"populate_by_name": True}
 
 
 class MovieGroup(BaseModel):

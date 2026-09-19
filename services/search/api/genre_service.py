@@ -74,7 +74,7 @@ class GenreBrowseService:
         normalized = genre_id.strip().lower()
         if not force_refresh:
             cached = self._cache.get(normalized, movie_profile=movie_profile)
-            if cached and cached.rows:
+            if cached and cached.rows and not cached.partial:
                 if not cached.is_fresh():
                     self._schedule_refresh(
                         normalized,
@@ -123,7 +123,7 @@ class GenreBrowseService:
         enrich: bool = True,
         partial_ok: bool = True,
     ) -> None:
-        if not self._cache.mark_refreshing(genre_id):
+        if not self._cache.mark_refreshing(genre_id, movie_profile=movie_profile):
             return
 
         def run() -> None:
@@ -140,7 +140,7 @@ class GenreBrowseService:
                     partial_ok=partial_ok,
                 )
             finally:
-                self._cache.clear_refreshing(genre_id)
+                self._cache.clear_refreshing(genre_id, movie_profile=movie_profile)
 
         threading.Thread(target=run, daemon=True, name=f"genre-pool-{genre_id}").start()
 
