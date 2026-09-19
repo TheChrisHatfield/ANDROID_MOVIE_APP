@@ -209,3 +209,23 @@ def test_fill_missing_trailers_respects_wall_clock_budget(monkeypatch):
     with patch("metadata.web_trailer.resolve_web_trailer", side_effect=slow_resolve):
         fill_missing_trailers(buckets)
     assert time.time() - start < 1.0
+
+
+def test_fill_applies_cached_hits_past_pending_limit():
+    late_id = trailer_id_for("Later Film", 2001)
+    web_trailer_mod._memory_hit[late_id] = "dQw4w9WgXcQ"
+    buckets = [
+        {"title": "Need Network", "year": 2000, "trailer_youtube_key": None, "releases": []},
+        {"title": "Later Film", "year": 2001, "trailer_youtube_key": None, "releases": []},
+    ]
+
+    def fake_resolve(title, year, **kwargs):
+        assert title == "Need Network"
+        return None
+
+    try:
+        with patch("metadata.web_trailer.resolve_web_trailer", side_effect=fake_resolve):
+            fill_missing_trailers(buckets, limit=1)
+        assert buckets[1]["trailer_youtube_key"] == "dQw4w9WgXcQ"
+    finally:
+        web_trailer_mod._memory_hit.pop(late_id, None)

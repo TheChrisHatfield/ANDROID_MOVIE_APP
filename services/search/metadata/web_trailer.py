@@ -512,9 +512,10 @@ def fill_missing_trailers(buckets: list[dict], *, limit: int = _MAX_PER_REQUEST)
             continue
         if _is_recent_miss(cache_id):
             continue
-        pending.append(bucket)
-        if len(pending) >= limit:
-            break
+        if _is_recent_miss(cache_id):
+            continue
+        if len(pending) < limit:
+            pending.append(bucket)
     if not pending:
         return filled
 
