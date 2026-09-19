@@ -175,8 +175,8 @@ def broad_indexer_genre_pool(
     """
     normalized = genre_id.strip().lower()
     outcomes: list[SearchOutcome] = []
-    keyword_pages = max(1, min(page_limit or BROAD_KEYWORD_PAGE_LIMIT, 5))
-    x1337_pages = max(1, min(page_limit or BROAD_1337X_PAGE_LIMIT, 5))
+    keyword_pages = max(1, min(page_limit or BROAD_KEYWORD_PAGE_LIMIT, 10))
+    x1337_pages = max(1, min(page_limit or BROAD_1337X_PAGE_LIMIT, 10))
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = {

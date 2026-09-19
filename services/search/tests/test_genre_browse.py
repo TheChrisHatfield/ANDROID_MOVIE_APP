@@ -88,6 +88,17 @@ def test_broad_indexer_genre_pool_fans_out(mock_search, mock_1337x):
     mock_1337x.assert_called_once()
 
 
+@patch.object(TorrentSearcher, "browse_1337x_genre")
+@patch.object(TorrentSearcher, "search")
+def test_broad_indexer_genre_pool_honors_page_limit(mock_search, mock_1337x):
+    searcher = TorrentSearcher(site_classes=[])
+    mock_search.return_value = SearchOutcome([], [])
+    mock_1337x.return_value = SearchOutcome([], [])
+    broad_indexer_genre_pool(searcher, "horror", page_limit=10)
+    assert mock_search.call_args.kwargs["page_limit"] == 10
+    assert mock_1337x.call_args.kwargs["page_limit"] == 10
+
+
 @patch.object(TorrentSearcher, "search")
 def test_keyword_genre_search_uses_genre_term(mock_search):
     searcher = TorrentSearcher(site_classes=[])
