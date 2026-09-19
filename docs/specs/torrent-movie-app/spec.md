@@ -238,6 +238,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-036b**: When a grouped title still has no usable YouTube trailer after indexer metadata and TMDB, and `enrich=true`, the search service SHOULD build trailer queries from torrent title, year, overview, date, and release name; rank candidates that look like official trailers; and set `trailer_youtube_key` to an 11-character YouTube video id. Wikipedia/Wikidata is the default source; YouTube Data API search MAY be used when `YOUTUBE_API_KEY` (or `GOOGLE_API_KEY`) is set; Google Programmable Search MAY return `site:youtube.com` hits when CSE keys are set. MUST NOT scrape YouTube or Google HTML. Invalid indexer codes (not a YouTube video id) MUST be treated as missing. Missing trailers MUST NOT fail the search.
 - **FR-037**: Android search UI MUST render movie group cards (poster, title, year, overview, trailer affordance) and expandable compact release rows; detail/send flow unchanged per release.
 - **FR-038**: Torrent detail screen MUST show movie metadata (poster, overview, trailer) when available from grouped search; Settings MAY store optional TMDB API key passed to search API as `tmdb_api_key`.
+- **FR-039**: Android launcher and in-app title MUST display **Missy's Movies**. The app background MUST use Pantone Red 032 C (`#EF3340`). The launcher icon MUST use the Missy portrait on that red fill.
 
 ### Key Entities
 

@@ -68,6 +68,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 - Pull-to-refresh on results
 - Error banners per FR-010
 - TMDB + web poster (FR-036a) and YouTube trailer (FR-036b) fallbacks on grouped results
+- Brand as **Missy's Movies** with Missy portrait launcher icon and Pantone Red 032 C (`#EF3340`) app background (FR-039)
 - Optional: qBittorrent / Transmission adapters behind `SeedboxClient` interface
 
 ## Technical decisions

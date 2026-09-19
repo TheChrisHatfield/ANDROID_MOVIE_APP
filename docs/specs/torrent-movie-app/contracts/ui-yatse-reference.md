@@ -28,7 +28,7 @@
 
 ```
 ┌─────────────────────────────────────┐
-│ [≡]  Torrent Movies    [🔍][host] │  ← Top app bar: drawer, title, search, seedbox status
+│ [≡]  Missy's Movies    [🔍][host] │  ← Top app bar: drawer, title, search, seedbox status
 ├─────────────────────────────────────┤
 │                                     │
 │         Main content area           │  ← Search | Uploaded | Settings | Help
