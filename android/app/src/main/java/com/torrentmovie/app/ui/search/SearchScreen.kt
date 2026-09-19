@@ -161,7 +161,7 @@ fun SearchScreen(
                 if (state.activeGenre != null || state.activeBrowseFeed != null ||
                     (state.hasSearched && state.query.isNotBlank())
                 ) {
-                    vm.refreshCurrentResults()
+                    vm.refreshCurrentResults(forceRefresh = false)
                 }
             },
         )

@@ -157,10 +157,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun refreshCurrentResults() {
+    fun refreshCurrentResults(forceRefresh: Boolean = true) {
         val genre = X1337MovieGenre.fromId(_state.value.activeGenre)
         if (genre != null) {
-            loadGenreBrowse(genre, forceRefresh = true)
+            loadGenreBrowse(genre, forceRefresh = forceRefresh)
             return
         }
         val feed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
