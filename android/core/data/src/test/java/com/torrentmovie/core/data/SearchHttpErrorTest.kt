@@ -10,6 +10,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 
 class SearchHttpErrorTest {
     @Test
@@ -52,5 +53,16 @@ class CanceledNetworkTest {
         assertTrue(isCanceledNetwork(IOException("call canceled")))
         assertFalse(isCanceledNetwork(IOException("Cannot connect to search API")))
         assertFalse(isCanceledNetwork(IOException("timeout")))
+    }
+
+    @Test
+    fun healthAndWarmDoNotSwallowCoroutineCancellation() {
+        try {
+            CancellationException("job cancelled").rethrowIfCancelled()
+            throw AssertionError("expected CancellationException")
+        } catch (e: CancellationException) {
+            assertEquals("job cancelled", e.message)
+        }
+        IOException("down").rethrowIfCancelled()
     }
 }

@@ -22,4 +22,10 @@ class SearchBrowseStaleTest {
         assertFalse(keepStaleBrowseResults(previousId = "Inception", nextId = "Dune"))
         assertTrue(keepStaleBrowseResults(previousId = "Dune", nextId = "Dune"))
     }
+
+    @Test
+    fun cancelledOrSupersededSearchDoesNotCommit() {
+        assertTrue(shouldCommitSearchOutcome(startedGeneration = 3, currentGeneration = 3))
+        assertFalse(shouldCommitSearchOutcome(startedGeneration = 3, currentGeneration = 4))
+    }
 }

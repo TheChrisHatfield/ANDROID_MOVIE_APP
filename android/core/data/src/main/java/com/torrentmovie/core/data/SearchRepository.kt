@@ -127,7 +127,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 genres = genres,
                 movieProfile = settings.movieSitesOnly,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             // Background prefetch — ignore failures
         }
     }
@@ -182,7 +183,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 groupKey = groupKey,
                 success = success,
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             // Ranking feedback is best-effort
         }
     }
@@ -190,7 +192,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     suspend fun isTmdbConfigured(): Boolean {
         return try {
             api().health().tmdbConfigured
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.rethrowIfCancelled()
             false
         }
     }
@@ -239,6 +242,10 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     }
 
     private fun mapHttpError(e: HttpException): SearchException = mapSearchHttpError(e, gson)
+}
+
+internal fun Exception.rethrowIfCancelled() {
+    if (this is CancellationException) throw this
 }
 
 internal fun isCanceledNetwork(e: IOException): Boolean {

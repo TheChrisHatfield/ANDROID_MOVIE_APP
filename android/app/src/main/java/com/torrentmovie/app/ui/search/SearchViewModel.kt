@@ -249,9 +249,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastExecutedQuery = "",
             loading = false,
         )
-        viewModelScope.launch {
+        searchJob = viewModelScope.launch {
             try {
                 container.searchRepository.warmGenrePools()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // LOD-style background prefetch — non-blocking
             }
@@ -338,6 +340,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
                 if (!requestStillCurrent()) return@launch
                 applySuccessfulOutcome(
+                    generation = generation,
                     outcome = outcome,
                     executedLabel = label,
                     minSeeds = minSeeds,
@@ -430,6 +433,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
                 if (!requestStillCurrent()) return@launch
                 applySuccessfulOutcome(
+                    generation = generation,
                     outcome = outcome,
                     executedLabel = label,
                     minSeeds = minSeeds,
@@ -573,6 +577,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 )
                 if (!requestStillCurrent()) return@launch
                 applySuccessfulOutcome(
+                    generation = generation,
                     outcome = outcome,
                     executedLabel = q,
                     minSeeds = minSeeds,
@@ -605,6 +610,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private suspend fun applySuccessfulOutcome(
+        generation: Int,
         outcome: SearchResult,
         executedLabel: String,
         minSeeds: Int?,
@@ -659,9 +665,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             settings.tmdbApiKey.isBlank() &&
             !try {
                 container.searchRepository.isTmdbConfigured()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 false
             }
+        if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
         val allReleases = display.groups.flatMap { it.releases }
         allReleases.forEach { container.searchResultStore.put(it) }
