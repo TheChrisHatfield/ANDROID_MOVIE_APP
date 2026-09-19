@@ -27,9 +27,9 @@ def test_genre_cache_misses_on_movie_profile_mismatch():
     assert cache.get("horror", movie_profile=False) is None
 
 
-@patch("api.genre_service.build_genre_pool")
-def test_browse_skips_partial_cache_entry(mock_build):
-    mock_build.return_value = SearchOutcome(
+@patch("api.genre_service.fetch_genre_pool_rows")
+def test_browse_skips_partial_cache_entry(mock_fetch):
+    mock_fetch.return_value = SearchOutcome(
         [{"name": "Full 2020 1080p", "seeds": "10", "site": "YTS"}],
         [],
     )
@@ -43,7 +43,28 @@ def test_browse_skips_partial_cache_entry(mock_build):
     )
     service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
     service.browse("horror", movie_profile=True)
-    mock_build.assert_called_once()
+    mock_fetch.assert_called_once()
+
+
+@patch("api.genre_service.rank_genre_pool_rows")
+def test_browse_reranks_on_cache_hit(mock_rank):
+    mock_rank.return_value = [
+        {"name": "High 2020 1080p", "seeds": "50", "site": "YTS"},
+        {"name": "Low 2020 1080p", "seeds": "2", "site": "YTS"},
+    ]
+    cache = GenrePoolCache()
+    cache.put(
+        "horror",
+        [
+            {"name": "Low 2020 1080p", "seeds": "2", "site": "YTS"},
+            {"name": "High 2020 1080p", "seeds": "50", "site": "YTS"},
+        ],
+        [],
+        movie_profile=True,
+    )
+    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service.browse("horror", movie_profile=True)
+    mock_rank.assert_called_once()
 
 
 def test_browse_applies_filters_on_cache_hit():

@@ -7,7 +7,7 @@ import time
 from typing import Callable
 
 from api.genre_pool_cache import GenrePoolCache
-from metadata.genre_pool import build_genre_pool
+from metadata.genre_pool import fetch_genre_pool_rows, rank_genre_pool_rows
 from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
 from torrtux_core.filters import apply_filters
@@ -39,9 +39,37 @@ def _serve_cached_rows(
     max_size: str | None,
     limit: int | None,
 ) -> list[dict]:
-    """Re-apply request filters to cached pool rows (cache stores unfiltered merge)."""
+    """Re-apply request filters to ranked pool rows."""
     return apply_filters(
         rows,
+        min_seeds=min_seeds,
+        max_seeds=max_seeds,
+        max_size=max_size,
+        limit=limit,
+    )
+
+
+def _rank_and_serve_rows(
+    rows: list[dict],
+    genre_id: str,
+    searcher: TorrentSearcher,
+    *,
+    movie_profile: bool,
+    min_seeds: int | None,
+    max_seeds: int | None,
+    max_size: str | None,
+    limit: int | None,
+) -> list[dict]:
+    """Re-rank with MCT + Thompson on each request, then apply filters."""
+    ranked = rank_genre_pool_rows(
+        rows,
+        genre_id,
+        searcher,
+        movie_profile=movie_profile,
+        limit=None,
+    )
+    return _serve_cached_rows(
+        ranked,
         min_seeds=min_seeds,
         max_seeds=max_seeds,
         max_size=max_size,
@@ -95,8 +123,11 @@ class GenreBrowseService:
                         tmdb_api_key=tmdb_api_key,
                         enrich=enrich,
                     )
-                filtered = _serve_cached_rows(
+                filtered = _rank_and_serve_rows(
                     cached.rows,
+                    normalized,
+                    self._searcher,
+                    movie_profile=movie_profile,
                     min_seeds=min_seeds,
                     max_seeds=max_seeds,
                     max_size=max_size,
@@ -171,12 +202,11 @@ class GenreBrowseService:
     ) -> SearchOutcome:
         tmdb_client, _ = self._tmdb_resolver(tmdb_api_key)
         use_tmdb = enrich and tmdb_client.configured and tmdb_client.validate_key()
-        outcome = build_genre_pool(
+        outcome = fetch_genre_pool_rows(
             self._searcher,
             genre_id,
             tmdb_client if use_tmdb else None,
             movie_profile=movie_profile,
-            limit=_POOL_BUILD_LIMIT,
             discover_page_offset=discover_page_offset,
         )
         if outcome.results:
@@ -187,8 +217,11 @@ class GenreBrowseService:
                 partial=partial_ok and len(outcome.results) < _POOL_BUILD_LIMIT,
                 movie_profile=movie_profile,
             )
-        filtered = _serve_cached_rows(
+        filtered = _rank_and_serve_rows(
             outcome.results,
+            genre_id,
+            self._searcher,
+            movie_profile=movie_profile,
             min_seeds=min_seeds,
             max_seeds=max_seeds,
             max_size=max_size,

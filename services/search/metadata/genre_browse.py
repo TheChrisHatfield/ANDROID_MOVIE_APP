@@ -15,7 +15,14 @@ GENRE_TITLE_SEARCH_LIMIT = 28
 GENRE_TITLE_FANOUT_TIMEOUT_SEC = 45
 GENRE_RELEASES_PER_TITLE = 3
 GENRE_DISCOVER_MAX_PAGES = 3
-GENRE_KEYWORD_PAGE_LIMIT = 2
+GENRE_KEYWORD_PAGE_LIMIT = 3
+# Broad indexer fan-out (primary pool driver — all movie sites via keyword search).
+BROAD_KEYWORD_PAGE_LIMIT = 3
+BROAD_KEYWORD_LIMIT = 250
+BROAD_1337X_PAGE_LIMIT = 2
+BROAD_1337X_LIMIT = 120
+# TMDB discover is enrichment-only (posters/metadata), not the shelf title source.
+TMDB_ENRICH_TITLE_LIMIT = 8
 
 
 def _attach_discover_metadata(row: dict, rank: int, movie: TmdbDiscoverMovie) -> None:
@@ -147,6 +154,73 @@ def curated_genre_search(
         results=sorted_results,
         failed_sites=list(dict.fromkeys(failed_sites)),
         all_sources_failed=all_sources_failed,
+    )
+
+
+def broad_indexer_genre_pool(
+    searcher: TorrentSearcher,
+    genre_id: str,
+    *,
+    sites: list | None = None,
+    movie_profile: bool = True,
+    min_seeds: int | None = None,
+    max_seeds: int | None = None,
+    max_size: str | None = None,
+) -> SearchOutcome:
+    """
+    Primary genre pool: fan out across all movie indexers via keyword search,
+    plus 1337x genre browse when the genre slug is supported there.
+    """
+    normalized = genre_id.strip().lower()
+    outcomes: list[SearchOutcome] = []
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {
+            "keyword": pool.submit(
+                keyword_genre_search,
+                searcher,
+                normalized,
+                sites=sites,
+                movie_profile=movie_profile,
+                page_limit=BROAD_KEYWORD_PAGE_LIMIT,
+                parallel=True,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=BROAD_KEYWORD_LIMIT,
+            ),
+            "1337x": pool.submit(
+                searcher.browse_1337x_genre,
+                normalized,
+                page_limit=BROAD_1337X_PAGE_LIMIT,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                limit=BROAD_1337X_LIMIT,
+            ),
+        }
+        for name, future in futures.items():
+            try:
+                outcomes.append(future.result())
+            except Exception as exc:
+                logger.warning("broad indexer genre %s failed: %s", name, exc)
+
+    all_results: list[dict] = []
+    failed_sites: list[str] = []
+    indexers_unavailable = False
+    for outcome in outcomes:
+        all_results.extend(outcome.results)
+        failed_sites.extend(outcome.failed_sites)
+        if outcome.indexers_unavailable:
+            indexers_unavailable = True
+
+    if not all_results and indexers_unavailable:
+        return SearchOutcome([], failed_sites, indexers_unavailable=True)
+
+    return SearchOutcome(
+        results=all_results,
+        failed_sites=list(dict.fromkeys(failed_sites)),
+        all_sources_failed=not all_results and bool(failed_sites),
     )
 
 

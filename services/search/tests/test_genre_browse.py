@@ -1,6 +1,10 @@
 from unittest.mock import MagicMock, patch
 
-from metadata.genre_browse import curated_genre_search, keyword_genre_search
+from metadata.genre_browse import (
+    broad_indexer_genre_pool,
+    curated_genre_search,
+    keyword_genre_search,
+)
 from metadata.tmdb_client import TmdbDiscoverMovie
 from torrtux_core.searcher import SearchOutcome, TorrentSearcher
 
@@ -64,6 +68,24 @@ def test_curated_returns_none_when_discover_empty(mock_search):
     tmdb.discover_movies.return_value = []
     assert curated_genre_search(searcher, "horror", tmdb) is None
     mock_search.assert_not_called()
+
+
+@patch.object(TorrentSearcher, "browse_1337x_genre")
+@patch.object(TorrentSearcher, "search")
+def test_broad_indexer_genre_pool_fans_out(mock_search, mock_1337x):
+    searcher = TorrentSearcher(site_classes=[])
+    mock_search.return_value = SearchOutcome(
+        [{"name": "Horror Pool 2020 1080p", "seeds": "10", "site": "YTS"}],
+        [],
+    )
+    mock_1337x.return_value = SearchOutcome(
+        [{"name": "Horror 1337x 2021 1080p", "seeds": "5", "site": "1337x"}],
+        [],
+    )
+    outcome = broad_indexer_genre_pool(searcher, "horror")
+    assert len(outcome.results) == 2
+    mock_search.assert_called_once()
+    mock_1337x.assert_called_once()
 
 
 @patch.object(TorrentSearcher, "search")

@@ -1,13 +1,13 @@
-"""Build merged genre torrent pool from TMDB discover + multi-indexer keyword fan-out."""
+"""Build merged genre torrent pool from multi-indexer fan-out + optional TMDB enrichment."""
 from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from metadata.genre_browse import (
-    GENRE_KEYWORD_PAGE_LIMIT,
+    TMDB_ENRICH_TITLE_LIMIT,
+    broad_indexer_genre_pool,
     curated_genre_search,
-    keyword_genre_search,
 )
 from metadata.genre_tree import get_branch_feedback, rank_pool_thompson
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
@@ -45,6 +45,8 @@ def _merge_outcomes(*outcomes: SearchOutcome | None) -> tuple[list[dict], list[s
                     existing["magnet"] = row["magnet"]
                 if not existing.get("poster_url") and row.get("poster_url"):
                     existing["poster_url"] = row["poster_url"]
+                if not existing.get("overview") and row.get("overview"):
+                    existing["overview"] = row["overview"]
                 existing["_genre_rank"] = min(
                     int(existing.get("_genre_rank", 9999)),
                     int(row.get("_genre_rank", 9999)),
@@ -71,6 +73,102 @@ def _diversify_unique_movies(rows: list[dict], max_per_movie: int = MAX_RELEASES
     return diversified
 
 
+def fetch_genre_pool_rows(
+    searcher: TorrentSearcher,
+    genre_id: str,
+    tmdb: TmdbClient | None,
+    *,
+    sites: list | None = None,
+    movie_profile: bool = True,
+    min_seeds: int | None = None,
+    max_seeds: int | None = None,
+    max_size: str | None = None,
+    discover_page_offset: int = 1,
+) -> SearchOutcome:
+    """
+    Build a wide unranked pool: all indexers first, TMDB discover for metadata only.
+    Ranking (MCT + Thompson) is deferred to rank_genre_pool_rows on each serve.
+    """
+    indexer: SearchOutcome | None = None
+    enrich: SearchOutcome | None = None
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {
+            "indexer": pool.submit(
+                broad_indexer_genre_pool,
+                searcher,
+                genre_id,
+                sites=sites,
+                movie_profile=movie_profile,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+            ),
+        }
+        if tmdb is not None and tmdb.configured:
+            futures["enrich"] = pool.submit(
+                curated_genre_search,
+                searcher,
+                genre_id,
+                tmdb,
+                sites=sites,
+                movie_profile=movie_profile,
+                min_seeds=min_seeds,
+                max_seeds=max_seeds,
+                max_size=max_size,
+                title_limit=TMDB_ENRICH_TITLE_LIMIT,
+                discover_page_offset=discover_page_offset,
+            )
+        for name, future in futures.items():
+            try:
+                result = future.result()
+                if name == "indexer":
+                    indexer = result
+                else:
+                    enrich = result
+            except Exception as exc:
+                logger.warning("genre pool %s fetch failed: %s", name, exc)
+
+    rows, failed = _merge_outcomes(indexer, enrich)
+    rows = _diversify_unique_movies(rows)
+    if not rows:
+        if indexer and indexer.indexers_unavailable:
+            return SearchOutcome([], [], indexers_unavailable=True)
+        return SearchOutcome([], failed, all_sources_failed=bool(failed))
+
+    return SearchOutcome(
+        results=rows,
+        failed_sites=failed,
+        all_sources_failed=False,
+        indexers_unavailable=indexer.indexers_unavailable if indexer else False,
+        movie_indexers_unavailable=indexer.movie_indexers_unavailable if indexer else False,
+    )
+
+
+def rank_genre_pool_rows(
+    rows: list[dict],
+    genre_id: str,
+    searcher: TorrentSearcher,
+    *,
+    sites: list | None = None,
+    movie_profile: bool = True,
+    limit: int | None = None,
+) -> list[dict]:
+    """MCT + Thompson rank on each request — non-deterministic shelf order."""
+    ranked = rank_pool_thompson(
+        rows,
+        feedback=get_branch_feedback(genre_id),
+        genre_id=genre_id,
+        searcher=searcher,
+        sites=sites,
+        movie_profile=movie_profile,
+        mct_live=True,
+    )
+    if limit is not None:
+        ranked = ranked[:limit]
+    return ranked
+
+
 def build_genre_pool(
     searcher: TorrentSearcher,
     genre_id: str,
@@ -84,69 +182,33 @@ def build_genre_pool(
     limit: int | None = None,
     discover_page_offset: int = 1,
 ) -> SearchOutcome:
-    """
-    Merge curated TMDB-title searches with broad keyword indexer fan-out,
-    then Thompson-rank the combined pool.
-    """
-    curated: SearchOutcome | None = None
-    keyword: SearchOutcome | None = None
-
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = {}
-        if tmdb is not None and tmdb.configured:
-            futures["curated"] = pool.submit(
-                curated_genre_search,
-                searcher,
-                genre_id,
-                tmdb,
-                sites=sites,
-                movie_profile=movie_profile,
-                min_seeds=min_seeds,
-                max_seeds=max_seeds,
-                max_size=max_size,
-                limit=limit,
-                discover_page_offset=discover_page_offset,
-            )
-        futures["keyword"] = pool.submit(
-            keyword_genre_search,
-            searcher,
-            genre_id,
-            sites=sites,
-            movie_profile=movie_profile,
-            page_limit=GENRE_KEYWORD_PAGE_LIMIT,
-            parallel=True,
-            min_seeds=min_seeds,
-            max_seeds=max_seeds,
-            max_size=max_size,
-            limit=limit or 120,
-        )
-        for name, future in futures.items():
-            try:
-                result = future.result()
-                if name == "curated":
-                    curated = result
-                else:
-                    keyword = result
-            except Exception as exc:
-                logger.warning("genre pool %s fetch failed: %s", name, exc)
-
-    rows, failed = _merge_outcomes(curated, keyword)
-    rows = _diversify_unique_movies(rows)
-    if not rows:
-        if keyword and keyword.indexers_unavailable:
-            return SearchOutcome([], [], indexers_unavailable=True)
-        return SearchOutcome([], failed, all_sources_failed=bool(failed))
-
-    ranked = rank_pool_thompson(
-        rows,
-        feedback=get_branch_feedback(genre_id),
-        genre_id=genre_id,
+    """Fetch wide pool then rank (convenience wrapper)."""
+    outcome = fetch_genre_pool_rows(
+        searcher,
+        genre_id,
+        tmdb,
+        sites=sites,
+        movie_profile=movie_profile,
+        min_seeds=min_seeds,
+        max_seeds=max_seeds,
+        max_size=max_size,
+        discover_page_offset=discover_page_offset,
     )
-    if limit is not None:
-        ranked = ranked[:limit]
+    if not outcome.results:
+        return outcome
 
+    ranked = rank_genre_pool_rows(
+        outcome.results,
+        genre_id,
+        searcher,
+        sites=sites,
+        movie_profile=movie_profile,
+        limit=limit,
+    )
     return SearchOutcome(
         results=ranked,
-        failed_sites=failed,
-        all_sources_failed=False,
+        failed_sites=outcome.failed_sites,
+        all_sources_failed=outcome.all_sources_failed,
+        indexers_unavailable=outcome.indexers_unavailable,
+        movie_indexers_unavailable=outcome.movie_indexers_unavailable,
     )
