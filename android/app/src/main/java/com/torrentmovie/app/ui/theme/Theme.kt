@@ -5,25 +5,25 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val MissyColors = lightColorScheme(
-    primary = OnPantone,
-    onPrimary = PantoneRed,
-    primaryContainer = PantoneRedDark,
-    onPrimaryContainer = OnPantone,
+    primary = InkOnRed,
+    onPrimary = Cream,
+    primaryContainer = Cream,
+    onPrimaryContainer = InkOnRed,
     secondary = Cream,
-    onSecondary = PantoneRed,
+    onSecondary = InkOnRed,
     secondaryContainer = Cream,
     onSecondaryContainer = InkOnRed,
     tertiary = Cream,
-    onTertiary = PantoneRed,
+    onTertiary = InkOnRed,
     background = PantoneRed,
-    onBackground = OnPantone,
+    onBackground = InkOnRed,
     surface = PantoneRed,
-    onSurface = OnPantone,
-    surfaceVariant = PantoneRedDark,
-    onSurfaceVariant = OnPantone,
-    error = WarningOnRed,
-    onError = InkOnRed,
-    outline = Cream,
+    onSurface = InkOnRed,
+    surfaceVariant = Cream,
+    onSurfaceVariant = InkOnRed,
+    error = InkOnRed,
+    onError = Cream,
+    outline = InkOnRed,
 )
 
 @Composable

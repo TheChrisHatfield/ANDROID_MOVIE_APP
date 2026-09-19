@@ -27,9 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import com.torrentmovie.app.ui.theme.Cream
+import com.torrentmovie.app.ui.theme.InkOnRed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -180,6 +183,18 @@ fun SearchScreen(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.search() }),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Cream,
+                unfocusedContainerColor = Cream,
+                disabledContainerColor = Cream,
+                focusedTextColor = InkOnRed,
+                unfocusedTextColor = InkOnRed,
+                focusedLabelColor = InkOnRed,
+                unfocusedLabelColor = InkOnRed,
+                cursorColor = InkOnRed,
+                focusedBorderColor = InkOnRed,
+                unfocusedBorderColor = InkOnRed,
+            ),
             trailingIcon = {
                 IconButton(onClick = { showFilters = true }) {
                     Icon(Icons.Default.FilterList, contentDescription = "Filters")
