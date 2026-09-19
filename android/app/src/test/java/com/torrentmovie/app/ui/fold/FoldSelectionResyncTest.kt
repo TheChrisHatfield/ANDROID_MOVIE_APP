@@ -56,4 +56,36 @@ class FoldSelectionResyncTest {
         assertEquals("old-id", foldRankingFeedbackResultId(null, "old-id"))
         assertEquals("old-id", foldRankingFeedbackResultId("  ", "old-id"))
     }
+
+    @Test
+    fun clearsTwoPaneDetailWhenQueryNoLongerMatchesLastSearch() {
+        assertTrue(
+            shouldClearFoldSelectionOnQueryEdit(
+                hasSearched = false,
+                query = "Dune",
+                lastExecutedQuery = "Inception",
+            ),
+        )
+        assertTrue(
+            shouldClearFoldSelectionOnQueryEdit(
+                hasSearched = true,
+                query = "  ",
+                lastExecutedQuery = "Inception",
+            ),
+        )
+        assertFalse(
+            shouldClearFoldSelectionOnQueryEdit(
+                hasSearched = true,
+                query = "Inception",
+                lastExecutedQuery = "Inception",
+            ),
+        )
+        assertFalse(
+            shouldClearFoldSelectionOnQueryEdit(
+                hasSearched = false,
+                query = "Inception",
+                lastExecutedQuery = "",
+            ),
+        )
+    }
 }

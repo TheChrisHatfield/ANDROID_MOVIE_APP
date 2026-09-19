@@ -155,15 +155,20 @@ fun FoldSearchDetailLayout(
         lastBrowseGenreKey = key
     }
 
-    LaunchedEffect(state.query, state.hasSearched) {
-        if (!state.hasSearched) return@LaunchedEffect
-        if (state.query.trim().isBlank()) {
-            selectedId = null
-            restoredName = null
-            restoredSite = null
-            genreAtDetailOpen = null
-            syncFoldSelection(null, "", "")
+    LaunchedEffect(state.query, state.hasSearched, state.lastExecutedQuery) {
+        if (!shouldClearFoldSelectionOnQueryEdit(
+                state.hasSearched,
+                state.query,
+                state.lastExecutedQuery,
+            )
+        ) {
+            return@LaunchedEffect
         }
+        selectedId = null
+        restoredName = null
+        restoredSite = null
+        genreAtDetailOpen = null
+        syncFoldSelection(null, "", "")
     }
 
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
@@ -312,6 +317,19 @@ internal fun needsFoldSelectionResync(selectedId: String?, activeResultId: Strin
 
 internal fun foldRankingFeedbackResultId(selectedId: String?, resultId: String): String {
     return selectedId?.takeIf { it.isNotBlank() } ?: resultId
+}
+
+/** Drop two-pane detail when the typed query no longer matches the results that produced it. */
+internal fun shouldClearFoldSelectionOnQueryEdit(
+    hasSearched: Boolean,
+    query: String,
+    lastExecutedQuery: String,
+): Boolean {
+    val typed = query.trim()
+    if (typed.isBlank()) return true
+    return !hasSearched &&
+        lastExecutedQuery.isNotBlank() &&
+        typed != lastExecutedQuery.trim()
 }
 
 /** Cover/narrow fold must reopen the selected release even if the drawer is on Settings or Uploaded. */
