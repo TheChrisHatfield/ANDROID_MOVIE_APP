@@ -61,10 +61,10 @@ class SeedboxRepository(
     ): SeedboxResult = addMutex.withLock {
         val settings = settingsRepository.load()
         val authKey = seedboxAuthKey(settings)
-        if (authKey != lastSeedboxAuthKey) {
+        if (seedboxAuthChanged(lastSeedboxAuthKey, authKey)) {
             clearSentWithoutPersistCache()
-            lastSeedboxAuthKey = authKey
         }
+        lastSeedboxAuthKey = authKey
         val key = MagnetHashUtil.storageKey(magnet, displayName, site)
         if (MagnetHashUtil.extractInfoHash(magnet) == null) {
             return SeedboxResult.Failure("Magnet missing info hash — cannot send or track status")
@@ -237,4 +237,9 @@ class SeedboxRepository(
         private const val PREFS_PENDING_PERSIST = "seedbox_pending_persist"
         private const val KEY_PENDING = "keys"
     }
+}
+
+/** True only when credentials actually changed — not on first send after process start. */
+internal fun seedboxAuthChanged(previous: String?, current: String): Boolean {
+    return previous != null && previous != current
 }
