@@ -29,6 +29,14 @@ def _magnet_from_hash(info_hash: str, name: str) -> str:
     return f"magnet:?xt=urn:btih:{info_hash.upper()}&dn={quote(name)}"
 
 
+_YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def _youtube_video_id(raw: object) -> str | None:
+    text = str(raw or "").strip()
+    return text if _YOUTUBE_ID_RE.fullmatch(text) else None
+
+
 def _extract_next_data(content: bytes) -> dict | None:
     text = content.decode("utf-8", errors="replace")
     match = re.search(
@@ -334,7 +342,7 @@ class YTS(TorrentSite):
             overview = (movie.get("description_intro") or movie.get("description_full") or "").strip()
             if overview and len(overview) > 400:
                 overview = overview[:397].rstrip() + "..."
-            trailer_key = movie.get("yt_trailer_code")
+            trailer_key = _youtube_video_id(movie.get("yt_trailer_code"))
             for torrent in torrents:
                 info_hash = torrent.get("hash")
                 seeds_val = int(torrent.get("seeds") or 0)

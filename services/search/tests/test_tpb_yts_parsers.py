@@ -32,6 +32,40 @@ def test_yts_peers_field_is_leech_count():
     assert rows[0]["leeches"] == "53"
 
 
+def test_yts_omits_invalid_trailer_codes():
+    site = YTS()
+    site.working_url = "https://yts.rs"
+    payload = {
+        "props": {
+            "pageProps": {
+                "movies": [
+                    {
+                        "title": "Junk Trailer",
+                        "year": 2024,
+                        "yt_trailer_code": "abc123",
+                        "torrents": [
+                            {"hash": "B" * 40, "quality": "1080p", "seeds": 1, "peers": 0, "size": "1 GB"},
+                        ],
+                    },
+                    {
+                        "title": "Real Trailer",
+                        "year": 2024,
+                        "yt_trailer_code": "dQw4w9WgXcQ",
+                        "torrents": [
+                            {"hash": "C" * 40, "quality": "1080p", "seeds": 1, "peers": 0, "size": "1 GB"},
+                        ],
+                    },
+                ]
+            }
+        }
+    }
+    rows = site._movie_rows_from_payload(payload)
+    junk = next(row for row in rows if row["name"].startswith("Junk Trailer"))
+    real = next(row for row in rows if row["name"].startswith("Real Trailer"))
+    assert junk.get("trailer_youtube_key") is None
+    assert real.get("trailer_youtube_key") == "dQw4w9WgXcQ"
+
+
 def test_yts_parses_next_data_fixture():
     site = YTS()
     site.working_url = "https://yts.rs"
