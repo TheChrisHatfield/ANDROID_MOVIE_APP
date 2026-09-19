@@ -1,7 +1,7 @@
 """Pydantic models for search API."""
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -25,7 +25,11 @@ class TorrentResult(BaseModel):
     magnet: str | None = None
     detail_url: str | None = None
     poster_url: str | None = None
-    branch_key: str | None = Field(default=None, alias="_branch_key")
+    branch_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("_branch_key", "branch_key"),
+        serialization_alias="branch_key",
+    )
 
     model_config = {"populate_by_name": True}
 

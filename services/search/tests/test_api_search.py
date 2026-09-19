@@ -166,3 +166,27 @@ def test_min_seeds_greater_than_max_seeds_returns_400(_mock_test):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "min_seeds cannot exceed max_seeds"
+
+
+@patch.object(_searcher, "test_sites", return_value=True)
+@patch.object(_searcher, "search")
+def test_search_serializes_branch_key_for_android(mock_search, _mock_test):
+    mock_search.return_value = SearchOutcome(
+        results=[
+            {
+                "name": "Insidious 2015 1080p",
+                "site": "YTS",
+                "seeds": "10",
+                "_branch_key": "insidious|2015",
+            }
+        ],
+        failed_sites=[],
+    )
+    _searcher.working_sites = [MagicMock(name="YTS")]
+
+    response = client.get("/v1/search", params={"q": "insidious", "enrich": False})
+    assert response.status_code == 200
+    release = response.json()["groups"][0]["releases"][0]
+    assert "branch_key" in release
+    assert "_branch_key" not in release
+    assert release["branch_key"] == "insidious|2015"
