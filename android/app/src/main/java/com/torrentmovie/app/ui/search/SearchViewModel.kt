@@ -685,7 +685,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 trailerYoutubeKey = group.trailerYoutubeKey,
             )
             group.releases.forEach { release ->
-                container.movieMetadataStore.put(release.id, metadata)
+                container.movieMetadataStore.put(release.id, metadata, merge = false)
             }
         }
         container.movieMetadataStore.bumpRevision()

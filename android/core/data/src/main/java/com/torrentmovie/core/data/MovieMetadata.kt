@@ -22,10 +22,10 @@ class MovieMetadataStore {
         _revision.value++
     }
 
-    fun put(resultId: String, metadata: MovieMetadata) {
+    fun put(resultId: String, metadata: MovieMetadata, merge: Boolean = true) {
         synchronized(this) {
             val existing = byResultId[resultId]
-            byResultId[resultId] = if (existing == null) {
+            byResultId[resultId] = if (existing == null || !merge) {
                 metadata
             } else {
                 MovieMetadata(
