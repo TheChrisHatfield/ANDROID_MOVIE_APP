@@ -14,6 +14,8 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException, Query
 
 from api.cache import ResultCache
+from api.genre_pool_cache import GenrePoolCache
+from api.genre_service import GenreBrowseService, record_genre_feedback
 from api.models import HealthResponse, MagnetResponse, MovieGroup, SearchResponse, SitesHealthResponse, TorrentResult
 from metadata.grouping import build_movie_groups
 from metadata.tmdb_client import TmdbClient
@@ -68,6 +70,10 @@ def _tmdb_for_request(api_key: str | None) -> tuple[TmdbClient, bool]:
     if not client.validate_key():
         return _tmdb, True
     return client, False
+
+
+_genre_pool_cache = GenrePoolCache()
+_genre_service = GenreBrowseService(_searcher, _genre_pool_cache, _tmdb_for_request)
 
 
 def _quality_from_result_name(name: str | None) -> str | None:
@@ -293,6 +299,7 @@ def browse_genre(
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
     enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
+    force_refresh: bool = Query(False, description="Bypass genre pool cache (pull-to-refresh)"),
 ) -> SearchResponse:
     normalized = genre.strip().lower()
     if normalized not in MOVIE_GENRES:
@@ -311,15 +318,16 @@ def browse_genre(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid max_size")
 
-    outcome = _searcher.browse_genre(
+    outcome = _genre_service.browse(
         normalized,
         movie_profile=movie_profile,
-        page_limit=pages,
-        parallel=parallel,
         min_seeds=min_seeds,
         max_seeds=max_seeds,
         max_size=max_size,
         limit=limit,
+        tmdb_api_key=tmdb_api_key,
+        enrich=enrich,
+        force_refresh=force_refresh,
     )
     if outcome.movie_indexers_unavailable:
         raise HTTPException(status_code=503, detail="No movie indexers available")
@@ -340,6 +348,38 @@ def browse_genre(
         tmdb_api_key=tmdb_api_key,
         max_enrich_groups=12,
     )
+
+
+@app.post("/v1/browse/genre/warm")
+def warm_genre_pools(
+    genres: str | None = Query(
+        None,
+        description="Comma-separated genre ids; omit to warm all genres in background",
+    ),
+    movie_profile: bool = Query(True),
+) -> dict[str, object]:
+    if genres:
+        genre_ids = [part.strip().lower() for part in genres.split(",") if part.strip()]
+        unknown = [g for g in genre_ids if g not in MOVIE_GENRES]
+        if unknown:
+            raise HTTPException(status_code=400, detail=f"Unknown genre(s): {', '.join(unknown)}")
+    else:
+        genre_ids = list(MOVIE_GENRES.keys())
+    _genre_service.warm_genres(genre_ids, movie_profile=movie_profile)
+    return {"status": "warming", "count": len(genre_ids)}
+
+
+@app.post("/v1/browse/genre/{genre}/feedback")
+def genre_branch_feedback(
+    genre: str,
+    group_key: str = Query(..., min_length=1),
+    success: bool = Query(True),
+) -> dict[str, str]:
+    normalized = genre.strip().lower()
+    if normalized not in MOVIE_GENRES:
+        raise HTTPException(status_code=400, detail="Unknown genre")
+    record_genre_feedback(normalized, group_key, success)
+    return {"status": "ok"}
 
 
 @app.get("/v1/browse/1337x/genre/{genre}", response_model=SearchResponse)
