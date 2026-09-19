@@ -4,9 +4,12 @@ import com.google.gson.Gson
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
+import java.io.IOException
 
 class SearchHttpErrorTest {
     @Test
@@ -39,5 +42,15 @@ class SearchHttpErrorTest {
         val exception = mapSearchHttpError(HttpException(response), Gson())
         assertEquals("No movie indexers available", exception.message)
         assertEquals(503, exception.httpCode)
+    }
+}
+
+class CanceledNetworkTest {
+    @Test
+    fun okHttpCanceledIsTreatedAsCancellation() {
+        assertTrue(isCanceledNetwork(IOException("Canceled")))
+        assertTrue(isCanceledNetwork(IOException("call canceled")))
+        assertFalse(isCanceledNetwork(IOException("Cannot connect to search API")))
+        assertFalse(isCanceledNetwork(IOException("timeout")))
     }
 }

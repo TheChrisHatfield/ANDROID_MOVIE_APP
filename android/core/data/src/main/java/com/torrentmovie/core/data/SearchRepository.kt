@@ -13,6 +13,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 
 class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
@@ -226,6 +227,9 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     }
 
     private fun mapNetworkError(e: IOException): SearchException {
+        if (isCanceledNetwork(e)) {
+            throw CancellationException(e.message).apply { initCause(e) }
+        }
         val message = when (e) {
             is SocketTimeoutException -> "Search API timed out. Check the URL in Settings."
             is UnknownHostException -> "Cannot reach search API. Check the URL in Settings."
@@ -235,6 +239,12 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     }
 
     private fun mapHttpError(e: HttpException): SearchException = mapSearchHttpError(e, gson)
+}
+
+internal fun isCanceledNetwork(e: IOException): Boolean {
+    val message = e.message.orEmpty()
+    return message.contains("Canceled", ignoreCase = true) ||
+        message.contains("cancelled", ignoreCase = true)
 }
 
 internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
