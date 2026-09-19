@@ -47,6 +47,14 @@ def test_browse_1337x_endpoint(mock_browse):
     mock_browse.assert_called_once()
 
 
+def test_browse_1337x_rejects_tv_feed_in_movie_profile():
+    response = client.get(
+        "/v1/browse/1337x/top-100-television",
+        params={"movie_profile": True},
+    )
+    assert response.status_code == 400
+
+
 @patch.object(_searcher, "browse_1337x")
 def test_browse_rejects_pages_above_max(mock_browse):
     response = client.get("/v1/browse/1337x/trending", params={"pages": 10})

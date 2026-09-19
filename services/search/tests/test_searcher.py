@@ -50,8 +50,11 @@ def test_browse_1337x_applies_movie_profile_except_tv_feed():
     assert len(movies.results) == 1
     assert movies.results[0]["name"].startswith("Movie Title")
     with patch.object(searcher, "_browse_site", return_value=(raw, False)):
-        tv = searcher.browse_1337x("top-100-television")
+        tv = searcher.browse_1337x("top-100-television", movie_profile=False)
     assert len(tv.results) == 2
+    with patch.object(searcher, "_browse_site", return_value=(raw, False)):
+        tv_blocked = searcher.browse_1337x("top-100-television", movie_profile=True)
+    assert len(tv_blocked.results) == 0
 
 
 def test_site_for_name_is_case_insensitive():

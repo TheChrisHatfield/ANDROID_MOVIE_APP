@@ -96,6 +96,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,
+                movieProfile = settings.movieSitesOnly,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
                 enrich = settings.fetchMovieMetadata,
             )

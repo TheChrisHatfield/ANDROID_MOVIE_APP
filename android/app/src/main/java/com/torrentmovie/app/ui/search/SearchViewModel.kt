@@ -66,6 +66,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchSettingsKey = searchSettingsKey()
         viewModelScope.launch {
             container.settingsRepository.revision.drop(1).collect {
+                val settings = container.settingsRepository.load()
+                val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
+                if (settings.movieSitesOnly && activeFeed != null && !activeFeed.visibleFor(true)) {
+                    loadBrowse1337x(X1337BrowseFeed.TRENDING)
+                    return@collect
+                }
                 val key = searchSettingsKey()
                 if (key != lastSearchSettingsKey && _state.value.hasSearched) {
                     lastSearchSettingsKey = key
@@ -117,7 +123,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             lastExecutedQuery = if (modeCleared) "" else _state.value.lastExecutedQuery,
         )
         if (revertingToLastSearch) {
-            val labelFeed = X1337BrowseFeed.entriesList.find { it.label.equals(trimmed, ignoreCase = true) }
+            val movieSitesOnly = container.settingsRepository.load().movieSitesOnly
+            val labelFeed = X1337BrowseFeed.entriesList
+                .find { it.label.equals(trimmed, ignoreCase = true) }
+                ?.takeIf { it.visibleFor(movieSitesOnly) }
             if (labelFeed != null) {
                 loadBrowse1337x(labelFeed)
             } else {
@@ -469,8 +478,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             )
             return
         }
+        val movieSitesOnly = container.settingsRepository.load().movieSitesOnly
         val labelFeed = if (!_state.value.genrePanelExpanded) {
-            X1337BrowseFeed.entriesList.find { it.label.equals(q, ignoreCase = true) }
+            X1337BrowseFeed.entriesList
+                .find { it.label.equals(q, ignoreCase = true) }
+                ?.takeIf { it.visibleFor(movieSitesOnly) }
         } else {
             null
         }

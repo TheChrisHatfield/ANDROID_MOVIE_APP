@@ -222,6 +222,7 @@ class TorrentSearcher:
         self,
         feed: str,
         *,
+        movie_profile: bool = True,
         page_limit: int = 1,
         min_seeds: int | None = None,
         max_seeds: int | None = None,
@@ -248,7 +249,12 @@ class TorrentSearcher:
         from torrtux_core.filters import filter_movie_profile
 
         raw, errored = self._browse_site(site, feed, page_limit)
-        profiled = raw if feed == "top-100-television" else filter_movie_profile(raw)
+        if feed == "top-100-television":
+            profiled = raw if not movie_profile else []
+        elif movie_profile:
+            profiled = filter_movie_profile(raw)
+        else:
+            profiled = raw
         filtered = apply_filters(
             profiled,
             min_seeds=min_seeds,

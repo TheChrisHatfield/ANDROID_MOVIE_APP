@@ -60,6 +60,10 @@ fun SearchScreen(
 ) {
     val vm: SearchViewModel = sharedViewModel ?: viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
+    val settingsRevision by container.settingsRepository.revision.collectAsState()
+    val movieSitesOnly = remember(settingsRevision) {
+        container.settingsRepository.load().movieSitesOnly
+    }
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
@@ -189,6 +193,7 @@ fun SearchScreen(
             genrePanelExpanded = state.genrePanelExpanded,
             activeGenre = state.activeGenre,
             activeBrowseFeed = state.activeBrowseFeed,
+            movieSitesOnly = movieSitesOnly,
             loading = state.loading,
             onCollapseGenrePanel = vm::collapseGenrePanel,
             onExpandGenrePanel = vm::expandGenrePanel,
@@ -351,6 +356,7 @@ private fun BrowseGenreChipRow(
     genrePanelExpanded: Boolean,
     activeGenre: String?,
     activeBrowseFeed: String?,
+    movieSitesOnly: Boolean,
     loading: Boolean,
     onCollapseGenrePanel: () -> Unit,
     onExpandGenrePanel: () -> Unit,
@@ -380,7 +386,7 @@ private fun BrowseGenreChipRow(
                 )
             }
         } else {
-            X1337BrowseFeed.entriesList.forEach { feed ->
+            X1337BrowseFeed.entriesFor(movieSitesOnly).forEach { feed ->
                 FilterChip(
                     selected = activeBrowseFeed == feed.id,
                     onClick = { onLoadBrowse(feed) },

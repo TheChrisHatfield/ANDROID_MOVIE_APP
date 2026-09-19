@@ -33,6 +33,7 @@ interface SearchApi {
         @Query("min_seeds") minSeeds: Int? = null,
         @Query("max_seeds") maxSeeds: Int? = null,
         @Query("max_size") maxSize: String? = null,
+        @Query("movie_profile") movieProfile: Boolean = true,
         @Query("group") group: Boolean = true,
         @Query("enrich") enrich: Boolean = true,
         @Query("tmdb_api_key") tmdbApiKey: String? = null,

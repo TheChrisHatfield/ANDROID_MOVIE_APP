@@ -244,6 +244,7 @@ def browse_1337x(
     min_seeds: int | None = Query(None, ge=0),
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
+    movie_profile: bool = Query(True, description="Movie indexers and title filter (no TV/software)"),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
     enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB when API key set"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
@@ -259,8 +260,12 @@ def browse_1337x(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid max_size")
 
+    if movie_profile and feed == "top-100-television":
+        raise HTTPException(status_code=400, detail="TV browse feed unavailable in movie profile")
+
     outcome = _searcher.browse_1337x(
         feed,
+        movie_profile=movie_profile,
         page_limit=pages,
         min_seeds=min_seeds,
         max_seeds=max_seeds,
