@@ -66,3 +66,14 @@ class CanceledNetworkTest {
         IOException("down").rethrowIfCancelled()
     }
 }
+
+class TransientGenreRefreshTest {
+    @Test
+    fun onlyRefreshing503IsRetried() {
+        assertTrue(isTransientGenreRefresh(503, "Genre pool still refreshing — retry shortly"))
+        assertFalse(isTransientGenreRefresh(503, "No movie indexers available"))
+        assertFalse(isTransientGenreRefresh(503, "No sources available"))
+        assertFalse(isTransientGenreRefresh(404, "Genre pool still refreshing — retry shortly"))
+        assertFalse(isTransientGenreRefresh(null, null))
+    }
+}

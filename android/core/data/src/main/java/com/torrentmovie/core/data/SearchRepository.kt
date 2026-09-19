@@ -14,6 +14,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
@@ -141,7 +142,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         forceRefresh: Boolean = false,
     ): SearchResult {
         val settings = settingsRepository.load()
-        return try {
+        suspend fun requestOnce(): SearchResult {
             val response = api().browseGenre(
                 genre = genre,
                 limit = minOf(settings.searchPages * 50, 200),
@@ -154,15 +155,29 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 enrich = settings.fetchMovieMetadata,
                 forceRefresh = forceRefresh,
             )
-            SearchResult(
+            return SearchResult(
                 results = response.results,
                 failedSites = response.failedSites,
                 groups = response.groups,
                 tmdbKeyRejected = response.tmdbKeyRejected,
                 tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
             )
+        }
+        return try {
+            requestOnce()
         } catch (e: HttpException) {
-            throw mapHttpError(e)
+            val mapped = mapHttpError(e)
+            if (!isTransientGenreRefresh(mapped.httpCode, mapped.message)) throw mapped
+            delay(800)
+            try {
+                requestOnce()
+            } catch (retry: HttpException) {
+                throw mapHttpError(retry)
+            } catch (retry: IllegalArgumentException) {
+                throw SearchException("Invalid search API URL — check Settings", cause = retry)
+            } catch (retry: IOException) {
+                throw mapNetworkError(retry)
+            }
         } catch (e: IllegalArgumentException) {
             throw SearchException("Invalid search API URL — check Settings", cause = e)
         } catch (e: IOException) {
@@ -252,6 +267,11 @@ internal fun isCanceledNetwork(e: IOException): Boolean {
     val message = e.message.orEmpty()
     return message.contains("Canceled", ignoreCase = true) ||
         message.contains("cancelled", ignoreCase = true)
+}
+
+internal fun isTransientGenreRefresh(httpCode: Int?, message: String?): Boolean {
+    return httpCode == 503 &&
+        message.orEmpty().contains("still refreshing", ignoreCase = true)
 }
 
 internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
