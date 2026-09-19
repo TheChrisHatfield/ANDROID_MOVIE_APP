@@ -117,9 +117,17 @@ def build_movie_groups(
             return
         staged.append((bucket, releases))
 
-    primary_keys = order[:max_groups]
-    overflow_keys = order[max_groups:]
+    titled_order = [
+        key for key in order if str(buckets[key].get("title") or "").strip()
+    ]
+    untitled_keys = [
+        key for key in order if not str(buckets[key].get("title") or "").strip()
+    ]
+    primary_keys = titled_order[:max_groups]
+    overflow_keys = titled_order[max_groups:]
 
+    for key in untitled_keys:
+        process_key(key)
     for key in primary_keys:
         process_key(key)
     for key in overflow_keys:
@@ -129,7 +137,7 @@ def build_movie_groups(
         _apply_indexer_metadata(bucket, releases)
 
     if enrich_metadata and tmdb and tmdb.configured:
-        tmdb_buckets = [buckets[key] for key in primary_keys if key in buckets]
+        tmdb_buckets = [buckets[key] for key in primary_keys]
         _enrich_buckets_parallel(tmdb_buckets, tmdb)
 
     for bucket, releases in staged:

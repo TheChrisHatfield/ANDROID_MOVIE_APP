@@ -68,3 +68,30 @@ def test_enrichment_capped_when_overflow_with_tmdb(monkeypatch):
     assert len(groups) == 55
     assert ungrouped == []
     assert capped is True
+
+
+def test_untitled_rows_do_not_consume_tmdb_enrichment_slots():
+    rows = [
+        {"id": "u1", "name": "", "site": "1337x"},
+        {"id": "u2", "name": "   ", "site": "1337x"},
+        {"id": "m1", "name": "Named Film 2020 1080p", "site": "YTS"},
+    ]
+    looked_up: list[str] = []
+
+    class FakeTmdb:
+        configured = True
+
+        def lookup(self, title, year=None):
+            looked_up.append(title)
+            return None
+
+    groups, ungrouped, capped = build_movie_groups(
+        rows,
+        tmdb=FakeTmdb(),
+        enrich_metadata=True,
+        max_groups=1,
+    )
+    assert any(g["title"] == "Named Film" for g in groups)
+    assert looked_up == ["Named Film"]
+    assert len(ungrouped) == 2
+    assert capped is False
