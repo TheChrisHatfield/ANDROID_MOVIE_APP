@@ -94,7 +94,7 @@ def apply_filters(
                 and seed_count(r["seeds"]) >= min_seeds
             )
         ]
-    if max_seeds is not None and max_seeds > 0:
+    if max_seeds is not None:
         filtered = [
             r
             for r in filtered
