@@ -44,3 +44,13 @@ def test_expired_rows_still_served_while_refreshing():
     assert served is not None
     assert served.rows
     assert cache.is_refreshing("horror")
+
+
+def test_put_preserves_refreshing_lock_until_owner_clears():
+    cache = GenrePoolCache()
+    assert cache.mark_refreshing("horror")
+    cache.put("horror", [{"name": "Film 2020 1080p", "site": "YTS"}], [])
+    assert cache.is_refreshing("horror")
+    assert cache.mark_refreshing("horror") is False
+    cache.clear_refreshing("horror")
+    assert not cache.is_refreshing("horror")

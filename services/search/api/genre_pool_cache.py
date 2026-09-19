@@ -68,12 +68,13 @@ class GenrePoolCache:
             # Never downgrade a full pool entry to partial on background refresh.
             if existing and existing.rows and not existing.partial and partial:
                 partial = False
+            still_refreshing = bool(existing and existing.refreshing)
             entry = GenrePoolEntry(
                 genre_id=genre_id.strip().lower(),
                 rows=list(rows),
                 failed_sites=list(failed_sites),
                 partial=partial,
-                refreshing=False,
+                refreshing=still_refreshing,
                 movie_profile=movie_profile,
             )
             self._entries[key] = entry
