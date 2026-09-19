@@ -170,8 +170,6 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                 } else {
                     _statusError.value = error
                     _pollSucceeded.value = false
-                    _remoteByHash.value = emptyMap()
-                    _syncClock.value = SyncClock()
                 }
             } finally {
                 if (generation == refreshGeneration) {
@@ -237,8 +235,8 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
             pollSucceeded -> "Not on seedbox"
             else -> "Status unavailable"
         }
-        val showProgress = remote != null && remote.sizeBytes > 0L &&
-            remote.leftBytes > 0L && !remote.isHashChecking
+        val showProgress = remote != null && statusError == null && remote.isOpen &&
+            remote.sizeBytes > 0L && remote.leftBytes > 0L && !remote.isHashChecking
         return UploadedRowUi(
             entry = entry,
             remoteStatus = remote,

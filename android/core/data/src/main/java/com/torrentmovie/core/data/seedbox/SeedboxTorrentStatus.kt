@@ -32,6 +32,14 @@ data class SeedboxTorrentStatus(
             return if (upRate > 0L) "Seeding" else "Complete"
         }
         if (!isOpen) return "Paused"
+        if (
+            sizeBytes > 0L &&
+            leftBytes > 0L &&
+            downRate <= 0L &&
+            bytesDone < sizeBytes
+        ) {
+            return "Waiting for peers"
+        }
         if (downRate > 0L || (sizeBytes > 0L && bytesDone < sizeBytes)) {
             val pct = progressPercent()
             return if (pct != null) "Downloading · $pct%" else "Downloading"

@@ -53,6 +53,12 @@ class SeedboxTorrentStatusTest {
     }
 
     @Test
+    fun statusLabelShowsWaitingWhenStalled() {
+        val status = downloading(downRate = 0L, leftBytes = 500L)
+        assertEquals("Waiting for peers", status.statusLabel())
+    }
+
+    @Test
     fun etaSummaryShowsWaitingWhenStalled() {
         val status = downloading(downRate = 0L, leftBytes = 500L)
         assertEquals("waiting for peers", status.etaSummary(0L))
