@@ -37,6 +37,34 @@ class HttprpcTorrentParserTest {
         assertEquals(512000L, status.downRate)
         assertEquals(42, status.progressPercent())
         assertTrue(status.statusLabel().startsWith("Downloading"))
+        assertTrue(status.isStarted)
+    }
+
+    @Test
+    fun parseListResponseMapsStoppedStateAsPaused() {
+        val json = """
+            {
+              "t": {
+                "ABCDEF0123456789ABCDEF0123456789ABCDEF01": [
+                  "1", "0", "1", "0",
+                  "Movie.2024.1080p",
+                  "1000",
+                  "0", "0",
+                  "420",
+                  "0", "0", "0", "0",
+                  "0",
+                  "", "0", "0", "0", "0",
+                  "580"
+                ]
+              },
+              "cid": "1234567890"
+            }
+        """.trimIndent()
+
+        val status = HttprpcTorrentParser.parseListResponse(json).first()
+        assertEquals(false, status.isStarted)
+        assertEquals(true, status.isOpen)
+        assertEquals("Paused", status.statusLabel())
     }
 
     @Test

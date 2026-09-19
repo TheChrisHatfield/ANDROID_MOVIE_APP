@@ -11,6 +11,7 @@ import java.util.Locale
 internal object HttprpcTorrentParser {
     private const val IDX_IS_OPEN = 0
     private const val IDX_IS_HASH_CHECKING = 1
+    private const val IDX_GET_STATE = 3
     private const val IDX_NAME = 4
     private const val IDX_SIZE_BYTES = 5
     private const val IDX_BYTES_DONE = 8
@@ -43,6 +44,7 @@ internal object HttprpcTorrentParser {
             upRate = values.get(IDX_UP_RATE).asLongOrZero(),
             isOpen = values.get(IDX_IS_OPEN).asStringOrEmpty() != "0",
             isHashChecking = values.get(IDX_IS_HASH_CHECKING).asStringOrEmpty() != "0",
+            isStarted = values.get(IDX_GET_STATE).asStringOrEmpty() != "0",
         )
     }
 

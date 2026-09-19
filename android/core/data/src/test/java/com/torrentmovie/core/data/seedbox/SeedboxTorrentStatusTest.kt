@@ -71,5 +71,21 @@ class SeedboxTorrentStatusTest {
         assertTrue(
             !downloading(leftBytes = 0L, bytesDone = 1000L, sizeBytes = 1000L).isActivelyDownloading(),
         )
+        assertTrue(!downloading(downRate = 0L, leftBytes = 500L).copy(isStarted = false).isActivelyDownloading())
+    }
+
+    @Test
+    fun statusLabelShowsPausedWhenStoppedEvenIfOpen() {
+        val pausedDownload = downloading(downRate = 0L, leftBytes = 500L).copy(isStarted = false)
+        assertEquals("Paused", pausedDownload.statusLabel())
+        assertNull(pausedDownload.etaSummary(0L))
+
+        val pausedComplete = downloading(
+            leftBytes = 0L,
+            downRate = 0L,
+            bytesDone = 1000L,
+            sizeBytes = 1000L,
+        ).copy(isStarted = false)
+        assertEquals("Paused", pausedComplete.statusLabel())
     }
 }

@@ -13,6 +13,8 @@ data class SeedboxTorrentStatus(
     val upRate: Long,
     val isOpen: Boolean,
     val isHashChecking: Boolean,
+    /** rTorrent `d.get_state` — false when the torrent is stopped/paused. */
+    val isStarted: Boolean = true,
 ) {
     fun progressPercent(): Int? {
         if (sizeBytes <= 0L) return null
@@ -28,10 +30,10 @@ data class SeedboxTorrentStatus(
 
     fun statusLabel(): String {
         if (isHashChecking) return "Checking hash"
+        if (!isOpen || !isStarted) return "Paused"
         if (sizeBytes > 0L && leftBytes == 0L && bytesDone >= sizeBytes) {
             return if (upRate > 0L) "Seeding" else "Complete"
         }
-        if (!isOpen) return "Paused"
         if (
             sizeBytes > 0L &&
             leftBytes > 0L &&
@@ -55,7 +57,7 @@ data class SeedboxTorrentStatus(
     }
 
     fun isActivelyDownloading(): Boolean {
-        if (isHashChecking || !isOpen) return false
+        if (isHashChecking || !isOpen || !isStarted) return false
         if (sizeBytes > 0L && leftBytes == 0L && bytesDone >= sizeBytes) return false
         return downRate > 0L || leftBytes > 0L
     }
@@ -69,6 +71,7 @@ data class SeedboxTorrentStatus(
     fun etaSummary(elapsedSincePollSeconds: Long): String? {
         if (
             isOpen &&
+            isStarted &&
             !isHashChecking &&
             leftBytes > 0L &&
             downRate <= 0L &&
