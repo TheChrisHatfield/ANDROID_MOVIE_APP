@@ -31,6 +31,14 @@ import com.torrentmovie.app.ui.util.openYoutubeTrailerFullscreen
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 
+internal fun groupContainsSelectedRelease(
+    group: MovieGroupDto,
+    selectedResultId: String?,
+): Boolean {
+    if (selectedResultId.isNullOrBlank()) return false
+    return group.releases.any { it.id == selectedResultId }
+}
+
 @Composable
 fun MovieGroupCard(
     group: MovieGroupDto,
@@ -47,10 +55,23 @@ fun MovieGroupCard(
     val playableTrailerId = group.trailerYoutubeKey?.let { normalizeYoutubeVideoId(it) }
     val posterUrl = group.posterUrl?.takeIf { it.isNotBlank() }
         ?: group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
+    val groupSelected = groupContainsSelectedRelease(group, selectedResultId)
+    val cardShape = RoundedCornerShape(12.dp)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .then(
+                if (groupSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = cardShape,
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .clickable(onClick = {
                 if (singleRelease) {
                     onOpenRelease(group.releases.first())
@@ -58,7 +79,12 @@ fun MovieGroupCard(
                     onToggleExpand()
                 }
             }),
-        colors = CardDefaults.cardColors(),
+        shape = cardShape,
+        colors = if (groupSelected) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        },
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
