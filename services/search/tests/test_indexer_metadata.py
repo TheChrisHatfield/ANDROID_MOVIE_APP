@@ -2,7 +2,9 @@ from metadata.grouping import _apply_tmdb, build_movie_groups
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
 
 
-def test_group_uses_yts_poster_without_tmdb():
+def test_group_uses_yts_poster_without_tmdb(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
     rows = [
         {
             "id": "1",
@@ -23,7 +25,46 @@ def test_group_uses_yts_poster_without_tmdb():
     assert len(groups) == 1
     assert groups[0]["poster_url"] == "https://yts.rs/images/superman.jpg"
     assert groups[0]["overview"] == "Man of steel returns."
-    assert groups[0]["trailer_youtube_key"] == "abc123"
+    assert groups[0]["trailer_youtube_key"] is None
+
+
+def test_indexer_skips_invalid_trailer_and_keeps_later_valid_id(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
+    rows = [
+        {
+            "id": "1",
+            "name": "Inception 2010 1080p",
+            "site": "YTS",
+            "poster_url": "https://yts.rs/images/inception.jpg",
+            "overview": "Dream heist.",
+            "trailer_youtube_key": "abc123",
+        },
+        {
+            "id": "2",
+            "name": "Inception 2010 720p",
+            "site": "1337x",
+            "trailer_youtube_key": "dQw4w9WgXcQ",
+        },
+    ]
+    groups, _, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=True)
+    assert groups[0]["trailer_youtube_key"] == "dQw4w9WgXcQ"
+
+
+def test_indexer_keeps_valid_youtube_id(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
+    rows = [
+        {
+            "id": "1",
+            "name": "Dune 2021 1080p",
+            "site": "YTS",
+            "poster_url": "https://yts.rs/images/dune.jpg",
+            "trailer_youtube_key": "dQw4w9WgXcQ",
+        },
+    ]
+    groups, _, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=True)
+    assert groups[0]["trailer_youtube_key"] == "dQw4w9WgXcQ"
 
 
 def test_indexer_metadata_applied_when_enrich_disabled():
@@ -38,7 +79,7 @@ def test_indexer_metadata_applied_when_enrich_disabled():
     ]
     groups, ungrouped, _ = build_movie_groups(rows, tmdb=None, enrich_metadata=False)
     assert groups[0]["poster_url"] == "https://yts.rs/images/dune.jpg"
-    assert groups[0]["trailer_youtube_key"] == "dune-trailer"
+    assert groups[0]["trailer_youtube_key"] is None
 
 
 def test_yts_year_from_date_groups_single_card():

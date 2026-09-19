@@ -32,7 +32,7 @@ Torrent Movie App — Android search + seedbox magnet handoff (torrtux-c repurpo
 
 ```
 services/search/torrtux_core/     # ported from torrtux.py
-services/search/metadata/         # grouping, TMDB, web poster fallback
+services/search/metadata/         # grouping, TMDB, web poster/trailer fallback
 services/search/api/main.py       # FastAPI app
 android/                          # Kotlin Compose app
 docs/specs/torrent-movie-app/     # spec trio + contracts

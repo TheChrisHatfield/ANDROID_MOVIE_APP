@@ -201,7 +201,7 @@ def search(
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB, web poster, and YouTube trailer fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     q = q.strip()
@@ -269,7 +269,7 @@ def browse_1337x(
     max_size: str | None = Query(None),
     movie_profile: bool = Query(True, description="Movie indexers and title filter (no TV/software)"),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB, web poster, and YouTube trailer fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     if feed not in X1337.BROWSE_FEEDS:
@@ -327,7 +327,7 @@ def browse_genre(
     parallel: bool = Query(True),
     movie_profile: bool = Query(True),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB, web poster, and YouTube trailer fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
     force_refresh: bool = Query(False, description="Bypass genre pool cache (pull-to-refresh)"),
 ) -> SearchResponse:
@@ -427,7 +427,7 @@ def browse_1337x_genre(
     max_seeds: int | None = Query(None, ge=0),
     max_size: str | None = Query(None),
     group: bool = Query(True, description="Group duplicate movies; Kodi-style compact results"),
-    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB and web poster fallback"),
+    enrich: bool = Query(True, description="Fetch poster/overview/trailer via TMDB, web poster, and YouTube trailer fallback"),
     tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
 ) -> SearchResponse:
     normalized = genre.strip().lower()

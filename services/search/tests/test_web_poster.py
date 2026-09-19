@@ -194,7 +194,9 @@ def test_grouping_copies_web_poster_onto_releases():
     rows = [
         {"id": "1", "name": "Obscure Film 2020 1080p", "site": "1337x"},
     ]
-    with patch("metadata.grouping.fill_missing_posters") as mock_fill:
+    with patch("metadata.grouping.fill_missing_posters") as mock_fill, patch(
+        "metadata.grouping.fill_missing_trailers", return_value=0,
+    ):
         def _fill(buckets, **kwargs):
             for bucket in buckets:
                 bucket["poster_url"] = "/v1/posters/deadbeef.jpg"

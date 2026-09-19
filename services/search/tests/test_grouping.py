@@ -48,6 +48,8 @@ def test_max_groups_still_groups_overflow_without_tmdb():
 
 
 def test_enrichment_capped_when_overflow_with_tmdb(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
     rows = [
         {"id": str(i), "name": f"Film {i} 2020 1080p", "site": "YTS"}
         for i in range(55)
@@ -72,6 +74,7 @@ def test_enrichment_capped_when_overflow_with_tmdb(monkeypatch):
 
 def test_enrichment_capped_when_overflow_without_tmdb(monkeypatch):
     monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
     rows = [
         {"id": str(i), "name": f"Film {i} 2020 1080p", "site": "YTS"}
         for i in range(12)
@@ -86,7 +89,9 @@ def test_enrichment_capped_when_overflow_without_tmdb(monkeypatch):
     assert capped is True
 
 
-def test_untitled_rows_do_not_consume_tmdb_enrichment_slots():
+def test_untitled_rows_do_not_consume_tmdb_enrichment_slots(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    monkeypatch.setattr("metadata.grouping.fill_missing_trailers", lambda buckets, **kwargs: 0)
     rows = [
         {"id": "u1", "name": "", "site": "1337x"},
         {"id": "u2", "name": "   ", "site": "1337x"},

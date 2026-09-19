@@ -67,6 +67,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 - Filter chips (min seeds, max size)
 - Pull-to-refresh on results
 - Error banners per FR-010
+- TMDB + web poster (FR-036a) and YouTube trailer (FR-036b) fallbacks on grouped results
 - Optional: qBittorrent / Transmission adapters behind `SeedboxClient` interface
 
 ## Technical decisions

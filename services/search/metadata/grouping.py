@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
 from metadata.web_poster import fill_missing_posters, is_usable_poster_url
+from metadata.web_trailer import extract_youtube_id, fill_missing_trailers, is_usable_trailer_key
 
 _MAX_TMDB_WORKERS = 4
 
@@ -39,12 +40,14 @@ def _apply_indexer_metadata(bucket: dict, releases: list[dict]) -> None:
             bucket["poster_url"] = row["poster_url"]
         if not bucket.get("overview") and row.get("overview"):
             bucket["overview"] = row["overview"]
-        if not bucket.get("trailer_youtube_key") and row.get("trailer_youtube_key"):
-            bucket["trailer_youtube_key"] = row["trailer_youtube_key"]
+        if not is_usable_trailer_key(bucket.get("trailer_youtube_key")):
+            extracted = extract_youtube_id(row.get("trailer_youtube_key"))
+            if extracted:
+                bucket["trailer_youtube_key"] = extracted
         if (
-            bucket.get("poster_url")
+            is_usable_poster_url(bucket.get("poster_url"))
             and bucket.get("overview")
-            and bucket.get("trailer_youtube_key")
+            and is_usable_trailer_key(bucket.get("trailer_youtube_key"))
         ):
             break
 
@@ -147,7 +150,12 @@ def build_movie_groups(
         _enrich_buckets_parallel(tmdb_buckets, tmdb)
 
     if enrich_metadata:
-        fill_missing_posters([buckets[key] for key in primary_keys])
+        primary = [buckets[key] for key in primary_keys]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            poster_job = pool.submit(fill_missing_posters, primary)
+            trailer_job = pool.submit(fill_missing_trailers, primary)
+            poster_job.result()
+            trailer_job.result()
 
     for bucket, releases in staged:
         _append_group(bucket, releases, groups)
