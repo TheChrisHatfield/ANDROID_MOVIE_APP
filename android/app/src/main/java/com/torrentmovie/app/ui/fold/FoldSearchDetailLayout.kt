@@ -296,3 +296,9 @@ fun FoldSearchDetailLayout(
 internal fun needsFoldSelectionResync(selectedId: String?, activeResultId: String?): Boolean {
     return !selectedId.isNullOrBlank() && activeResultId != selectedId
 }
+
+/** Cover/narrow fold must reopen the selected release even if the drawer is on Settings or Uploaded. */
+internal fun shouldRestorePhoneDetailOnFold(
+    foldingToPhone: Boolean,
+    selectedResultId: String?,
+): Boolean = foldingToPhone && !selectedResultId.isNullOrBlank()

@@ -26,4 +26,16 @@ class FoldSelectionResyncTest {
         assertFalse(needsFoldSelectionResync(null, "abc"))
         assertFalse(needsFoldSelectionResync("", null))
     }
+
+    @Test
+    fun restoresPhoneDetailWhenFoldingWithASelection() {
+        assertTrue(shouldRestorePhoneDetailOnFold(true, "abc"))
+    }
+
+    @Test
+    fun skipsPhoneDetailRestoreWithoutSelectionOrWhenStayingTwoPane() {
+        assertFalse(shouldRestorePhoneDetailOnFold(true, null))
+        assertFalse(shouldRestorePhoneDetailOnFold(true, ""))
+        assertFalse(shouldRestorePhoneDetailOnFold(false, "abc"))
+    }
 }

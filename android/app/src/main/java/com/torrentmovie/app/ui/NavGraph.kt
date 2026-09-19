@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.fold.FoldSearchDetailLayout
+import com.torrentmovie.app.ui.fold.shouldRestorePhoneDetailOnFold
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -104,16 +105,13 @@ fun AppNavGraph(
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
             }
-        } else if (foldingToPhone) {
+        } else if (shouldRestorePhoneDetailOnFold(foldingToPhone, foldActiveSelection?.resultId)) {
             val active = foldActiveSelection ?: return@LaunchedEffect
-            val route = navController.currentBackStackEntry?.destination?.route
-            if (route == Routes.SEARCH) {
-                navController.navigate(
-                    Routes.detail(active.resultId, active.name, active.site),
-                ) {
-                    launchSingleTop = true
-                    popUpTo(Routes.SEARCH) { inclusive = false }
-                }
+            navController.navigate(
+                Routes.detail(active.resultId, active.name, active.site),
+            ) {
+                launchSingleTop = true
+                popUpTo(Routes.SEARCH) { inclusive = false }
             }
         }
         wasTwoPane = useTwoPane
