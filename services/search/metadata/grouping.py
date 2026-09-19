@@ -22,8 +22,9 @@ def _apply_tmdb(bucket: dict, tmdb: TmdbClient) -> None:
         bucket["overview"] = info.overview
     if info.poster_url:
         bucket["poster_url"] = info.poster_url
-    if info.trailer_youtube_key:
-        bucket["trailer_youtube_key"] = info.trailer_youtube_key
+    extracted = extract_youtube_id(info.trailer_youtube_key)
+    if extracted:
+        bucket["trailer_youtube_key"] = extracted
 
 
 def _enrich_buckets_parallel(buckets: list[dict], tmdb: TmdbClient) -> None:

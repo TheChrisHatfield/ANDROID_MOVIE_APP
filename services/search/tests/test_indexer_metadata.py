@@ -117,3 +117,27 @@ def test_tmdb_does_not_wipe_yts_poster(monkeypatch):
     assert bucket["poster_url"] == "https://yts.rs/poster.jpg"
     assert bucket["overview"] == "TMDB plot"
     assert bucket["trailer_youtube_key"] == "yts123"
+
+
+def test_tmdb_ignores_invalid_trailer_and_keeps_indexer_id(monkeypatch):
+    bucket = {
+        "title": "Inception",
+        "year": 2010,
+        "overview": "YTS plot",
+        "poster_url": "https://yts.rs/poster.jpg",
+        "trailer_youtube_key": "dQw4w9WgXcQ",
+    }
+    tmdb = TmdbClient(api_key="test-key")
+
+    def fake_lookup(title, year=None):
+        return TmdbMovieInfo(
+            title="Inception",
+            year=2010,
+            overview="TMDB plot",
+            poster_url=None,
+            trailer_youtube_key="not-a-vid",
+        )
+
+    monkeypatch.setattr(tmdb, "lookup", fake_lookup)
+    _apply_tmdb(bucket, tmdb)
+    assert bucket["trailer_youtube_key"] == "dQw4w9WgXcQ"
