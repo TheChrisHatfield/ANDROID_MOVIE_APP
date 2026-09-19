@@ -291,8 +291,10 @@ fun TorrentDetailScreen(
                                 }
                                 Toast.makeText(context, result.message, length).show()
                             }
-                            is SeedboxResult.Failure ->
+                            is SeedboxResult.Failure -> {
+                                onGenreBranchFeedback?.invoke(false)
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                            }
                         }
                     } catch (e: Exception) {
                         Toast.makeText(

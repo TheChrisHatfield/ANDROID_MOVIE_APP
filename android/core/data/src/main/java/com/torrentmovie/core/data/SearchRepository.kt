@@ -92,7 +92,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             val response = api().browse1337x(
                 feed = feed,
                 limit = 100,
-                pages = 1,
+                pages = settings.searchPages,
                 minSeeds = minSeeds,
                 maxSeeds = maxSeeds,
                 maxSize = maxSize,

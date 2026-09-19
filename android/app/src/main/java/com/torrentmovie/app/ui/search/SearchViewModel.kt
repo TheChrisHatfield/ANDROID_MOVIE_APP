@@ -70,10 +70,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
                 if (settings.movieSitesOnly && activeFeed != null && !activeFeed.visibleFor(true)) {
                     loadBrowse1337x(X1337BrowseFeed.TRENDING)
-                    return@collect
                 }
                 val key = searchSettingsKey()
-                if (key != lastSearchSettingsKey && _state.value.hasSearched) {
+                val modeActive = _state.value.hasSearched ||
+                    _state.value.genrePanelExpanded ||
+                    _state.value.activeBrowseFeed != null ||
+                    _state.value.activeGenre != null
+                if (key != lastSearchSettingsKey && modeActive) {
                     lastSearchSettingsKey = key
                     _state.value = _state.value.copy(
                         loading = true,
@@ -156,11 +159,21 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         _state.value = _state.value.copy(maxSize = value?.takeIf { it.isNotBlank() })
     }
 
-    fun recordGenreBranchFeedback(resultId: String, success: Boolean) {
-        val genreId = _state.value.activeGenre ?: return
-        val groupKey = _state.value.groups.firstOrNull { group ->
+    fun recordGenreBranchFeedback(
+        resultId: String,
+        success: Boolean,
+        genreIdOverride: String? = null,
+    ) {
+        val genreId = genreIdOverride ?: _state.value.activeGenre ?: return
+        val fromGroup = _state.value.groups.firstOrNull { group ->
             group.releases.any { it.id == resultId }
-        }?.groupKey ?: return
+        }?.groupKey
+        val fromFlat = _state.value.results.firstOrNull { it.id == resultId }?.branchKey
+        val fromGroupRelease = _state.value.groups
+            .flatMap { it.releases }
+            .firstOrNull { it.id == resultId }
+            ?.branchKey
+        val groupKey = fromGroup ?: fromGroupRelease ?: fromFlat ?: return
         viewModelScope.launch {
             container.searchRepository.recordGenreBranchFeedback(genreId, groupKey, success)
         }
@@ -513,6 +526,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             info = null,
             activeBrowseFeed = null,
             activeGenre = null,
+            genrePanelExpanded = false,
             results = emptyList(),
             groups = emptyList(),
         )

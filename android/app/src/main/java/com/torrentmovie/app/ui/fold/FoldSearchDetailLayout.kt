@@ -39,6 +39,7 @@ fun FoldSearchDetailLayout(
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredName by rememberSaveable { mutableStateOf<String?>(null) }
     var restoredSite by rememberSaveable { mutableStateOf<String?>(null) }
+    var genreAtDetailOpen by rememberSaveable { mutableStateOf<String?>(null) }
     val state by searchViewModel.state.collectAsState()
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
@@ -284,6 +285,7 @@ fun FoldSearchDetailLayout(
             onOpenSettings = onOpenSettings,
             onOpenDetail = { result ->
                 container.searchResultStore.put(result)
+                genreAtDetailOpen = state.activeGenre
                 selectedId = result.id
                 restoredName = result.name
                 restoredSite = result.site
@@ -335,7 +337,11 @@ fun FoldSearchDetailLayout(
                         },
                         onOpenUploaded = onOpenUploaded,
                         onGenreBranchFeedback = { success ->
-                            searchViewModel.recordGenreBranchFeedback(result.id, success)
+                            searchViewModel.recordGenreBranchFeedback(
+                                result.id,
+                                success,
+                                genreAtDetailOpen,
+                            )
                         },
                     )
                 }

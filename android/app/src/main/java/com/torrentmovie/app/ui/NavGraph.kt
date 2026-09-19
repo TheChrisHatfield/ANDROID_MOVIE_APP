@@ -207,7 +207,7 @@ fun AppNavGraph(
                     }
                     return@LaunchedEffect
                 }
-                if (navName.isNotBlank() && container.searchResultStore.get(resultId) != null) {
+                if (container.searchResultStore.get(resultId) != null) {
                     return@LaunchedEffect
                 }
                 navController.popBackStack(Routes.SEARCH, inclusive = false)
@@ -229,6 +229,7 @@ fun AppNavGraph(
             }
 
             val cached = container.searchResultStore.get(resultId)
+            val genreAtOpen = remember(resultId) { searchState.activeGenre }
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
@@ -247,7 +248,7 @@ fun AppNavGraph(
                 },
                 onOpenUploaded = ::openUploaded,
                 onGenreBranchFeedback = { success ->
-                    searchViewModel.recordGenreBranchFeedback(resultId, success)
+                    searchViewModel.recordGenreBranchFeedback(resultId, success, genreAtOpen)
                 },
             )
         }
