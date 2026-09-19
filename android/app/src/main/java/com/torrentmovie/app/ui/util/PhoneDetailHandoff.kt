@@ -27,3 +27,7 @@ internal fun resolveGenreForRankingFeedback(
 
 internal fun magnetFallbackDetailUrl(storeUrl: String?, selectionUrl: String?): String? =
     storeUrl?.takeIf { it.isNotBlank() } ?: selectionUrl?.takeIf { it.isNotBlank() }
+
+/** Ignore a cancelled magnet fetch's finally so Retry cannot drop the new request's loading flag. */
+internal fun shouldClearMagnetLoading(startedGeneration: Int, currentGeneration: Int): Boolean =
+    startedGeneration == currentGeneration

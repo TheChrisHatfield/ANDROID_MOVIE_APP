@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
+import com.torrentmovie.app.ui.util.shouldClearMagnetLoading
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
@@ -67,6 +68,7 @@ fun TorrentDetailScreen(
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     val metadataRevision by container.movieMetadataStore.revision.collectAsState()
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
+    var magnetFetchGeneration by remember { mutableIntStateOf(0) }
     var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
     var metadata by remember(resultId) { mutableStateOf(container.movieMetadataStore.get(resultId)) }
 
@@ -135,6 +137,7 @@ fun TorrentDetailScreen(
             magnetError = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)"
             return@LaunchedEffect
         }
+        val generation = ++magnetFetchGeneration
         magnetLoading = true
         magnetError = null
         val cachedBeforeResolve = container.searchResultStore.get(resultId)
@@ -200,13 +203,17 @@ fun TorrentDetailScreen(
                 e.httpCode == 404 -> "Result not in cache — tap retry or search again"
                 else -> e.message ?: "Magnet fetch failed"
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (magnet.isNullOrBlank()) {
                 magnet = null
             }
             magnetError = e.message ?: "Magnet fetch failed"
         } finally {
-            magnetLoading = false
+            if (shouldClearMagnetLoading(generation, magnetFetchGeneration)) {
+                magnetLoading = false
+            }
         }
     }
 

@@ -86,4 +86,10 @@ class PhoneDetailHandoffTest {
         )
         assertNull(magnetFallbackDetailUrl(storeUrl = "  ", selectionUrl = null))
     }
+
+    @Test
+    fun cancelledMagnetFetchDoesNotClearNewerLoadingFlag() {
+        assertTrue(shouldClearMagnetLoading(startedGeneration = 3, currentGeneration = 3))
+        assertFalse(shouldClearMagnetLoading(startedGeneration = 2, currentGeneration = 3))
+    }
 }
