@@ -297,6 +297,7 @@ fun TorrentDetailScreen(
                             }
                         }
                     } catch (e: Exception) {
+                        onGenreBranchFeedback?.invoke(false)
                         Toast.makeText(
                             context,
                             e.message ?: "Send failed",

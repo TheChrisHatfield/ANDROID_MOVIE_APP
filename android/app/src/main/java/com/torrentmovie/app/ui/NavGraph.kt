@@ -229,7 +229,7 @@ fun AppNavGraph(
             }
 
             val cached = container.searchResultStore.get(resultId)
-            val genreAtOpen = remember(resultId) { searchState.activeGenre }
+            val genreAtOpen = searchState.activeGenre
             TorrentDetailScreen(
                 container = container,
                 resultId = resultId,
@@ -241,7 +241,10 @@ fun AppNavGraph(
                     navController.popBackStack(Routes.SEARCH, inclusive = false)
                 },
                 onResultIdChanged = { newId ->
-                    navController.navigate(Routes.detail(newId, navName, navSite)) {
+                    val stored = container.searchResultStore.get(newId)
+                    val nextName = stored?.name?.takeIf { it.isNotBlank() } ?: cached?.name ?: navName
+                    val nextSite = stored?.site?.takeIf { it.isNotBlank() } ?: cached?.site ?: navSite
+                    navController.navigate(Routes.detail(newId, nextName, nextSite)) {
                         launchSingleTop = true
                         popUpTo(Routes.SEARCH) { inclusive = false }
                     }

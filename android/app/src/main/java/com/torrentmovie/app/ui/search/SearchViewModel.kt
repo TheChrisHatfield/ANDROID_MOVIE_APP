@@ -165,15 +165,16 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         genreIdOverride: String? = null,
     ) {
         val genreId = genreIdOverride ?: _state.value.activeGenre ?: return
-        val fromGroup = _state.value.groups.firstOrNull { group ->
-            group.releases.any { it.id == resultId }
-        }?.groupKey
-        val fromFlat = _state.value.results.firstOrNull { it.id == resultId }?.branchKey
         val fromGroupRelease = _state.value.groups
             .flatMap { it.releases }
             .firstOrNull { it.id == resultId }
             ?.branchKey
-        val groupKey = fromGroup ?: fromGroupRelease ?: fromFlat ?: return
+        val fromFlat = _state.value.results.firstOrNull { it.id == resultId }?.branchKey
+        val fromStore = container.searchResultStore.get(resultId)?.branchKey
+        val fromGroup = _state.value.groups.firstOrNull { group ->
+            group.releases.any { it.id == resultId }
+        }?.groupKey?.takeUnless { it.startsWith("flat-") }
+        val groupKey = fromGroupRelease ?: fromFlat ?: fromStore ?: fromGroup ?: return
         viewModelScope.launch {
             container.searchRepository.recordGenreBranchFeedback(genreId, groupKey, success)
         }
@@ -298,8 +299,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             error = null,
             errorCode = null,
             info = null,
-            results = emptyList(),
-            groups = emptyList(),
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -388,8 +387,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             error = null,
             errorCode = null,
             info = null,
-            results = emptyList(),
-            groups = emptyList(),
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
