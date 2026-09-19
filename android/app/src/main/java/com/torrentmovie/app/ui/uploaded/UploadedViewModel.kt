@@ -106,7 +106,9 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
                     _pollSucceeded.value = false
                     _syncClock.value = SyncClock()
                 }
-                refreshStatuses()
+                if (_screenVisible.value) {
+                    refreshStatuses()
+                }
             }
         }
         startEtaTicker()

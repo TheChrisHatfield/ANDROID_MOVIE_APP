@@ -69,6 +69,15 @@ fun AppNavGraph(
         return SearchReleaseRematch.find(allReleases(), resultId, name, site, detailUrl)
     }
 
+    fun openSettings() {
+        container.foldActiveSelection = null
+        navController.navigate(Routes.SETTINGS) {
+            launchSingleTop = true
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            restoreState = true
+        }
+    }
+
     fun openUploaded(storageKey: String) {
         container.foldActiveSelection = null
         container.requestUploadedHighlight(storageKey)
@@ -118,26 +127,14 @@ fun AppNavGraph(
                 FoldSearchDetailLayout(
                     container = container,
                     searchViewModel = searchViewModel,
-                    onOpenSettings = {
-                        navController.navigate(Routes.SETTINGS) {
-                            launchSingleTop = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            restoreState = true
-                        }
-                    },
+                    onOpenSettings = ::openSettings,
                     onOpenUploaded = ::openUploaded,
                 )
             } else {
                 SearchScreen(
                     container = container,
                     sharedViewModel = searchViewModel,
-                    onOpenSettings = {
-                        navController.navigate(Routes.SETTINGS) {
-                            launchSingleTop = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            restoreState = true
-                        }
-                    },
+                    onOpenSettings = ::openSettings,
                     onOpenDetail = { r ->
                         container.searchResultStore.put(r)
                         container.foldActiveSelection = PendingFoldDetail(
