@@ -29,6 +29,7 @@ import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.data.seedbox.SeedboxResult
 import com.torrentmovie.core.network.TorrentResultDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -298,6 +299,8 @@ fun TorrentDetailScreen(
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
                             }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         onGenreBranchFeedback?.invoke(false)
                         Toast.makeText(
