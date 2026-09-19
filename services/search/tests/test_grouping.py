@@ -70,6 +70,22 @@ def test_enrichment_capped_when_overflow_with_tmdb(monkeypatch):
     assert capped is True
 
 
+def test_enrichment_capped_when_overflow_without_tmdb(monkeypatch):
+    monkeypatch.setattr("metadata.grouping.fill_missing_posters", lambda buckets, **kwargs: 0)
+    rows = [
+        {"id": str(i), "name": f"Film {i} 2020 1080p", "site": "YTS"}
+        for i in range(12)
+    ]
+    groups, ungrouped, capped = build_movie_groups(
+        rows,
+        tmdb=None,
+        enrich_metadata=True,
+        max_groups=8,
+    )
+    assert len(groups) == 12
+    assert capped is True
+
+
 def test_untitled_rows_do_not_consume_tmdb_enrichment_slots():
     rows = [
         {"id": "u1", "name": "", "site": "1337x"},

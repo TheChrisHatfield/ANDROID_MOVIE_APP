@@ -175,6 +175,4 @@ def build_movie_groups(
             ),
         )
 
-    return groups, ungrouped, bool(
-        overflow_keys and enrich_metadata and tmdb and tmdb.configured
-    )
+    return groups, ungrouped, bool(overflow_keys and enrich_metadata)
