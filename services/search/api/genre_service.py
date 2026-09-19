@@ -154,6 +154,8 @@ class GenreBrowseService:
                         max_size=max_size,
                         limit=limit,
                     )
+            else:
+                need_wider_pool = _effective_pool_pages(page_limit) > BROAD_KEYWORD_PAGE_LIMIT
 
         owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
         if not owned_refresh:
@@ -166,15 +168,32 @@ class GenreBrowseService:
                 limit=limit,
                 wait_for_completion=force_refresh or need_wider_pool,
             )
-            if served is not None:
+            cached_after = self._cache.get(normalized, movie_profile=movie_profile)
+            still_narrow = bool(
+                cached_after and cached_after.rows and _pool_too_narrow(cached_after, page_limit)
+            )
+            if served is not None and not still_narrow:
+                return served
+            if still_narrow or force_refresh:
+                served = self._wait_for_in_flight_refresh(
+                    normalized,
+                    movie_profile=movie_profile,
+                    min_seeds=min_seeds,
+                    max_seeds=max_seeds,
+                    max_size=max_size,
+                    limit=limit,
+                    wait_for_completion=True,
+                )
                 cached_after = self._cache.get(normalized, movie_profile=movie_profile)
                 still_narrow = bool(
                     cached_after and cached_after.rows and _pool_too_narrow(cached_after, page_limit)
                 )
-                if not still_narrow:
+                if served is not None and not still_narrow and not force_refresh:
                     return served
             owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
             if not owned_refresh:
+                if served is not None and not still_narrow:
+                    return served
                 return served or SearchOutcome([], [])
 
         try:
