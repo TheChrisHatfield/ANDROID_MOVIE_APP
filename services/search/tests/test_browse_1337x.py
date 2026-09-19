@@ -168,3 +168,14 @@ def test_genre_feedback_returns_count():
     body = response.json()
     assert body["status"] == "ok"
     assert body["count"] == 1
+
+
+@patch("api.main._genre_service.browse")
+def test_browse_genre_refresh_in_progress_returns_503(mock_browse):
+    from api.main import _searcher
+
+    mock_browse.return_value = SearchOutcome([], [], refresh_in_progress=True)
+    _searcher.working_sites = [MagicMock(name="YTS")]
+    response = client.get("/v1/browse/genre/horror")
+    assert response.status_code == 503
+    assert "still refreshing" in response.json()["detail"]

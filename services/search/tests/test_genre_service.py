@@ -121,6 +121,7 @@ def test_browse_does_not_steal_in_flight_refresh(mock_fetch):
     outcome = service.browse("horror", movie_profile=True)
     mock_fetch.assert_not_called()
     assert outcome.results == []
+    assert outcome.refresh_in_progress is True
     assert cache.is_refreshing("horror", movie_profile=True)
 
 

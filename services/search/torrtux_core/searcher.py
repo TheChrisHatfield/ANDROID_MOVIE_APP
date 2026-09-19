@@ -24,6 +24,7 @@ class SearchOutcome:
     all_sources_failed: bool = False
     indexers_unavailable: bool = False
     movie_indexers_unavailable: bool = False
+    refresh_in_progress: bool = False
 
 
 class TorrentSearcher:

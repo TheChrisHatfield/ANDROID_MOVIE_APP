@@ -340,6 +340,8 @@ def browse_genre(
         raise HTTPException(status_code=503, detail="No movie indexers available")
     if outcome.indexers_unavailable:
         raise HTTPException(status_code=503, detail="Requested indexers unavailable")
+    if outcome.refresh_in_progress:
+        raise HTTPException(status_code=503, detail="Genre pool still refreshing — retry shortly")
     if outcome.all_sources_failed:
         _refresh_sites_health(force=True)
         raise HTTPException(status_code=503, detail="No sources available")

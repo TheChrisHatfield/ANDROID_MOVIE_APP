@@ -194,6 +194,10 @@ class GenreBrowseService:
             if not owned_refresh:
                 if served is not None and not still_narrow:
                     return served
+                if self._cache.is_refreshing(normalized, movie_profile=movie_profile):
+                    if served is not None:
+                        return served
+                    return SearchOutcome([], [], refresh_in_progress=True)
                 return served or SearchOutcome([], [])
 
         try:
