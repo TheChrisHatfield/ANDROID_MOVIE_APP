@@ -8,7 +8,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.MaterialTheme
+import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +46,8 @@ fun SearchFilterSheet(
                 },
                 label = { Text("Min seeds") },
                 isError = minSeedsError != null,
-                supportingText = minSeedsError?.let { { Text(it, color = Color.Red) } },
+                supportingText = minSeedsError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                colors = missyOutlinedTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
@@ -58,7 +60,8 @@ fun SearchFilterSheet(
                 },
                 label = { Text("Max seeds") },
                 isError = maxSeedsError != null,
-                supportingText = maxSeedsError?.let { { Text(it, color = Color.Red) } },
+                supportingText = maxSeedsError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                colors = missyOutlinedTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -71,7 +74,8 @@ fun SearchFilterSheet(
                 },
                 label = { Text("Max size (e.g. 4GB)") },
                 isError = sizeError != null,
-                supportingText = sizeError?.let { { Text(it, color = Color.Red) } },
+                supportingText = sizeError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                colors = missyOutlinedTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),

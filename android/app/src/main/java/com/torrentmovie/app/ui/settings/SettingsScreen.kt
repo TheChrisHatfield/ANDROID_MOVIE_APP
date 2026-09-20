@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +59,7 @@ fun SettingsScreen(container: AppContainer) {
             value = settings.searchApiBaseUrl,
             onValueChange = { settings = settings.copy(searchApiBaseUrl = it) },
             label = { Text("Search API base URL") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         RowSwitch("Movie sites only", settings.movieSitesOnly) {
@@ -71,6 +73,7 @@ fun SettingsScreen(container: AppContainer) {
                 settings = settings.copy(searchPages = pages.coerceIn(1, 10))
             },
             label = { Text("Indexer pages per search (1–10)") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -78,6 +81,7 @@ fun SettingsScreen(container: AppContainer) {
             onValueChange = { settings = settings.copy(tmdbApiKey = it) },
             label = { Text("TMDB API key (posters & trailers)") },
             visualTransformation = PasswordVisualTransformation(),
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
@@ -94,6 +98,7 @@ fun SettingsScreen(container: AppContainer) {
             value = settings.rutorrentBaseUrl,
             onValueChange = { settings = settings.copy(rutorrentBaseUrl = it) },
             label = { Text("ruTorrent base URL") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
@@ -105,6 +110,7 @@ fun SettingsScreen(container: AppContainer) {
             value = settings.username,
             onValueChange = { settings = settings.copy(username = it) },
             label = { Text("Username") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -112,18 +118,21 @@ fun SettingsScreen(container: AppContainer) {
             onValueChange = { settings = settings.copy(password = it) },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = settings.authScheme,
             onValueChange = { settings = settings.copy(authScheme = it.lowercase()) },
             label = { Text("Auth scheme (basic or digest)") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = settings.downloadDirectory,
             onValueChange = { settings = settings.copy(downloadDirectory = it) },
             label = { Text("Magnet download folder") },
+            colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
 
