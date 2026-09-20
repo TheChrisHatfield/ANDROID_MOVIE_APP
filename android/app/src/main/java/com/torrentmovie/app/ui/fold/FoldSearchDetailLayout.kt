@@ -219,6 +219,8 @@ fun FoldSearchDetailLayout(
                 if (oldId != null && oldId != rematched.id) {
                     container.movieMetadataStore.get(oldId)?.let { meta ->
                         container.movieMetadataStore.put(rematched.id, meta)
+                        container.movieMetadataStore.remove(oldId)
+                        container.movieMetadataStore.bumpRevision()
                     }
                 }
                 return@LaunchedEffect

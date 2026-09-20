@@ -215,6 +215,8 @@ fun AppNavGraph(
                     if (shouldReplacePhoneDetail(resultId, matched.id)) {
                         container.movieMetadataStore.get(resultId)?.let { meta ->
                             container.movieMetadataStore.put(matched.id, meta)
+                            container.movieMetadataStore.remove(resultId)
+                            container.movieMetadataStore.bumpRevision()
                         }
                         replacePhoneDetail(matched.id, matched.name, matched.site)
                     }
