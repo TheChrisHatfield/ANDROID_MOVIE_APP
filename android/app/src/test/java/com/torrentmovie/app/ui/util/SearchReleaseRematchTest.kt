@@ -17,9 +17,13 @@ class SearchReleaseRematchTest {
     }
 
     @Test
-    fun rematchRequiresSiteWhenMultipleNameMatches() {
+    fun rematchPrefersSiteAmongMultipleNameMatches() {
         assertEquals("2", SearchReleaseRematch.find(releases, "old", "Inception 2010", "1337x")?.id)
-        assertNull(SearchReleaseRematch.find(releases, "old", "Inception 2010", ""))
+    }
+
+    @Test
+    fun rematchFallsBackToFirstNameMatchWhenSiteOmitted() {
+        assertEquals("1", SearchReleaseRematch.find(releases, "old", "Inception 2010", "")?.id)
     }
 
     @Test
