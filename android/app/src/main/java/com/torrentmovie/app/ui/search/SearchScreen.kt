@@ -210,6 +210,41 @@ fun SearchScreen(
             ) { Text("Search") }
         }
 
+        if (searchApiBaseUrl.isBlank()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Search API not configured",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Run the search service on your PC, then set Search API to http://<PC-LAN-IP>:8765 in Settings (same Wi-Fi as this phone).",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    if (onOpenSettings != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            Button(onClick = onOpenSettings) {
+                                Text("Open Settings")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (state.showTmdbSetupHint) {
             Card(
                 modifier = Modifier
