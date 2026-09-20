@@ -673,8 +673,16 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             }
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
+        val settingsKey = searchSettingsKey()
+        val replaceStoredMetadata = shouldReplaceStoredMetadata(
+            lastCommittedSettingsKey = lastSearchSettingsKey,
+            currentSettingsKey = settingsKey,
+            fetchMovieMetadata = settings.fetchMovieMetadata,
+        )
         val allReleases = display.groups.flatMap { it.releases }
-        allReleases.forEach { container.searchResultStore.put(it, replaceBlankPoster = true) }
+        allReleases.forEach {
+            container.searchResultStore.put(it, replaceBlankPoster = replaceStoredMetadata)
+        }
         display.groups.forEach { group ->
             val releasePoster = group.releases.firstOrNull { !it.posterUrl.isNullOrBlank() }?.posterUrl
             val metadata = MovieMetadata(
@@ -685,7 +693,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 trailerYoutubeKey = group.trailerYoutubeKey,
             )
             group.releases.forEach { release ->
-                container.movieMetadataStore.put(release.id, metadata, merge = false)
+                container.movieMetadataStore.put(
+                    release.id,
+                    metadata,
+                    merge = !replaceStoredMetadata,
+                )
             }
         }
         container.movieMetadataStore.bumpRevision()
@@ -699,7 +711,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchMinSeeds = minSeeds
         lastSearchMaxSeeds = maxSeeds
         lastSearchMaxSize = maxSize
-        lastSearchSettingsKey = searchSettingsKey()
+        lastSearchSettingsKey = settingsKey
         lastSearchActiveBrowseFeed = activeBrowseFeed
         lastSearchActiveGenre = activeGenre
         _state.value = _state.value.copy(
