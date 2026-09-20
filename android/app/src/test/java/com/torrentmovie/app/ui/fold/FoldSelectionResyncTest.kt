@@ -61,35 +61,30 @@ class FoldSelectionResyncTest {
     fun clearsTwoPaneDetailWhenQueryNoLongerMatchesLastSearch() {
         assertTrue(
             shouldClearFoldSelectionOnQueryEdit(
-                hasSearched = false,
                 query = "Dune",
                 lastExecutedQuery = "Inception",
             ),
         )
         assertTrue(
             shouldClearFoldSelectionOnQueryEdit(
-                hasSearched = true,
                 query = "  ",
                 lastExecutedQuery = "Inception",
             ),
         )
         assertTrue(
             shouldClearFoldSelectionOnQueryEdit(
-                hasSearched = true,
                 query = "Dune",
                 lastExecutedQuery = "Inception",
             ),
         )
         assertFalse(
             shouldClearFoldSelectionOnQueryEdit(
-                hasSearched = true,
                 query = "Inception",
                 lastExecutedQuery = "Inception",
             ),
         )
         assertFalse(
             shouldClearFoldSelectionOnQueryEdit(
-                hasSearched = false,
                 query = "Inception",
                 lastExecutedQuery = "",
             ),

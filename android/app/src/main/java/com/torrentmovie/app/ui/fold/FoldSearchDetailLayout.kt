@@ -155,9 +155,8 @@ fun FoldSearchDetailLayout(
         lastBrowseGenreKey = key
     }
 
-    LaunchedEffect(state.query, state.hasSearched, state.lastExecutedQuery) {
+    LaunchedEffect(state.query, state.lastExecutedQuery) {
         if (!shouldClearFoldSelectionOnQueryEdit(
-                state.hasSearched,
                 state.query,
                 state.lastExecutedQuery,
             )
@@ -323,7 +322,6 @@ internal fun foldRankingFeedbackResultId(selectedId: String?, resultId: String):
 
 /** Drop two-pane detail when the typed query no longer matches the results that produced it. */
 internal fun shouldClearFoldSelectionOnQueryEdit(
-    hasSearched: Boolean,
     query: String,
     lastExecutedQuery: String,
 ): Boolean {
