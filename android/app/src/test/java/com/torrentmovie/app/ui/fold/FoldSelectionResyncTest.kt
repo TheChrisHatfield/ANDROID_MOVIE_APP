@@ -73,6 +73,13 @@ class FoldSelectionResyncTest {
                 lastExecutedQuery = "Inception",
             ),
         )
+        assertTrue(
+            shouldClearFoldSelectionOnQueryEdit(
+                hasSearched = true,
+                query = "Dune",
+                lastExecutedQuery = "Inception",
+            ),
+        )
         assertFalse(
             shouldClearFoldSelectionOnQueryEdit(
                 hasSearched = true,

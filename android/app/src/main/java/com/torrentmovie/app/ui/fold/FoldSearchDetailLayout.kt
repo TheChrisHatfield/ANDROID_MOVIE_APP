@@ -327,9 +327,9 @@ internal fun shouldClearFoldSelectionOnQueryEdit(
 ): Boolean {
     val typed = query.trim()
     if (typed.isBlank()) return true
-    return !hasSearched &&
-        lastExecutedQuery.isNotBlank() &&
-        typed != lastExecutedQuery.trim()
+    val executed = lastExecutedQuery.trim()
+    if (executed.isBlank()) return false
+    return typed != executed
 }
 
 /** Cover/narrow fold must reopen the selected release even if the drawer is on Settings or Uploaded. */
