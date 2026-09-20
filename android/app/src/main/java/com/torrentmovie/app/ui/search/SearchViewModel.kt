@@ -78,7 +78,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.activeBrowseFeed != null ||
                     _state.value.activeGenre != null
                 if (key != lastSearchSettingsKey) {
-                    lastSearchSettingsKey = key
                     if (modeActive) {
                         _state.value = _state.value.copy(
                             loading = true,
