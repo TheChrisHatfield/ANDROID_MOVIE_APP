@@ -13,3 +13,16 @@ internal fun shouldShowTmdbSetupHint(
     if (hasBundledTmdbApiKey || !clientTmdbKeyBlank) return false
     return !serverTmdbConfigured
 }
+
+/** Extra /v1/health round-trip is only needed when the setup hint could still appear. */
+internal fun shouldProbeServerTmdb(
+    fetchMovieMetadata: Boolean,
+    groupsPresent: Boolean,
+    anyPosterInGroups: Boolean,
+    clientTmdbKeyBlank: Boolean,
+    hasBundledTmdbApiKey: Boolean,
+): Boolean {
+    if (!fetchMovieMetadata || !groupsPresent || anyPosterInGroups) return false
+    if (hasBundledTmdbApiKey || !clientTmdbKeyBlank) return false
+    return true
+}

@@ -32,4 +32,26 @@ class TmdbSetupHintTest {
             ),
         )
     }
+
+    @Test
+    fun skipsHealthProbeOnOperatorBundledKey() {
+        assertFalse(
+            shouldProbeServerTmdb(
+                fetchMovieMetadata = true,
+                groupsPresent = true,
+                anyPosterInGroups = false,
+                clientTmdbKeyBlank = true,
+                hasBundledTmdbApiKey = true,
+            ),
+        )
+        assertTrue(
+            shouldProbeServerTmdb(
+                fetchMovieMetadata = true,
+                groupsPresent = true,
+                anyPosterInGroups = false,
+                clientTmdbKeyBlank = true,
+                hasBundledTmdbApiKey = false,
+            ),
+        )
+    }
 }

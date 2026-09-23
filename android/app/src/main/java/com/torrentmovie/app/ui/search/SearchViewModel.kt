@@ -781,12 +781,25 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             !group.posterUrl.isNullOrBlank() ||
                 group.releases.any { !it.posterUrl.isNullOrBlank() }
         }
-        val serverTmdbConfigured = try {
-            container.searchRepository.isTmdbConfigured()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            false
+        val hasBundledTmdb = container.settingsRepository.hasBundledTmdbApiKey()
+        val serverTmdbConfigured = if (
+            shouldProbeServerTmdb(
+                fetchMovieMetadata = settings.fetchMovieMetadata,
+                groupsPresent = display.groups.isNotEmpty(),
+                anyPosterInGroups = anyPoster,
+                clientTmdbKeyBlank = settings.tmdbApiKey.isBlank(),
+                hasBundledTmdbApiKey = hasBundledTmdb,
+            )
+        ) {
+            try {
+                container.searchRepository.isTmdbConfigured()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
+        } else {
+            true
         }
         val needsTmdbSetup = shouldShowTmdbSetupHint(
             fetchMovieMetadata = settings.fetchMovieMetadata,
@@ -794,7 +807,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             anyPosterInGroups = anyPoster,
             clientTmdbKeyBlank = settings.tmdbApiKey.isBlank(),
             serverTmdbConfigured = serverTmdbConfigured,
-            hasBundledTmdbApiKey = container.settingsRepository.hasBundledTmdbApiKey(),
+            hasBundledTmdbApiKey = hasBundledTmdb,
         )
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
