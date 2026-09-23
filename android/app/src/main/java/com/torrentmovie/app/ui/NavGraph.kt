@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.fold.FoldSearchDetailLayout
 import com.torrentmovie.app.ui.fold.foldRankingFeedbackResultId
+import com.torrentmovie.app.ui.fold.shouldClearFoldSelectionOnQueryEdit
 import com.torrentmovie.app.ui.fold.shouldRestorePhoneDetailOnFold
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -103,6 +104,13 @@ fun AppNavGraph(
     }
 
     var wasTwoPane by remember { mutableStateOf(useTwoPane) }
+
+    LaunchedEffect(searchState.query, searchState.lastExecutedQuery, useTwoPane) {
+        if (useTwoPane) return@LaunchedEffect
+        if (shouldClearFoldSelectionOnQueryEdit(searchState.query, searchState.lastExecutedQuery)) {
+            container.foldActiveSelection = null
+        }
+    }
 
     LaunchedEffect(useTwoPane, foldActiveSelection) {
         val foldingToPhone = wasTwoPane && !useTwoPane
