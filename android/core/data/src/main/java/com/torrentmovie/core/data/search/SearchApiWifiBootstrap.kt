@@ -15,6 +15,7 @@ class SearchApiWifiBootstrap(
     private val appContext = context.applicationContext
     private val connectivityManager =
         appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+    private var registered = false
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -34,14 +35,22 @@ class SearchApiWifiBootstrap(
     }
 
     fun register() {
+        if (registered) return
         val cm = connectivityManager ?: return
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
         cm.registerNetworkCallback(request, callback)
+        registered = true
     }
 
     fun unregister() {
-        connectivityManager?.unregisterNetworkCallback(callback)
+        if (!registered) return
+        try {
+            connectivityManager?.unregisterNetworkCallback(callback)
+        } catch (_: IllegalArgumentException) {
+            // Already unregistered by the system.
+        }
+        registered = false
     }
 }
