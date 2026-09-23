@@ -43,4 +43,9 @@ class SearchBootstrapRefreshTest {
         assertTrue(isSearchConnectivityError("Network error talking to search API"))
         assertFalse(isSearchConnectivityError("No results found. Try a broader query."))
     }
+
+    @Test
+    fun bootstrapPersistSkipsRetryWhenSearchSucceeded() {
+        assertFalse(shouldRefreshAfterBootstrapPersist(modeActive = true, errorMessage = null))
+    }
 }

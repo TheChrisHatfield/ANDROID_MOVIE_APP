@@ -66,6 +66,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchSettingsKey = searchSettingsKey()
         viewModelScope.launch {
             var observedSettingsKey: String? = null
+            var observedBootstrapGen = 0
             container.settingsRepository.revision.collect {
                 val settings = container.settingsRepository.load()
                 val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
@@ -84,12 +85,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                         searchApiBaseUrl = settings.searchApiBaseUrl,
                         errorMessage = _state.value.error,
                     )
-                val retryAfterBootstrapWhileUnreachable = observedSettingsKey != null &&
-                    modeActive &&
-                    settings.searchApiBaseUrl.isNotBlank() &&
-                    isSearchConnectivityError(_state.value.error)
+                val bootstrapGen = container.settingsRepository.searchApiBootstrapGeneration.value
+                val bootstrapJustPersisted = bootstrapGen > observedBootstrapGen
+                if (bootstrapJustPersisted) {
+                    observedBootstrapGen = bootstrapGen
+                }
+                val retryAfterBootstrapPersist = bootstrapJustPersisted &&
+                    shouldRefreshAfterBootstrapPersist(modeActive, _state.value.error)
                 observedSettingsKey = key
-                if ((settingsChanged || apiReadyAfterBootstrap || retryAfterBootstrapWhileUnreachable) &&
+                if ((settingsChanged || apiReadyAfterBootstrap || retryAfterBootstrapPersist) &&
                     modeActive
                 ) {
                     _state.value = _state.value.copy(

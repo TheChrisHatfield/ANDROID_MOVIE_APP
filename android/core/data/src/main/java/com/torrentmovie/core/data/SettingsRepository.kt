@@ -39,6 +39,9 @@ class SettingsRepository(
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision.asStateFlow()
 
+    private val _searchApiBootstrapGeneration = MutableStateFlow(0)
+    val searchApiBootstrapGeneration: StateFlow<Int> = _searchApiBootstrapGeneration.asStateFlow()
+
     private val prefs: SharedPreferences = openSettingsPrefs(context)
 
     private fun openSettingsPrefs(context: Context): SharedPreferences {
@@ -85,6 +88,7 @@ class SettingsRepository(
         if (normalized.isBlank()) return false
         val committed = prefs.edit().putString(KEY_SEARCH_API, normalized).commit()
         if (!committed) return false
+        _searchApiBootstrapGeneration.value += 1
         _revision.value += 1
         return true
     }

@@ -11,6 +11,15 @@ internal fun shouldRefreshAfterSearchApiBootstrap(
     return isSearchConnectivityError(errorMessage)
 }
 
+/** After FR-040 persist, retry only when the user already has a failed search in flight. */
+internal fun shouldRefreshAfterBootstrapPersist(modeActive: Boolean, errorMessage: String?): Boolean {
+    return shouldRefreshAfterSearchApiBootstrap(
+        modeActive = modeActive,
+        searchApiBaseUrl = "http://bootstrap.local",
+        errorMessage = errorMessage,
+    )
+}
+
 internal fun isSearchConnectivityError(message: String?): Boolean {
     if (message.isNullOrBlank()) return false
     val lower = message.lowercase()
