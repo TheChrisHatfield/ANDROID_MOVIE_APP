@@ -5,6 +5,7 @@ import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.search.LanNetworkAddress
 import com.torrentmovie.core.data.search.SearchApiBootstrap
 import com.torrentmovie.core.data.search.SearchApiLanDiscovery
+import com.torrentmovie.core.data.search.SearchApiWifiBootstrap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,27 +38,29 @@ class AppContainer(
     }
 
     val settingsRepository = SettingsRepository(context, bundledSearchApiUrl)
+    private val wifiBootstrap = SearchApiWifiBootstrap(
+        context = context,
+        onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi(context) } },
+        shouldKeepListening = { settingsRepository.needsSearchApiAutoConfiguration() },
+    )
 
     init {
         bootstrapSearchApiIfNeeded(context)
+        if (settingsRepository.needsSearchApiAutoConfiguration()) {
+            wifiBootstrap.register()
+        }
     }
 
     private fun bootstrapSearchApiIfNeeded(context: Context) {
         if (!settingsRepository.needsSearchApiAutoConfiguration()) return
         thread(name = "search-api-bootstrap") {
-            val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
-            val isEmulator = DeviceProfile.isEmulator()
             repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
-                if (!settingsRepository.needsSearchApiAutoConfiguration()) return@thread
-                val wifiIp = LanNetworkAddress.wifiIpv4(context)
-                val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
-                    bundledSearchApiUrl = bundled,
-                    isEmulator = isEmulator,
-                    wifiIpv4 = wifiIp,
-                    probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
-                )
-                if (resolved != null) {
-                    settingsRepository.applyAutoConfiguredSearchApi(resolved)
+                if (!settingsRepository.needsSearchApiAutoConfiguration()) {
+                    wifiBootstrap.unregister()
+                    return@thread
+                }
+                if (resolveAndPersistSearchApi(context)) {
+                    wifiBootstrap.unregister()
                     return@thread
                 }
                 if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
@@ -65,6 +68,18 @@ class AppContainer(
                 }
             }
         }
+    }
+
+    private fun resolveAndPersistSearchApi(context: Context): Boolean {
+        if (!settingsRepository.needsSearchApiAutoConfiguration()) return false
+        val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
+        val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
+            bundledSearchApiUrl = bundled,
+            isEmulator = DeviceProfile.isEmulator(),
+            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
+            probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
+        )
+        return resolved != null && settingsRepository.applyAutoConfiguredSearchApi(resolved)
     }
 
     private companion object {
