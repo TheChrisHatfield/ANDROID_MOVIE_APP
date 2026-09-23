@@ -3,4 +3,5 @@
     <!-- Pantone Red 032 C -->
     <color name="pantone_red">#EF3340</color>
     <color name="surface_white">#FFFFFF</color>
+    <color name="cream">#FFF5F5</color>
 </resources>

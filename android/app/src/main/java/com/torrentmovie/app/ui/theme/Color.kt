@@ -19,4 +19,4 @@ val NavInactive = Color(0xFF9E9E9E)
 /** Legacy aliases used by a few components. */
 val Cream = Color(0xFFFFF5F5)
 val WarningOnRed = Color(0xFFFFE8A3)
-val InkOnRed = TextCharcoal
+val InkOnRed = OnPantone

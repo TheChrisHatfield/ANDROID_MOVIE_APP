@@ -33,6 +33,18 @@ class AppBrandingTest {
     fun placeholderMeetsContrastOnSearchFieldGray() {
         assertTrue(contrastRatio(TextMuted, SearchFieldGray) >= 4.5)
     }
+
+    @Test
+    fun creamButtonsMeetContrastOnPantoneRed() {
+        assertTrue(contrastRatio(TextCharcoal, Cream) >= 4.5)
+        assertTrue(contrastRatio(Cream, PantoneRed) >= 3.0)
+    }
+
+    @Test
+    fun inkOnRedIsReversedForChrome() {
+        assertEquals(OnPantone, InkOnRed)
+        assertTrue(contrastRatio(InkOnRed, PantoneRed) >= 3.0)
+    }
 }
 
 internal fun contrastRatio(a: Color, b: Color): Double {

@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import com.torrentmovie.app.ui.theme.missyFilledButtonColors
 import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -180,6 +181,7 @@ fun SettingsScreen(container: AppContainer) {
             },
             enabled = !saving,
             modifier = Modifier.padding(top = 16.dp),
+            colors = missyFilledButtonColors(),
         ) { Text(if (saving) "Saving…" else "Save") }
     }
 }

@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.TorrentMovieApp" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@color/pantone_red</item>
-        <item name="android:navigationBarColor">@color/surface_white</item>
+        <item name="android:navigationBarColor">@color/cream</item>
         <item name="android:windowBackground">@color/surface_white</item>
         <item name="android:colorBackground">@color/surface_white</item>
     </style>

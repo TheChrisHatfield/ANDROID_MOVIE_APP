@@ -1,5 +1,6 @@
 package com.torrentmovie.app.ui.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,8 +32,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import com.torrentmovie.app.ui.theme.MissySearchFieldShape
-import com.torrentmovie.app.ui.theme.OnPantone
 import com.torrentmovie.app.ui.theme.PantoneRed
+import com.torrentmovie.app.ui.theme.TextCharcoal
+import com.torrentmovie.app.ui.theme.missyFilledButtonColors
+import com.torrentmovie.app.ui.theme.missyFilterChipBorder
+import com.torrentmovie.app.ui.theme.missyFilterChipColors
 import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -178,41 +181,52 @@ fun SearchScreen(
 
     Column(modifier.fillMaxSize()) {
         SnackbarHost(snackbar)
-        OutlinedTextField(
-            value = state.query,
-            onValueChange = vm::setQuery,
-            label = { Text("Search movies") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { vm.search() }),
-            colors = missyOutlinedTextFieldColors(),
-            shape = MissySearchFieldShape,
-            trailingIcon = {
-                IconButton(onClick = { showFilters = true }) {
-                    Icon(Icons.Default.FilterList, contentDescription = "Filters")
-                }
-            },
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-        )
-        BrowseGenreChipRow(
-            genrePanelExpanded = state.genrePanelExpanded,
-            activeGenre = state.activeGenre,
-            activeBrowseFeed = state.activeBrowseFeed,
-            movieSitesOnly = movieSitesOnly,
-            loading = state.loading,
-            onCollapseGenrePanel = vm::collapseGenrePanel,
-            onExpandGenrePanel = vm::expandGenrePanel,
-            onLoadGenre = vm::loadGenreBrowse,
-            onLoadBrowse = vm::loadBrowse1337x,
-        )
-        if (state.activeBrowseFeed == null && state.activeGenre == null) {
-            Button(
-                onClick = { vm.search() },
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                enabled = !state.loading && state.query.isNotBlank(),
-            ) { Text("Search") }
+                .background(PantoneRed),
+        ) {
+            OutlinedTextField(
+                value = state.query,
+                onValueChange = vm::setQuery,
+                label = { Text("Search movies") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { vm.search() }),
+                colors = missyOutlinedTextFieldColors(),
+                shape = MissySearchFieldShape,
+                trailingIcon = {
+                    IconButton(onClick = { showFilters = true }) {
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "Filters",
+                            tint = TextCharcoal,
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+            BrowseGenreChipRow(
+                genrePanelExpanded = state.genrePanelExpanded,
+                activeGenre = state.activeGenre,
+                activeBrowseFeed = state.activeBrowseFeed,
+                movieSitesOnly = movieSitesOnly,
+                loading = state.loading,
+                onCollapseGenrePanel = vm::collapseGenrePanel,
+                onExpandGenrePanel = vm::expandGenrePanel,
+                onLoadGenre = vm::loadGenreBrowse,
+                onLoadBrowse = vm::loadBrowse1337x,
+            )
+            if (state.activeBrowseFeed == null && state.activeGenre == null) {
+                Button(
+                    onClick = { vm.search() },
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+                    enabled = !state.loading && state.query.isNotBlank(),
+                    colors = missyFilledButtonColors(),
+                ) { Text("Search") }
+            }
         }
 
         if (searchApiBaseUrl.isBlank()) {
@@ -241,7 +255,10 @@ fun SearchScreen(
                                 .padding(top = 8.dp),
                             horizontalArrangement = Arrangement.End,
                         ) {
-                            Button(onClick = onOpenSettings) {
+                            Button(
+                                onClick = onOpenSettings,
+                                colors = missyFilledButtonColors(),
+                            ) {
                                 Text("Open Settings")
                             }
                         }
@@ -276,7 +293,10 @@ fun SearchScreen(
                                 .padding(top = 8.dp),
                             horizontalArrangement = Arrangement.End,
                         ) {
-                            Button(onClick = onOpenSettings) {
+                            Button(
+                                onClick = onOpenSettings,
+                                colors = missyFilledButtonColors(),
+                            ) {
                                 Text("Open Settings")
                             }
                         }
@@ -335,6 +355,7 @@ fun SearchScreen(
                             Button(
                                 onClick = { vm.refreshCurrentResults() },
                                 modifier = Modifier.padding(top = 12.dp),
+                                colors = missyFilledButtonColors(),
                             ) { Text("Retry") }
                         }
                     }
@@ -399,11 +420,7 @@ private fun BrowseGenreChipRow(
     onLoadGenre: (X1337MovieGenre) -> Unit,
     onLoadBrowse: (X1337BrowseFeed) -> Unit,
 ) {
-    val chipColors = FilterChipDefaults.filterChipColors(
-        selectedContainerColor = PantoneRed,
-        selectedLabelColor = OnPantone,
-        selectedLeadingIconColor = OnPantone,
-    )
+    val chipColors = missyFilterChipColors()
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -418,6 +435,7 @@ private fun BrowseGenreChipRow(
                 label = { Text("Lists") },
                 enabled = !loading,
                 colors = chipColors,
+                border = missyFilterChipBorder(selected = false, enabled = !loading),
             )
             X1337MovieGenre.entriesList.forEach { genre ->
                 FilterChip(
@@ -426,6 +444,7 @@ private fun BrowseGenreChipRow(
                     label = { Text(genre.buttonLabel) },
                     enabled = !loading,
                     colors = chipColors,
+                    border = missyFilterChipBorder(selected = activeGenre == genre.id, enabled = !loading),
                 )
             }
         } else {
@@ -436,6 +455,10 @@ private fun BrowseGenreChipRow(
                     label = { Text(feed.buttonLabel) },
                     enabled = !loading,
                     colors = chipColors,
+                    border = missyFilterChipBorder(
+                        selected = activeBrowseFeed == feed.id,
+                        enabled = !loading,
+                    ),
                 )
             }
             FilterChip(
@@ -444,6 +467,7 @@ private fun BrowseGenreChipRow(
                 label = { Text("By Genre") },
                 enabled = !loading,
                 colors = chipColors,
+                border = missyFilterChipBorder(selected = false, enabled = !loading),
             )
         }
     }

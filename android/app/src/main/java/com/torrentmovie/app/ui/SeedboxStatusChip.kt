@@ -1,11 +1,9 @@
 package com.torrentmovie.app.ui
 
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.torrentmovie.app.ui.theme.OnPantone
-import com.torrentmovie.app.ui.theme.PantoneRed
+import com.torrentmovie.app.ui.theme.missyAssistChipColors
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,10 +58,7 @@ fun SeedboxStatusChip(
                 onOpenSettings?.invoke()
             }
         },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = OnPantone.copy(alpha = 0.22f),
-            labelColor = OnPantone,
-        ),
+        colors = missyAssistChipColors(),
         label = {
             Text(
                 when {

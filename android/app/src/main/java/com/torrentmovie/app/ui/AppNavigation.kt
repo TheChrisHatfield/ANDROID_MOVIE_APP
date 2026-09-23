@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -18,9 +17,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.torrentmovie.app.ui.theme.NavInactive
+import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.NavigationRailItemColors
+import com.torrentmovie.app.ui.theme.Cream
 import com.torrentmovie.app.ui.theme.PantoneRed
 import com.torrentmovie.app.ui.theme.SurfaceWhite
+import com.torrentmovie.app.ui.theme.TextCharcoal
 import androidx.navigation.NavHostController
 
 internal data class AppDestination(
@@ -52,6 +54,28 @@ private val appDestinations = listOf(
     ),
 )
 
+@Composable
+private fun missyNavigationItemColors(): NavigationBarItemColors {
+    return NavigationBarItemDefaults.colors(
+        selectedIconColor = PantoneRed,
+        selectedTextColor = PantoneRed,
+        unselectedIconColor = TextCharcoal,
+        unselectedTextColor = TextCharcoal,
+        indicatorColor = SurfaceWhite,
+    )
+}
+
+@Composable
+private fun missyNavigationRailItemColors(): NavigationRailItemColors {
+    return NavigationRailItemDefaults.colors(
+        selectedIconColor = PantoneRed,
+        selectedTextColor = PantoneRed,
+        unselectedIconColor = TextCharcoal,
+        unselectedTextColor = TextCharcoal,
+        indicatorColor = SurfaceWhite,
+    )
+}
+
 private fun destinationIcon(label: String) = when (label) {
     "Search" -> Icons.Default.Search
     "Uploaded" -> Icons.Default.CloudUpload
@@ -68,7 +92,7 @@ internal fun AppNavigationRail(
 ) {
     NavigationRail(
         modifier = modifier.padding(vertical = 8.dp),
-        containerColor = SurfaceWhite,
+        containerColor = Cream,
     ) {
         appDestinations.forEach { dest ->
             NavigationRailItem(
@@ -76,13 +100,7 @@ internal fun AppNavigationRail(
                 label = { Text(dest.label) },
                 selected = dest.selected(route, onDetailRoute),
                 onClick = { onNavigate(dest.route) },
-                colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = PantoneRed,
-                    selectedTextColor = PantoneRed,
-                    unselectedIconColor = NavInactive,
-                    unselectedTextColor = NavInactive,
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
+                colors = missyNavigationRailItemColors(),
             )
         }
     }
@@ -97,7 +115,8 @@ internal fun AppNavigationBar(
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = SurfaceWhite,
+        containerColor = Cream,
+        tonalElevation = 0.dp,
     ) {
         appDestinations.forEach { dest ->
             NavigationBarItem(
@@ -105,13 +124,7 @@ internal fun AppNavigationBar(
                 label = { Text(dest.label) },
                 selected = dest.selected(route, onDetailRoute),
                 onClick = { onNavigate(dest.route) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = PantoneRed,
-                    selectedTextColor = PantoneRed,
-                    unselectedIconColor = NavInactive,
-                    unselectedTextColor = NavInactive,
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
+                colors = missyNavigationItemColors(),
             )
         }
     }

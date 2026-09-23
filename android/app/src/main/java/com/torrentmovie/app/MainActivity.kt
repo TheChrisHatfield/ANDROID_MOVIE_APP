@@ -17,7 +17,10 @@ class MainActivity : ComponentActivity() {
         val brandRed = Color.parseColor(AppBranding.PANTONE_RED_HEX)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(brandRed),
-            navigationBarStyle = SystemBarStyle.light(Color.WHITE, Color.WHITE),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.parseColor(AppBranding.CREAM_HEX),
+                Color.parseColor(AppBranding.CREAM_HEX),
+            ),
         )
         setContent {
             TorrentMovieTheme {

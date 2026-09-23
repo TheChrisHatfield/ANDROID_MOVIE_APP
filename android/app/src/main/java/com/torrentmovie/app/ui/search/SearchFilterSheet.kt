@@ -9,6 +9,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import com.torrentmovie.app.ui.theme.missyFilledButtonColors
 import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -115,6 +116,7 @@ fun SearchFilterSheet(
                     onDismiss()
                 },
                 modifier = Modifier.padding(top = 16.dp),
+                colors = missyFilledButtonColors(),
             ) { Text("Apply") }
         }
     }
