@@ -222,10 +222,11 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         return try {
             api().getMagnet(resultId)
         } catch (e: HttpException) {
-            if (e.code() == 404 && !detailUrl.isNullOrBlank() && !site.isNullOrBlank()) {
+            val resolvedSite = site?.trim().orEmpty()
+            if (e.code() == 404 && !detailUrl.isNullOrBlank() && resolvedSite.isNotEmpty()) {
                 try {
                     return api().resolveMagnetByDetail(
-                        site = site,
+                        site = resolvedSite,
                         detailUrl = detailUrl,
                         resultId = resultId,
                         name = name,

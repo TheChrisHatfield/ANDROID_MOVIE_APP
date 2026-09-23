@@ -58,6 +58,18 @@ class FoldSelectionResyncTest {
     }
 
     @Test
+    fun retainsSelectionWhenReleaseRemainsInStore() {
+        assertTrue(shouldRetainFoldSelectionAfterRematchMiss(storedReleasePresent = true))
+        assertFalse(shouldRetainFoldSelectionAfterRematchMiss(storedReleasePresent = false))
+    }
+
+    @Test
+    fun clearsDetailOnlyOnHttpSearchFailures() {
+        assertTrue(shouldClearFoldSelectionOnSearchFailure(errorCode = 503))
+        assertFalse(shouldClearFoldSelectionOnSearchFailure(errorCode = null))
+    }
+
+    @Test
     fun clearsTwoPaneDetailWhenQueryNoLongerMatchesLastSearch() {
         assertTrue(
             shouldClearFoldSelectionOnQueryEdit(

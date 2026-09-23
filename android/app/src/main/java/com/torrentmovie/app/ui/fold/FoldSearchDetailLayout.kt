@@ -82,6 +82,7 @@ fun FoldSearchDetailLayout(
 
     val selected: TorrentResultDto? = selectedId?.let { id ->
         findRelease(id)
+            ?: container.searchResultStore.get(id)
             ?: restoredName?.let { name ->
                 TorrentResultDto(
                     id = id,
@@ -177,7 +178,10 @@ fun FoldSearchDetailLayout(
 
     LaunchedEffect(state.error, state.groups, state.results, state.hasSearched, state.loading, state.query, state.lastExecutedQuery) {
         if (state.loading || !state.hasSearched) return@LaunchedEffect
-        if (state.error != null && state.groups.isEmpty() && state.results.isEmpty()) {
+        if (shouldClearFoldSelectionOnSearchFailure(state.errorCode) &&
+            state.groups.isEmpty() &&
+            state.results.isEmpty()
+        ) {
             selectedId = null
             restoredName = null
             restoredSite = null
@@ -229,6 +233,9 @@ fun FoldSearchDetailLayout(
                 }
                 return@LaunchedEffect
             }
+        }
+        if (shouldRetainFoldSelectionAfterRematchMiss(container.searchResultStore.get(id) != null)) {
+            return@LaunchedEffect
         }
         selectedId = null
         restoredName = null
@@ -326,6 +333,12 @@ internal fun foldRankingFeedbackResultId(selectedId: String?, resultId: String):
 }
 
 /** Drop two-pane detail when the typed query no longer matches the results that produced it. */
+/** Only HTTP/search failures clear detail; empty-result copy uses error text without errorCode. */
+internal fun shouldClearFoldSelectionOnSearchFailure(errorCode: Int?): Boolean = errorCode != null
+
+internal fun shouldRetainFoldSelectionAfterRematchMiss(storedReleasePresent: Boolean): Boolean =
+    storedReleasePresent
+
 internal fun shouldClearFoldSelectionOnQueryEdit(
     query: String,
     lastExecutedQuery: String,
