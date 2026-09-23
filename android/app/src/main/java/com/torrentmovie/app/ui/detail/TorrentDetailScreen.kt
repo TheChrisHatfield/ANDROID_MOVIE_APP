@@ -92,7 +92,7 @@ fun TorrentDetailScreen(
         }
     }
 
-    LaunchedEffect(magnet, name, site) {
+    LaunchedEffect(magnet, name, site, settingsRevision) {
         val current = magnet ?: initialMagnet
         pendingPersist = !current.isNullOrBlank() &&
             container.seedboxRepository.isPendingPersist(current, name, site)
