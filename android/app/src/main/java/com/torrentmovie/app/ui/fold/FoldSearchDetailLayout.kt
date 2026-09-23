@@ -144,13 +144,11 @@ fun FoldSearchDetailLayout(
         state.activeGenre,
         state.activeBrowseFeed,
         state.genrePanelExpanded,
-        state.lastExecutedQuery,
     ) {
         val key = listOf(
             state.activeGenre.orEmpty(),
             state.activeBrowseFeed.orEmpty(),
             state.genrePanelExpanded.toString(),
-            state.lastExecutedQuery,
         ).joinToString("|")
         if (lastBrowseGenreKey != null && lastBrowseGenreKey != key) {
             selectedId = null
