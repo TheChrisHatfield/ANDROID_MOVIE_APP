@@ -95,6 +95,9 @@ class SettingsRepository(
 
     fun needsSearchApiAutoConfiguration(): Boolean = !hasUserConfiguredSearchApi()
 
+    fun searchApiBlockedMessage(): String =
+        SearchApiMessages.blocked(needsSearchApiAutoConfiguration())
+
     fun acceptDisclaimer(): Boolean {
         val ok = prefs.edit().putBoolean(KEY_DISCLAIMER, true).commit()
         if (ok) {

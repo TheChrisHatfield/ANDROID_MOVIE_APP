@@ -37,7 +37,7 @@ data class SearchUiState(
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private fun searchApiBlockedMessage(): String =
-        searchApiBlockedMessage(container.settingsRepository.needsSearchApiAutoConfiguration())
+        container.settingsRepository.searchApiBlockedMessage()
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null

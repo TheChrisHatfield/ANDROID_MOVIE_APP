@@ -135,7 +135,7 @@ fun TorrentDetailScreen(
         val apiUrl = container.settingsRepository.load().searchApiBaseUrl
         if (apiUrl.isBlank()) {
             magnetLoading = false
-            magnetError = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)"
+            magnetError = container.settingsRepository.searchApiBlockedMessage()
             return@LaunchedEffect
         }
         val generation = ++magnetFetchGeneration

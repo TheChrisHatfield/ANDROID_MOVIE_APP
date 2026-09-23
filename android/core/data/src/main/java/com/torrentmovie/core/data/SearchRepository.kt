@@ -31,7 +31,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     private fun api(): SearchApi {
         val settings = settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) {
-            throw SearchException("Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)")
+            throw SearchException(settingsRepository.searchApiBlockedMessage())
         }
         val revision = settingsRepository.revision.value
         val base = settings.searchApiBaseUrl.trimEnd('/') + "/"
