@@ -28,6 +28,19 @@ internal fun resolveGenreForRankingFeedback(
 internal fun magnetFallbackDetailUrl(storeUrl: String?, selectionUrl: String?): String? =
     storeUrl?.takeIf { it.isNotBlank() } ?: selectionUrl?.takeIf { it.isNotBlank() }
 
+/** Phone→two-pane handoff: nav args are trimmed; fall back to stash/selection for magnet/send. */
+internal fun detailHandoffName(navName: String?, storedName: String?, selectionName: String?): String =
+    navName?.trim()?.takeIf { it.isNotBlank() }
+        ?: storedName?.trim()?.takeIf { it.isNotBlank() }
+        ?: selectionName?.trim()?.orEmpty()
+        ?: ""
+
+internal fun detailHandoffSite(navSite: String?, storedSite: String?, selectionSite: String?): String =
+    navSite?.trim()?.takeIf { it.isNotBlank() }
+        ?: storedSite?.trim()?.takeIf { it.isNotBlank() }
+        ?: selectionSite?.trim()?.orEmpty()
+        ?: ""
+
 /** Ignore a cancelled magnet fetch's finally so Retry cannot drop the new request's loading flag. */
 internal fun shouldClearMagnetLoading(startedGeneration: Int, currentGeneration: Int): Boolean =
     startedGeneration == currentGeneration

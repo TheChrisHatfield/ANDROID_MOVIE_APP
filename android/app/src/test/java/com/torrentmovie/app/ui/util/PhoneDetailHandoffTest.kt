@@ -44,6 +44,18 @@ class PhoneDetailHandoffTest {
     }
 
     @Test
+    fun detailHandoffFallsBackToStoreWhenNavSiteBlank() {
+        assertEquals("YTS", detailHandoffSite("", "YTS", null))
+        assertEquals("Inception", detailHandoffName("", "Inception", null))
+    }
+
+    @Test
+    fun detailHandoffPrefersNavArgsOverStore() {
+        assertEquals("1337x", detailHandoffSite("1337x", "YTS", "EZTV"))
+        assertEquals("Dune", detailHandoffName("Dune", "Other", "Other"))
+    }
+
+    @Test
     fun prefersGenreCapturedWhenOpeningDetail() {
         assertEquals(
             "horror",

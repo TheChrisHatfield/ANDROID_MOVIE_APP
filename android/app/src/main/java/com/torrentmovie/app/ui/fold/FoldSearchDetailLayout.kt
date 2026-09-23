@@ -225,6 +225,7 @@ fun FoldSearchDetailLayout(
                 }
                 container.searchResultStore.put(merged)
                 if (oldId != null && oldId != rematched.id) {
+                    container.searchResultStore.remove(oldId)
                     container.movieMetadataStore.get(oldId)?.let { meta ->
                         container.movieMetadataStore.put(rematched.id, meta)
                         container.movieMetadataStore.remove(oldId)

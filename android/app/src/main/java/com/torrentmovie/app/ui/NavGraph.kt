@@ -28,6 +28,8 @@ import com.torrentmovie.app.ui.settings.SettingsScreen
 import com.torrentmovie.app.ui.uploaded.UploadedScreen
 import com.torrentmovie.app.ui.uploaded.UploadedViewModel
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
+import com.torrentmovie.app.ui.util.detailHandoffName
+import com.torrentmovie.app.ui.util.detailHandoffSite
 import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.app.ui.util.shouldClearPhoneFoldSelectionOnDetailDispose
 import com.torrentmovie.app.ui.util.shouldPopExpiredPhoneDetail
@@ -109,17 +111,27 @@ fun AppNavGraph(
             if (route != null && route.startsWith("detail/")) {
                 val resultId = entry.arguments?.getString("resultId")
                 if (!resultId.isNullOrBlank()) {
+                    val stored = container.searchResultStore.get(resultId)
+                    val selection = foldActiveSelection?.takeIf { it.resultId == resultId }
                     container.pendingFoldDetail = PendingFoldDetail(
                         resultId = resultId,
-                        name = entry.arguments?.getString("name") ?: "",
-                        site = entry.arguments?.getString("site") ?: "",
+                        name = detailHandoffName(
+                            entry.arguments?.getString("name"),
+                            stored?.name,
+                            selection?.name,
+                        ),
+                        site = detailHandoffSite(
+                            entry.arguments?.getString("site"),
+                            stored?.site,
+                            selection?.site,
+                        ),
                         genreId = snapshotGenreAtDetailOpen(
                             foldActiveSelection?.genreId,
                             searchState.activeGenre,
                         ),
                         detailUrl = magnetFallbackDetailUrl(
-                            container.searchResultStore.get(resultId)?.detail_url,
-                            foldActiveSelection?.detailUrl,
+                            stored?.detail_url,
+                            selection?.detailUrl,
                         ),
                     )
                 }
@@ -212,6 +224,9 @@ fun AppNavGraph(
                         matched
                     }
                     container.searchResultStore.put(merged)
+                    if (resultId != matched.id) {
+                        container.searchResultStore.remove(resultId)
+                    }
                     if (shouldReplacePhoneDetail(resultId, matched.id)) {
                         container.movieMetadataStore.get(resultId)?.let { meta ->
                             container.movieMetadataStore.put(matched.id, meta)
