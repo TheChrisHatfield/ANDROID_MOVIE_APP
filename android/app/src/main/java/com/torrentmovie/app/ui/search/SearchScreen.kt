@@ -74,6 +74,9 @@ fun SearchScreen(
     val searchApiBaseUrl = remember(settingsRevision) {
         container.settingsRepository.load().searchApiBaseUrl
     }
+    val searchApiAutoConfigPending = remember(settingsRevision) {
+        container.settingsRepository.needsSearchApiAutoConfiguration()
+    }
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
@@ -240,11 +243,19 @@ fun SearchScreen(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = "Search API not configured",
+                        text = if (searchApiAutoConfigPending) {
+                            "Finding search service"
+                        } else {
+                            "Search API not configured"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = "On the same Wi-Fi, run the search service on your PC (port 8765). The app will try to find it automatically; you can also set Search API manually in Settings.",
+                        text = if (searchApiAutoConfigPending) {
+                            "On the same Wi-Fi, run the search service on your PC (port 8765). The app is scanning your network; you can also set Search API manually in Settings."
+                        } else {
+                            "Set Search API in Settings (e.g. http://<PC-IP>:8765)."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )

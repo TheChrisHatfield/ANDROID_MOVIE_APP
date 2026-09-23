@@ -36,6 +36,8 @@ data class SearchUiState(
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
+    private fun searchApiBlockedMessage(): String =
+        searchApiBlockedMessage(container.settingsRepository.needsSearchApiAutoConfiguration())
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
@@ -302,7 +304,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value = _state.value.copy(
                 query = feed.label,
                 loading = false,
-                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                error = searchApiBlockedMessage(),
                 errorCode = null,
                 results = emptyList(),
                 groups = emptyList(),
@@ -394,7 +396,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             _state.value = _state.value.copy(
                 query = genre.label,
                 loading = false,
-                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                error = searchApiBlockedMessage(),
                 errorCode = null,
                 results = emptyList(),
                 groups = emptyList(),
@@ -523,7 +525,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         if (settings.searchApiBaseUrl.isBlank()) {
             _state.value = _state.value.copy(
                 loading = false,
-                error = "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)",
+                error = searchApiBlockedMessage(),
                 errorCode = null,
                 results = emptyList(),
                 groups = emptyList(),
