@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-import time
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from metadata.tmdb_client import TmdbClient, TmdbDiscoverMovie
@@ -11,6 +11,8 @@ from torrtux_core.genres import genre_search_query, tmdb_genre_id
 from torrtux_core.searcher import SearchOutcome, TorrentSearcher
 
 logger = logging.getLogger(__name__)
+_discover_rotation_lock = threading.Lock()
+_discover_rotation_counts: dict[str, int] = {}
 
 GENRE_TITLE_SEARCH_LIMIT = 28
 GENRE_TITLE_FANOUT_TIMEOUT_SEC = 45
@@ -19,9 +21,8 @@ GENRE_RELEASES_PER_TITLE = 3
 GENRE_DISCOVER_MAX_PAGES = 4
 # How many TMDB titles to torrent-search into the genre pool (was 8).
 TMDB_ENRICH_TITLE_LIMIT = 24
-# Discover page rotation window (pull-to-refresh / background rebuild).
+# Discover page rotation window (each pull-to-refresh / rebuild advances one page).
 DISCOVER_PAGE_WINDOW = 8
-DISCOVER_ROTATE_SECONDS = 1800
 # Shared rank band so TMDB popularity order does not always beat indexer rows.
 GENRE_RANK_BASE = 24
 GENRE_KEYWORD_PAGE_LIMIT = 3
@@ -33,12 +34,16 @@ BROAD_1337X_LIMIT = 120
 
 
 def discover_page_offset(genre_id: str, *, rotate: bool, now: float | None = None) -> int:
-    """Rotate TMDB discover start page so rebuilds are not always popularity page 1."""
+    """Advance TMDB discover start page on each rebuild (not a 30-minute time bucket)."""
+    del now  # kept so callers/tests can pass a clock without changing the signature
     if not rotate:
         return 1
-    stamp = time.time() if now is None else now
-    bucket = (hash(genre_id.strip().lower()) + int(stamp) // DISCOVER_ROTATE_SECONDS) % DISCOVER_PAGE_WINDOW
-    return bucket + 1
+    key = genre_id.strip().lower()
+    with _discover_rotation_lock:
+        count = _discover_rotation_counts.get(key, 0) + 1
+        _discover_rotation_counts[key] = count
+    # Cold load stays on page 1; the first refresh starts at page 2.
+    return (count % DISCOVER_PAGE_WINDOW) + 1
 
 
 def _attach_discover_metadata(row: dict, rank: int, movie: TmdbDiscoverMovie) -> None:

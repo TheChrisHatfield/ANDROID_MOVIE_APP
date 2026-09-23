@@ -23,14 +23,16 @@ def _movie(title: str, rank: int = 0) -> TmdbDiscoverMovie:
     )
 
 
-def test_discover_page_offset_rotates_across_window():
-    assert discover_page_offset("horror", rotate=False) == 1
+def test_discover_page_offset_advances_on_each_refresh():
+    assert discover_page_offset("rotation-probe", rotate=False) == 1
     assert TMDB_ENRICH_TITLE_LIMIT >= 24
-    pages = {
-        discover_page_offset("horror", rotate=True, now=float(step * 1800))
-        for step in range(DISCOVER_PAGE_WINDOW)
-    }
-    assert pages == set(range(1, DISCOVER_PAGE_WINDOW + 1))
+    pages = [
+        discover_page_offset("rotation-probe", rotate=True)
+        for _ in range(DISCOVER_PAGE_WINDOW)
+    ]
+    assert pages[0] == 2
+    assert len(set(pages)) == DISCOVER_PAGE_WINDOW
+    assert discover_page_offset("rotation-probe", rotate=True) == 2
 
 
 def test_discover_genre_movies_fetches_multiple_pages():
