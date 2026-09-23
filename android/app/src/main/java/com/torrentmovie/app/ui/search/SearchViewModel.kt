@@ -777,20 +777,25 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val display = normalizeKodiGroups(outcome.groups, outcome.results)
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val settings = container.settingsRepository.load()
-        val needsTmdbSetup = settings.fetchMovieMetadata &&
-            display.groups.isNotEmpty() &&
-            display.groups.none { group ->
-                !group.posterUrl.isNullOrBlank() ||
-                    group.releases.any { !it.posterUrl.isNullOrBlank() }
-            } &&
-            settings.tmdbApiKey.isBlank() &&
-            !try {
-                container.searchRepository.isTmdbConfigured()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                false
-            }
+        val anyPoster = display.groups.any { group ->
+            !group.posterUrl.isNullOrBlank() ||
+                group.releases.any { !it.posterUrl.isNullOrBlank() }
+        }
+        val serverTmdbConfigured = try {
+            container.searchRepository.isTmdbConfigured()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
+        val needsTmdbSetup = shouldShowTmdbSetupHint(
+            fetchMovieMetadata = settings.fetchMovieMetadata,
+            groupsPresent = display.groups.isNotEmpty(),
+            anyPosterInGroups = anyPoster,
+            clientTmdbKeyBlank = settings.tmdbApiKey.isBlank(),
+            serverTmdbConfigured = serverTmdbConfigured,
+            hasBundledTmdbApiKey = container.settingsRepository.hasBundledTmdbApiKey(),
+        )
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val info = infoMessages.takeIf { it.isNotEmpty() }?.joinToString("\n")
         val settingsKey = searchSettingsKey()

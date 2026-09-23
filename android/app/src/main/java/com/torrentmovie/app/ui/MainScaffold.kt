@@ -69,6 +69,7 @@ fun MainScaffold(container: AppContainer) {
             onAccept = {
                 if (container.settingsRepository.acceptDisclaimer()) {
                     settings = container.settingsRepository.load()
+                    container.settingsRepository.applyBundledTmdbIfNeeded()
                     container.restartSearchApiBootstrapIfNeeded()
                 } else {
                     Toast.makeText(context, "Failed to save — try again", Toast.LENGTH_SHORT).show()
