@@ -31,6 +31,17 @@ cd android
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`
 
+### Operator keys (no user setup in Settings)
+
+Add to `android/local.properties` (gitignored) or `android/gradle.properties`:
+
+```properties
+missysBundledTmdbApiKey=your-tmdb-v3-api-key
+# missysBundledSearchApiUrl=https://your-search-host:8765
+```
+
+On PC, set `TMDB_API_KEY` in `services/search/.env` (copy from `.env.example` or run `services/search/scripts/ensure_env.ps1`).
+
 ## Device E2E
 
 Automated bootstrap (emulator + API + install + launch):

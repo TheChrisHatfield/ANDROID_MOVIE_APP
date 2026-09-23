@@ -26,6 +26,7 @@ if (-not (Test-Path $apk)) {
 }
 
 Push-Location $searchDir
+& (Join-Path $searchDir "scripts\ensure_env.ps1")
 py -3.11 -m pip install -e ".[dev]" -q
 Pop-Location
 

@@ -1,6 +1,26 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+}
+
+fun readMissysBuildProperty(name: String): String {
+    val fromGradle = (project.findProperty(name) as String?)?.trim()
+    if (!fromGradle.isNullOrBlank()) return fromGradle
+    val localFile = rootProject.file("local.properties")
+    if (localFile.isFile) {
+        val props = Properties()
+        localFile.inputStream().use { props.load(it) }
+        val fromLocal = props.getProperty(name)?.trim()
+        if (!fromLocal.isNullOrBlank()) return fromLocal
+    }
+    val envName = when (name) {
+        "missysBundledSearchApiUrl" -> "MISSYS_BUNDLED_SEARCH_API_URL"
+        "missysBundledTmdbApiKey" -> "MISSYS_BUNDLED_TMDB_API_KEY"
+        else -> name.uppercase()
+    }
+    return System.getenv(envName)?.trim().orEmpty()
 }
 
 android {
@@ -13,9 +33,10 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-        val bundledSearchApi =
-            (project.findProperty("missysBundledSearchApiUrl") as String? ?: "").trim()
+        val bundledSearchApi = readMissysBuildProperty("missysBundledSearchApiUrl")
+        val bundledTmdbApiKey = readMissysBuildProperty("missysBundledTmdbApiKey")
         buildConfigField("String", "BUNDLED_SEARCH_API_URL", "\"$bundledSearchApi\"")
+        buildConfigField("String", "BUNDLED_TMDB_API_KEY", "\"$bundledTmdbApiKey\"")
     }
 
     buildFeatures {

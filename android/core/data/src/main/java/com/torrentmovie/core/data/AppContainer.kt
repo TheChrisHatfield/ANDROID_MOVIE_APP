@@ -14,6 +14,7 @@ import kotlin.concurrent.thread
 class AppContainer(
     context: Context,
     bundledSearchApiUrl: String = "",
+    bundledTmdbApiKey: String = "",
 ) {
     private val appContext = context.applicationContext
     /** Cover/single-pane → unfolded two-pane restore payload. */
@@ -38,7 +39,12 @@ class AppContainer(
         _uploadedHighlightSeq.value += 1
     }
 
-    val settingsRepository = SettingsRepository(context, bundledSearchApiUrl)
+    val settingsRepository = SettingsRepository(
+        context,
+        bundledSearchApiUrl,
+        bundledTmdbApiKey,
+    )
+
     @Volatile
     private var bootstrapThreadActive = false
     private val wifiBootstrap = SearchApiWifiBootstrap(
@@ -48,6 +54,7 @@ class AppContainer(
     )
 
     init {
+        settingsRepository.applyBundledTmdbIfNeeded()
         restartSearchApiBootstrapIfNeeded()
     }
 

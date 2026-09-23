@@ -93,19 +93,37 @@ fun SettingsScreen(container: AppContainer) {
             colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
+        val tmdbBundled = container.settingsRepository.hasBundledTmdbApiKey()
+        if (tmdbBundled) {
+            Text(
+                "Posters and autocomplete use the TMDB key included in this build. Override only if needed.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
         OutlinedTextField(
             value = settings.tmdbApiKey,
             onValueChange = { settings = settings.copy(tmdbApiKey = it) },
-            label = { Text("TMDB API key (posters & trailers)") },
+            label = {
+                Text(
+                    if (tmdbBundled) {
+                        "TMDB API key (optional override)"
+                    } else {
+                        "TMDB API key (posters & trailers)"
+                    },
+                )
+            },
             visualTransformation = PasswordVisualTransformation(),
             colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(
-            "Required for posters and descriptions. Free key at themoviedb.org — paste here or set TMDB_API_KEY in services/search/.env on your PC.",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+        if (!tmdbBundled) {
+            Text(
+                "Required for posters and autocomplete. Free key at themoviedb.org — or set TMDB_API_KEY in services/search/.env on your PC.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
         RowSwitch("Fetch posters & trailers", settings.fetchMovieMetadata) {
             settings = settings.copy(fetchMovieMetadata = it)
         }

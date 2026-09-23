@@ -35,6 +35,7 @@ data class AppSettings(
 class SettingsRepository(
     private val context: Context,
     private val bundledSearchApiUrl: String = "",
+    private val bundledTmdbApiKey: String = "",
 ) {
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision.asStateFlow()
@@ -74,9 +75,29 @@ class SettingsRepository(
             disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
             searchPages = prefs.getInt(KEY_SEARCH_PAGES, AppSettings.DEFAULT_SEARCH_PAGES)
                 .coerceIn(1, MAX_SEARCH_PAGES),
-            tmdbApiKey = (prefs.getString(KEY_TMDB_API_KEY, "") ?: "").trim(),
+            tmdbApiKey = resolveTmdbApiKey(
+                userHasStoredKey = hasUserConfiguredTmdb(),
+                storedKey = prefs.getString(KEY_TMDB_API_KEY, null),
+                bundledKey = bundledTmdbApiKey,
+            ),
             fetchMovieMetadata = prefs.getBoolean(KEY_FETCH_METADATA, true),
         )
+    }
+
+    fun hasBundledTmdbApiKey(): Boolean = bundledTmdbApiKey.isNotBlank()
+
+    fun hasUserConfiguredTmdb(): Boolean = prefs.contains(KEY_TMDB_API_KEY)
+
+    /** Persist operator-bundled TMDB key on first launch (mirrors FR-040 Search API bootstrap). */
+    fun applyBundledTmdbIfNeeded(): Boolean {
+        if (hasUserConfiguredTmdb()) return false
+        val key = bundledTmdbApiKey.trim()
+        if (key.isBlank()) return false
+        val committed = prefs.edit().putString(KEY_TMDB_API_KEY, key).commit()
+        if (committed) {
+            _revision.value += 1
+        }
+        return committed
     }
 
     fun hasUserConfiguredSearchApi(): Boolean = prefs.contains(KEY_SEARCH_API)
@@ -132,6 +153,12 @@ class SettingsRepository(
         } else {
             editor.putString(KEY_SEARCH_API, searchApiUrl)
         }
+        val tmdb = settings.tmdbApiKey.trim()
+        if (tmdb.isBlank()) {
+            editor.remove(KEY_TMDB_API_KEY)
+        } else {
+            editor.putString(KEY_TMDB_API_KEY, tmdb)
+        }
         val ok = editor
             .putString(KEY_RUTORRENT_URL, rutorrentUrl)
             .putString(KEY_USERNAME, settings.username.trim())
@@ -141,7 +168,6 @@ class SettingsRepository(
             .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
             .putInt(KEY_SEARCH_PAGES, settings.searchPages.coerceIn(1, MAX_SEARCH_PAGES))
-            .putString(KEY_TMDB_API_KEY, settings.tmdbApiKey.trim())
             .putBoolean(KEY_FETCH_METADATA, settings.fetchMovieMetadata)
             .commit()
         if (ok) {
