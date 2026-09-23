@@ -7,7 +7,7 @@ import time
 from typing import Callable
 
 from api.genre_pool_cache import GenrePoolCache, GenrePoolEntry
-from metadata.genre_browse import BROAD_KEYWORD_PAGE_LIMIT
+from metadata.genre_browse import BROAD_KEYWORD_PAGE_LIMIT, discover_page_offset
 from metadata.genre_pool import fetch_genre_pool_rows, pool_rows_from_ranked, rank_genre_pool_rows
 from metadata.genre_tree import record_genre_branch_feedback
 from metadata.tmdb_client import TmdbClient
@@ -22,13 +22,6 @@ _POOL_BUILD_LIMIT = 150
 # Outlive default 3-page indexer fan-out without exceeding Android's 120s read timeout.
 _REFRESH_WAIT_SECONDS = float(min(100, search_fanout_timeout_sec(BROAD_KEYWORD_PAGE_LIMIT) + 10))
 _REFRESH_POLL_SECONDS = 0.05
-
-def _discover_page_offset(genre_id: str, *, rotate: bool) -> int:
-    """Rotate TMDB discover pages on refresh so genre shelves surface new titles."""
-    if not rotate:
-        return 1
-    bucket = (hash(genre_id.strip().lower()) + int(time.time()) // 1800) % 3
-    return bucket + 1
 
 
 def _effective_pool_pages(page_limit: int | None) -> int:
@@ -214,7 +207,7 @@ class GenreBrowseService:
                 tmdb_api_key=tmdb_api_key,
                 enrich=enrich,
                 partial_ok=False,
-                discover_page_offset=_discover_page_offset(normalized, rotate=force_refresh),
+                discover_page_offset=discover_page_offset(normalized, rotate=force_refresh),
             )
         finally:
             if owned_refresh:
@@ -334,7 +327,7 @@ class GenreBrowseService:
                     tmdb_api_key=tmdb_api_key,
                     enrich=enrich,
                     partial_ok=partial_ok,
-                    discover_page_offset=_discover_page_offset(genre_id, rotate=True),
+                    discover_page_offset=discover_page_offset(genre_id, rotate=True),
                 )
             finally:
                 self._cache.clear_refreshing(genre_id, movie_profile=movie_profile)

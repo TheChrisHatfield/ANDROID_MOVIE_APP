@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from metadata.tmdb_client import TmdbClient, TmdbDiscoverMovie
@@ -14,19 +15,34 @@ logger = logging.getLogger(__name__)
 GENRE_TITLE_SEARCH_LIMIT = 28
 GENRE_TITLE_FANOUT_TIMEOUT_SEC = 45
 GENRE_RELEASES_PER_TITLE = 3
-GENRE_DISCOVER_MAX_PAGES = 3
+# Walk several discover pages per fetch (not a single popularity page).
+GENRE_DISCOVER_MAX_PAGES = 4
+# How many TMDB titles to torrent-search into the genre pool (was 8).
+TMDB_ENRICH_TITLE_LIMIT = 24
+# Discover page rotation window (pull-to-refresh / background rebuild).
+DISCOVER_PAGE_WINDOW = 8
+DISCOVER_ROTATE_SECONDS = 1800
+# Shared rank band so TMDB popularity order does not always beat indexer rows.
+GENRE_RANK_BASE = 24
 GENRE_KEYWORD_PAGE_LIMIT = 3
 # Broad indexer fan-out (primary pool driver — all movie sites via keyword search).
 BROAD_KEYWORD_PAGE_LIMIT = 3
 BROAD_KEYWORD_LIMIT = 250
 BROAD_1337X_PAGE_LIMIT = 2
 BROAD_1337X_LIMIT = 120
-# TMDB discover is enrichment-only (posters/metadata), not the shelf title source.
-TMDB_ENRICH_TITLE_LIMIT = 8
+
+
+def discover_page_offset(genre_id: str, *, rotate: bool, now: float | None = None) -> int:
+    """Rotate TMDB discover start page so rebuilds are not always popularity page 1."""
+    if not rotate:
+        return 1
+    stamp = time.time() if now is None else now
+    bucket = (hash(genre_id.strip().lower()) + int(stamp) // DISCOVER_ROTATE_SECONDS) % DISCOVER_PAGE_WINDOW
+    return bucket + 1
 
 
 def _attach_discover_metadata(row: dict, rank: int, movie: TmdbDiscoverMovie) -> None:
-    row["_genre_rank"] = rank
+    row["_genre_rank"] = GENRE_RANK_BASE + rank
     if movie.poster_url and not row.get("poster_url"):
         row["poster_url"] = movie.poster_url
     if movie.overview and not row.get("overview"):
@@ -221,6 +237,10 @@ def broad_indexer_genre_pool(
 
     if not all_results and indexers_unavailable:
         return SearchOutcome([], failed_sites, indexers_unavailable=True)
+
+    for index, row in enumerate(all_results):
+        if row.get("_genre_rank") is None:
+            row["_genre_rank"] = GENRE_RANK_BASE + (index % TMDB_ENRICH_TITLE_LIMIT)
 
     return SearchOutcome(
         results=all_results,

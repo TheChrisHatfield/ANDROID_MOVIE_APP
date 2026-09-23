@@ -1,8 +1,11 @@
 from unittest.mock import MagicMock, patch
 
 from metadata.genre_browse import (
+    DISCOVER_PAGE_WINDOW,
+    TMDB_ENRICH_TITLE_LIMIT,
     broad_indexer_genre_pool,
     curated_genre_search,
+    discover_page_offset,
     keyword_genre_search,
 )
 from metadata.tmdb_client import TmdbDiscoverMovie
@@ -18,6 +21,16 @@ def _movie(title: str, rank: int = 0) -> TmdbDiscoverMovie:
         poster_url=f"https://image.tmdb.org/t/p/w342/{title.lower()}.jpg",
         popularity=100.0 - rank,
     )
+
+
+def test_discover_page_offset_rotates_across_window():
+    assert discover_page_offset("horror", rotate=False) == 1
+    assert TMDB_ENRICH_TITLE_LIMIT >= 24
+    pages = {
+        discover_page_offset("horror", rotate=True, now=float(step * 1800))
+        for step in range(DISCOVER_PAGE_WINDOW)
+    }
+    assert pages == set(range(1, DISCOVER_PAGE_WINDOW + 1))
 
 
 def test_discover_genre_movies_fetches_multiple_pages():
@@ -84,6 +97,7 @@ def test_broad_indexer_genre_pool_fans_out(mock_search, mock_1337x):
     )
     outcome = broad_indexer_genre_pool(searcher, "horror")
     assert len(outcome.results) == 2
+    assert outcome.results[0]["_genre_rank"] >= 24
     mock_search.assert_called_once()
     mock_1337x.assert_called_once()
 
