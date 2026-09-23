@@ -232,7 +232,7 @@ fun SearchScreen(
             }
         }
 
-        if (searchApiBaseUrl.isBlank()) {
+        if (shouldShowSearchApiSetupBanner(searchApiBaseUrl, searchApiAutoConfigPending)) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

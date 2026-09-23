@@ -56,10 +56,26 @@ fun SettingsScreen(container: AppContainer) {
         )
 
         Text("Search", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+        val searchApiAutoPending = container.settingsRepository.needsSearchApiAutoConfiguration()
+        if (searchApiAutoPending) {
+            Text(
+                "Search is set up automatically on your Wi-Fi (port 8765). Only fill in the URL below if auto-detect fails.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
         OutlinedTextField(
             value = settings.searchApiBaseUrl,
             onValueChange = { settings = settings.copy(searchApiBaseUrl = it) },
-            label = { Text("Search API base URL") },
+            label = {
+                Text(
+                    if (searchApiAutoPending) {
+                        "Search API (optional override)"
+                    } else {
+                        "Search API base URL"
+                    },
+                )
+            },
             colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
