@@ -79,11 +79,19 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.activeGenre != null
                 val settingsChanged = observedSettingsKey != null && key != observedSettingsKey
                 val apiReadyAfterBootstrap = observedSettingsKey == null &&
+                    shouldRefreshAfterSearchApiBootstrap(
+                        modeActive = modeActive,
+                        searchApiBaseUrl = settings.searchApiBaseUrl,
+                        errorMessage = _state.value.error,
+                    )
+                val retryAfterBootstrapWhileUnreachable = observedSettingsKey != null &&
                     modeActive &&
                     settings.searchApiBaseUrl.isNotBlank() &&
-                    _state.value.error?.contains("Configure Search API", ignoreCase = true) == true
+                    isSearchConnectivityError(_state.value.error)
                 observedSettingsKey = key
-                if ((settingsChanged || apiReadyAfterBootstrap) && modeActive) {
+                if ((settingsChanged || apiReadyAfterBootstrap || retryAfterBootstrapWhileUnreachable) &&
+                    modeActive
+                ) {
                     _state.value = _state.value.copy(
                         loading = true,
                         error = null,
