@@ -15,6 +15,7 @@ class AppContainer(
     context: Context,
     bundledSearchApiUrl: String = "",
 ) {
+    private val appContext = context.applicationContext
     /** Cover/single-pane → unfolded two-pane restore payload. */
     var pendingFoldDetail: PendingFoldDetail? = null
 
@@ -40,18 +41,24 @@ class AppContainer(
     val settingsRepository = SettingsRepository(context, bundledSearchApiUrl)
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
-        onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi(context) } },
+        onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi() } },
         shouldKeepListening = { settingsRepository.needsSearchApiAutoConfiguration() },
     )
 
     init {
-        bootstrapSearchApiIfNeeded(context)
+        restartSearchApiBootstrapIfNeeded()
+    }
+
+    fun restartSearchApiBootstrapIfNeeded() {
         if (settingsRepository.needsSearchApiAutoConfiguration()) {
             wifiBootstrap.register()
+            bootstrapSearchApiIfNeeded()
+        } else {
+            wifiBootstrap.unregister()
         }
     }
 
-    private fun bootstrapSearchApiIfNeeded(context: Context) {
+    private fun bootstrapSearchApiIfNeeded() {
         if (!settingsRepository.needsSearchApiAutoConfiguration()) return
         thread(name = "search-api-bootstrap") {
             repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
@@ -59,7 +66,7 @@ class AppContainer(
                     wifiBootstrap.unregister()
                     return@thread
                 }
-                if (resolveAndPersistSearchApi(context)) {
+                if (resolveAndPersistSearchApi()) {
                     wifiBootstrap.unregister()
                     return@thread
                 }
@@ -70,13 +77,13 @@ class AppContainer(
         }
     }
 
-    private fun resolveAndPersistSearchApi(context: Context): Boolean {
+    private fun resolveAndPersistSearchApi(): Boolean {
         if (!settingsRepository.needsSearchApiAutoConfiguration()) return false
         val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
         val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
             bundledSearchApiUrl = bundled,
             isEmulator = DeviceProfile.isEmulator(),
-            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
+            wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext),
             probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
         )
         return resolved != null && settingsRepository.applyAutoConfiguredSearchApi(resolved)

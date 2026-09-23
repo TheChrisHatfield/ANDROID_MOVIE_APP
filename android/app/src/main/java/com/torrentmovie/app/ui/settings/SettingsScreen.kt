@@ -156,6 +156,7 @@ fun SettingsScreen(container: AppContainer) {
                     Toast.makeText(context, "Failed to save settings", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+                container.restartSearchApiBootstrapIfNeeded()
                 saving = true
                 scope.launch {
                     try {
