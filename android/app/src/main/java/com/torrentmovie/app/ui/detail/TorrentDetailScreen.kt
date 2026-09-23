@@ -175,7 +175,13 @@ fun TorrentDetailScreen(
                     container.foldActiveSelection
                         ?.takeIf { it.resultId == resultId }
                         ?.let { pending ->
-                            container.foldActiveSelection = pending.copy(resultId = stableId)
+                            container.foldActiveSelection = pending.copy(
+                                resultId = stableId,
+                                name = merged.name.takeIf { it.isNotBlank() } ?: pending.name,
+                                site = merged.site.takeIf { it.isNotBlank() } ?: pending.site,
+                                detailUrl = merged.detail_url?.takeIf { it.isNotBlank() }
+                                    ?: pending.detailUrl,
+                            )
                         }
                     onResultIdChanged?.invoke(stableId)
                 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.fold.FoldSearchDetailLayout
+import com.torrentmovie.app.ui.fold.foldRankingFeedbackResultId
 import com.torrentmovie.app.ui.fold.shouldRestorePhoneDetailOnFold
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -319,10 +320,30 @@ fun AppNavGraph(
                     if (shouldReplacePhoneDetail(resultId, newId)) {
                         replacePhoneDetail(newId, nextName, nextSite)
                     }
+                    if (!useTwoPane) {
+                        val prior = container.foldActiveSelection
+                        container.foldActiveSelection = PendingFoldDetail(
+                            resultId = newId,
+                            name = nextName,
+                            site = nextSite,
+                            genreId = snapshotGenreAtDetailOpen(
+                                prior?.genreId,
+                                searchState.activeGenre,
+                            ),
+                            detailUrl = magnetFallbackDetailUrl(
+                                stored?.detail_url,
+                                prior?.detailUrl,
+                            ),
+                        )
+                    }
                 },
                 onOpenUploaded = ::openUploaded,
                 onGenreBranchFeedback = { success ->
-                    searchViewModel.recordGenreBranchFeedback(resultId, success, genreAtOpen)
+                    val feedbackId = foldRankingFeedbackResultId(
+                        container.foldActiveSelection?.resultId,
+                        resultId,
+                    )
+                    searchViewModel.recordGenreBranchFeedback(feedbackId, success, genreAtOpen)
                 },
             )
         }
