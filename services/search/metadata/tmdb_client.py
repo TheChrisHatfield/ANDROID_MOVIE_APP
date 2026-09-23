@@ -10,6 +10,8 @@ from typing import Any
 
 import requests
 
+from operator_defaults import BUNDLED_TMDB_API_KEY
+
 logger = logging.getLogger(__name__)
 
 _TMDB_BASE = "https://api.themoviedb.org/3"
@@ -40,7 +42,9 @@ class TmdbDiscoverMovie:
 
 class TmdbClient:
     def __init__(self, api_key: str | None = None, timeout: float = 8.0):
-        self.api_key = (api_key or os.environ.get("TMDB_API_KEY") or "").strip()
+        self.api_key = (
+            api_key or os.environ.get("TMDB_API_KEY") or BUNDLED_TMDB_API_KEY or ""
+        ).strip()
         self.timeout = timeout
         self._cache: dict[str, tuple[float, TmdbMovieInfo | None]] = {}
         self._discover_cache: dict[str, tuple[float, list[TmdbDiscoverMovie]]] = {}

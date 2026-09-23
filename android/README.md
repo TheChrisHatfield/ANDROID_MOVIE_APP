@@ -33,14 +33,9 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 ### Operator keys (no user setup in Settings)
 
-Add to `android/local.properties` (gitignored) or `android/gradle.properties`:
+TMDB is pre-set in `gradle.properties` (`missysBundledTmdbApiKey`) and `services/search/operator_defaults.py` — keep those in sync. Optional overrides: `android/local.properties`, `services/search/.env`, or Settings.
 
-```properties
-missysBundledTmdbApiKey=your-tmdb-v3-api-key
-# missysBundledSearchApiUrl=https://your-search-host:8765
-```
-
-On PC, set `TMDB_API_KEY` in `services/search/.env` (copy from `.env.example` or run `services/search/scripts/ensure_env.ps1`).
+Optional hosted Search API: `missysBundledSearchApiUrl` in `gradle.properties`.
 
 ## Device E2E
 
