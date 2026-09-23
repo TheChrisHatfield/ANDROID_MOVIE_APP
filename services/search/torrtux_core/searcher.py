@@ -8,7 +8,12 @@ from dataclasses import dataclass
 
 from urllib.parse import urlparse
 
-from torrtux_core.filters import apply_filters, filter_movie_profile, sort_by_seeds_desc
+from torrtux_core.filters import (
+    apply_filters,
+    filter_movie_profile,
+    interleave_by_site,
+    sort_by_seeds_desc,
+)
 from torrtux_core.http_client import http_get
 from torrtux_core.profiles import EXCLUDED_FROM_MOVIE_PROFILE, MOVIE_SITE_NAMES
 from torrtux_core.sites import ALL_SITE_CLASSES
@@ -502,9 +507,7 @@ class TorrentSearcher:
             min_size=min_size,
             max_size=max_size,
         )
-        sorted_results = sort_by_seeds_desc(filtered)
-        if limit is not None:
-            sorted_results = sorted_results[:limit]
+        sorted_results = interleave_by_site(filtered, limit=limit)
         failed = set(failed_sites)
         all_sources_failed = (
             bool(queried_names)

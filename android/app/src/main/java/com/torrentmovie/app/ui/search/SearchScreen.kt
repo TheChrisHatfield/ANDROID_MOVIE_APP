@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
@@ -44,14 +45,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.network.TorrentResultDto
 
@@ -124,6 +130,28 @@ fun SearchScreen(
         refreshing = state.loading,
         onRefresh = { vm.refreshCurrentResults() },
     )
+    val configuration = LocalConfiguration.current
+    val phoneLandscape = AdaptiveLayout.isPhoneLandscape(
+        configuration.smallestScreenWidthDp,
+        configuration.screenWidthDp,
+        configuration.screenHeightDp,
+    )
+    val resultsListState = rememberLazyListState()
+    var browseChipsCollapsed by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.genrePanelExpanded, state.activeGenre, state.activeBrowseFeed, phoneLandscape) {
+        browseChipsCollapsed = phoneLandscape
+    }
+    LaunchedEffect(resultsListState) {
+        snapshotFlow {
+            resultsListState.firstVisibleItemIndex to resultsListState.firstVisibleItemScrollOffset
+        }
+            .distinctUntilChanged()
+            .collect { (index, offset) ->
+                if (shouldCollapseBrowseChipsOnScroll(index, offset)) {
+                    browseChipsCollapsed = true
+                }
+            }
+    }
 
     var lastSnackbarKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.error, state.info, state.errorCode, state.results.size, state.groups.size) {
@@ -189,36 +217,67 @@ fun SearchScreen(
                 .fillMaxWidth()
                 .background(PantoneRed),
         ) {
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = vm::setQuery,
-                label = { Text("Search movies") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        vm.dismissSearchSuggestions()
-                        vm.search()
+            val inTextSearchMode = state.activeBrowseFeed == null && state.activeGenre == null
+            val showStandaloneSearchButton = inTextSearchMode && !phoneLandscape
+            val searchField: @Composable (Modifier) -> Unit = { fieldModifier ->
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = vm::setQuery,
+                    label = { Text("Search movies") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            vm.dismissSearchSuggestions()
+                            vm.search()
+                        },
+                    ),
+                    colors = missyOutlinedTextFieldColors(),
+                    shape = MissySearchFieldShape,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            vm.dismissSearchSuggestions()
+                            showFilters = true
+                        }) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = "Filters",
+                                tint = TextCharcoal,
+                            )
+                        }
                     },
-                ),
-                colors = missyOutlinedTextFieldColors(),
-                shape = MissySearchFieldShape,
-                trailingIcon = {
-                    IconButton(onClick = {
-                        vm.dismissSearchSuggestions()
-                        showFilters = true
-                    }) {
-                        Icon(
-                            Icons.Default.FilterList,
-                            contentDescription = "Filters",
-                            tint = TextCharcoal,
-                        )
+                    modifier = fieldModifier,
+                )
+            }
+            if (phoneLandscape) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    searchField(
+                        Modifier
+                            .weight(1f)
+                            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    )
+                    if (inTextSearchMode) {
+                        Button(
+                            onClick = {
+                                vm.dismissSearchSuggestions()
+                                vm.search()
+                            },
+                            modifier = Modifier.padding(end = 16.dp),
+                            enabled = !state.loading && state.query.isNotBlank(),
+                            colors = missyFilledButtonColors(),
+                        ) { Text("Search") }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-            )
+                }
+            } else {
+                searchField(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                )
+            }
             SearchSuggestionsPanel(
                 suggestions = state.suggestions,
                 loading = state.suggestionsLoading,
@@ -232,12 +291,14 @@ fun SearchScreen(
                 activeBrowseFeed = state.activeBrowseFeed,
                 movieSitesOnly = movieSitesOnly,
                 loading = state.loading,
+                browseChipsCollapsed = browseChipsCollapsed,
+                onExpandBrowseChips = { browseChipsCollapsed = false },
                 onCollapseGenrePanel = vm::collapseGenrePanel,
                 onExpandGenrePanel = vm::expandGenrePanel,
                 onLoadGenre = vm::loadGenreBrowse,
                 onLoadBrowse = vm::loadBrowse1337x,
             )
-            if (state.activeBrowseFeed == null && state.activeGenre == null) {
+            if (showStandaloneSearchButton) {
                 Button(
                     onClick = {
                         vm.dismissSearchSuggestions()
@@ -390,7 +451,10 @@ fun SearchScreen(
                     }
                 }
                 else -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = resultsListState,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
                         items(state.groups, key = { it.groupKey }) { group ->
                             MovieGroupCard(
                                 group = group,
@@ -444,12 +508,44 @@ private fun BrowseGenreChipRow(
     activeBrowseFeed: String?,
     movieSitesOnly: Boolean,
     loading: Boolean,
+    browseChipsCollapsed: Boolean,
+    onExpandBrowseChips: () -> Unit,
     onCollapseGenrePanel: () -> Unit,
     onExpandGenrePanel: () -> Unit,
     onLoadGenre: (X1337MovieGenre) -> Unit,
     onLoadBrowse: (X1337BrowseFeed) -> Unit,
 ) {
     val chipColors = missyFilterChipColors()
+    val showCollapsedBar = shouldShowCollapsedBrowseBar(browseChipsCollapsed)
+    if (showCollapsedBar) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = collapsedBrowseBarLabel(
+                    genrePanelExpanded = genrePanelExpanded,
+                    activeGenre = activeGenre,
+                    activeBrowseFeed = activeBrowseFeed,
+                    movieSitesOnly = movieSitesOnly,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            FilterChip(
+                selected = false,
+                onClick = onExpandBrowseChips,
+                label = { Text(expandBrowseChipsActionLabel(genrePanelExpanded)) },
+                enabled = !loading,
+                colors = chipColors,
+                border = missyFilterChipBorder(selected = false, enabled = !loading),
+            )
+        }
+        return
+    }
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()

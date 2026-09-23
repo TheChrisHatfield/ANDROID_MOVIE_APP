@@ -6,7 +6,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from metadata.tmdb_client import TmdbClient, TmdbDiscoverMovie
-from torrtux_core.filters import seed_count, sort_by_seeds_desc
+from torrtux_core.filters import interleave_by_site, seed_count
 from torrtux_core.genres import genre_search_query, tmdb_genre_id
 from torrtux_core.searcher import SearchOutcome, TorrentSearcher
 
@@ -243,6 +243,7 @@ def broad_indexer_genre_pool(
     if not all_results and indexers_unavailable:
         return SearchOutcome([], failed_sites, indexers_unavailable=True)
 
+    all_results = interleave_by_site(all_results)
     for index, row in enumerate(all_results):
         if row.get("_genre_rank") is None:
             row["_genre_rank"] = GENRE_RANK_BASE + (index % TMDB_ENRICH_TITLE_LIMIT)

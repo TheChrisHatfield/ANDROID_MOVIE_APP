@@ -133,9 +133,60 @@ def filter_movie_profile(results: list[dict]) -> list[dict]:
     return [row for row in results if is_likely_movie_release(str(row.get("name") or ""))]
 
 
-def sort_by_seeds_desc(results: list[dict]) -> list[dict]:
-    def key(row: dict) -> int:
-        value = seed_count(row.get("seeds", "-"))
-        return value if value is not None else -1
+def seed_sort_value(row: dict) -> int:
+    value = seed_count(row.get("seeds", "-"))
+    return value if value is not None else -1
 
-    return sorted(results, key=key, reverse=True)
+
+def sort_by_seeds_desc(results: list[dict]) -> list[dict]:
+    return sorted(results, key=seed_sort_value, reverse=True)
+
+
+def _site_sort_key(site_name: str, site_order: list[str]) -> tuple[int, str]:
+    lowered = site_name.casefold()
+    order_index = {name.casefold(): index for index, name in enumerate(site_order)}
+    return (order_index.get(lowered, len(site_order)), lowered)
+
+
+def interleave_by_site(
+    results: list[dict],
+    *,
+    limit: int | None = None,
+    site_order: list[str] | None = None,
+) -> list[dict]:
+    """
+    Round-robin merge across indexers so one high-seed site (often 1337x) cannot
+    fill the entire result window. Within each site, rows stay seed-sorted.
+    """
+    if not results:
+        return []
+    from torrtux_core.profiles import MOVIE_SITE_NAMES
+
+    order = site_order or MOVIE_SITE_NAMES
+    by_site: dict[str, list[dict]] = {}
+    for row in results:
+        site = str(row.get("site") or "unknown").strip() or "unknown"
+        key = site.casefold()
+        by_site.setdefault(key, []).append(row)
+    for bucket in by_site.values():
+        bucket.sort(key=seed_sort_value, reverse=True)
+
+    site_keys = sorted(by_site.keys(), key=lambda site: _site_sort_key(site, order))
+    indices = {site: 0 for site in site_keys}
+    merged: list[dict] = []
+    while True:
+        if limit is not None and len(merged) >= limit:
+            break
+        progressed = False
+        for site in site_keys:
+            if limit is not None and len(merged) >= limit:
+                break
+            bucket = by_site[site]
+            index = indices[site]
+            if index < len(bucket):
+                merged.append(bucket[index])
+                indices[site] = index + 1
+                progressed = True
+        if not progressed:
+            break
+    return merged

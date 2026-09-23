@@ -44,8 +44,8 @@ fun MainScaffold(container: AppContainer) {
     val backStack by navController.currentBackStackEntryAsState()
     val route = backStack?.destination?.route ?: Routes.SEARCH
     val onDetailRoute = route.startsWith("detail/")
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val useNavigationRail = AdaptiveLayout.useNavigationRail(screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val useNavigationRail = AdaptiveLayout.useNavigationRail(configuration.smallestScreenWidthDp)
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 

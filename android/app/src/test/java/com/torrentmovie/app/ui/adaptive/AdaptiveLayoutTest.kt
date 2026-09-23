@@ -16,8 +16,28 @@ class AdaptiveLayoutTest {
     @Test
     fun foldInnerAndTabletUseTwoPane() {
         assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(673))
-        assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(800))
+        assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(600))
         assertTrue(AdaptiveLayout.useNavigationRail(840))
+    }
+
+    @Test
+    fun phoneLandscapeWidthDoesNotEnableTwoPane() {
+        assertFalse(AdaptiveLayout.useTwoPaneSearchDetail(411))
+        assertFalse(AdaptiveLayout.useNavigationRail(411))
+        assertTrue(
+            AdaptiveLayout.isPhoneLandscape(
+                smallestScreenWidthDp = 411,
+                screenWidthDp = 840,
+                screenHeightDp = 411,
+            ),
+        )
+        assertFalse(
+            AdaptiveLayout.isPhoneLandscape(
+                smallestScreenWidthDp = 673,
+                screenWidthDp = 840,
+                screenHeightDp = 673,
+            ),
+        )
     }
 
     @Test

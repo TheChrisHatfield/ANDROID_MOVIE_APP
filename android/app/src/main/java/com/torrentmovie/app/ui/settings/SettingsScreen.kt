@@ -174,7 +174,7 @@ fun SettingsScreen(container: AppContainer) {
         Text("Interface", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         Text("Theme follows system default (Material 3).")
         Text(
-            "Wide screens (tablet, fold unfolded, landscape): search and detail appear side by side; navigation uses the side rail.",
+            "Wide screens (tablet, fold inner display): search and detail appear side by side with a side navigation rail. Phones keep the same bottom navigation in portrait and landscape.",
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
         )

@@ -67,7 +67,10 @@ private fun youtubePlayerHtml(
                   origin: '$YOUTUBE_APP_ORIGIN'
                 },
                 events: {
-                  onReady: function(event) { if ($autoplayFlag) event.target.playVideo(); },
+                  onReady: function(event) {
+                    if ($autoplayFlag) event.target.playVideo();
+                    if ($muteFlag === 0) event.target.unMute();
+                  },
                   onError: function(e) {
                     console.log('YouTube player error', e.data);
                     if (window.AndroidBridge && window.AndroidBridge.onPlayerError) {

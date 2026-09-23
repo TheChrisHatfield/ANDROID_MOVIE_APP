@@ -36,7 +36,7 @@ fun InlineYoutubePlayer(
     modifier: Modifier = Modifier,
     autoplay: Boolean = true,
     fixedAspectRatio: Boolean = true,
-    startMuted: Boolean = true,
+    startMuted: Boolean = false,
 ) {
     val context = LocalContext.current
     val videoId = remember(youtubeKey) { normalizeYoutubeVideoId(youtubeKey) }

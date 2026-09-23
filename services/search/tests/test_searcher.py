@@ -96,6 +96,25 @@ def test_search_sorts_before_limit():
     assert [row["name"] for row in out.results] == ["high", "mid"]
 
 
+def test_search_interleaves_sites_before_limit():
+    searcher = TorrentSearcher(site_classes=[])
+    searcher.working_sites = [MagicMock(name="YTS"), MagicMock(name="1337x")]
+
+    raw_rows = [
+        {"name": "x1", "seeds": "500", "size": "1 GB", "site": "1337x"},
+        {"name": "x2", "seeds": "400", "size": "1 GB", "site": "1337x"},
+        {"name": "x3", "seeds": "300", "size": "1 GB", "site": "1337x"},
+        {"name": "y1", "seeds": "10", "size": "1 GB", "site": "YTS"},
+    ]
+
+    with patch.object(searcher, "search_all_sites", return_value=(raw_rows, [])):
+        out = searcher.search("test", limit=3, movie_profile=False)
+
+    sites = [row["site"] for row in out.results]
+    assert "YTS" in sites
+    assert sites.count("1337x") == 2
+
+
 def test_yts_detail_url_is_absolute():
     from torrtux_core.sites.providers import YTS
 

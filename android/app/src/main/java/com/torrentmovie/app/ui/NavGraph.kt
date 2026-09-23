@@ -63,8 +63,8 @@ fun AppNavGraph(
     val uploadedViewModel: UploadedViewModel = viewModel { UploadedViewModel(container) }
     val searchState by searchViewModel.state.collectAsState()
     val foldActiveSelection by container.foldActiveSelectionFlow.collectAsState()
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val useTwoPane = AdaptiveLayout.useTwoPaneSearchDetail(screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val useTwoPane = AdaptiveLayout.useTwoPaneSearchDetail(configuration.smallestScreenWidthDp)
 
     fun allReleases(): List<TorrentResultDto> {
         return searchState.results + searchState.groups.flatMap { it.releases }

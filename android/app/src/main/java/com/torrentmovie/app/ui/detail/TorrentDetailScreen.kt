@@ -1,6 +1,7 @@
 package com.torrentmovie.app.ui.detail
 
 import android.widget.Toast
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -151,6 +154,9 @@ fun TorrentDetailScreen(
                     name = cachedBeforeResolve?.name?.takeIf { it.isNotBlank() } ?: name,
                 )
             }
+            if (!shouldClearMagnetLoading(generation, magnetFetchGeneration)) {
+                return@LaunchedEffect
+            }
             magnet = resolved.magnet.takeIf { it.isNotBlank() }
             if (!magnet.isNullOrBlank()) {
                 val cached = container.searchResultStore.get(resultId)
@@ -190,6 +196,9 @@ fun TorrentDetailScreen(
                 magnetError = "Magnet unavailable — tap retry"
             }
         } catch (e: SearchException) {
+            if (!shouldClearMagnetLoading(generation, magnetFetchGeneration)) {
+                return@LaunchedEffect
+            }
             if (magnet.isNullOrBlank()) {
                 magnet = null
             }
@@ -213,6 +222,9 @@ fun TorrentDetailScreen(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (!shouldClearMagnetLoading(generation, magnetFetchGeneration)) {
+                return@LaunchedEffect
+            }
             if (magnet.isNullOrBlank()) {
                 magnet = null
             }
@@ -224,12 +236,14 @@ fun TorrentDetailScreen(
         }
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-    ) {
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+                .padding(bottom = 96.dp),
+        ) {
         val headerMetadata = detailHeaderMetadata(
             metadata,
             container.searchResultStore.get(resultId),
@@ -284,88 +298,96 @@ fun TorrentDetailScreen(
                 color = MaterialTheme.colorScheme.error,
             )
         }
-        Button(
-            onClick = {
-                val m = magnet
-                if (m.isNullOrBlank()) {
-                    Toast.makeText(context, "Magnet not available", Toast.LENGTH_SHORT).show()
-                    return@Button
+        }
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            tonalElevation = 3.dp,
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Button(
+                    onClick = {
+                        val m = magnet
+                        if (m.isNullOrBlank()) {
+                            Toast.makeText(context, "Magnet not available", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (loading || magnetLoading) return@Button
+                        loading = true
+                        scope.launch {
+                            try {
+                                val result = withContext(Dispatchers.IO) {
+                                    container.seedboxRepository.addMagnet(m, name, site)
+                                }
+                                when (result) {
+                                    is SeedboxResult.Success -> {
+                                        val persistFailed = result.message.contains(
+                                            "history save failed",
+                                            ignoreCase = true,
+                                        )
+                                        val wasRetryingPersist = pendingPersist
+                                        pendingPersist = persistFailed
+                                        if (shouldRecordGenreRankingSuccess(wasRetryingPersist)) {
+                                            onGenreBranchFeedback?.invoke(true)
+                                        }
+                                        if (!persistFailed) {
+                                            duplicate = true
+                                            justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
+                                        } else {
+                                            duplicate = false
+                                        }
+                                        val length = if (persistFailed) {
+                                            Toast.LENGTH_LONG
+                                        } else {
+                                            Toast.LENGTH_SHORT
+                                        }
+                                        Toast.makeText(context, result.message, length).show()
+                                    }
+                                    is SeedboxResult.Failure -> {
+                                        if (isGenreRankingSendFailure(result.message)) {
+                                            onGenreBranchFeedback?.invoke(false)
+                                        }
+                                        Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                onGenreBranchFeedback?.invoke(false)
+                                Toast.makeText(
+                                    context,
+                                    e.message ?: "Send failed",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    },
+                    enabled = seedboxConfigured && downloadDirConfigured && !loading &&
+                        !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = missyFilledButtonColors(),
+                ) {
+                    Text(
+                        when {
+                            loading -> "Sending…"
+                            pendingPersist -> "Retry save to Uploaded"
+                            else -> "Send to seedbox"
+                        },
+                    )
                 }
-                if (loading || magnetLoading) return@Button
-                loading = true
-                scope.launch {
-                    try {
-                        val result = withContext(Dispatchers.IO) {
-                            container.seedboxRepository.addMagnet(m, name, site)
-                        }
-                        when (result) {
-                            is SeedboxResult.Success -> {
-                                val persistFailed = result.message.contains(
-                                    "history save failed",
-                                    ignoreCase = true,
-                                )
-                                val wasRetryingPersist = pendingPersist
-                                pendingPersist = persistFailed
-                                if (shouldRecordGenreRankingSuccess(wasRetryingPersist)) {
-                                    onGenreBranchFeedback?.invoke(true)
-                                }
-                                if (!persistFailed) {
-                                    duplicate = true
-                                    justSentStorageKey = MagnetHashUtil.storageKey(m, name, site)
-                                } else {
-                                    duplicate = false
-                                }
-                                val length = if (persistFailed) {
-                                    Toast.LENGTH_LONG
-                                } else {
-                                    Toast.LENGTH_SHORT
-                                }
-                                Toast.makeText(context, result.message, length).show()
-                            }
-                            is SeedboxResult.Failure -> {
-                                if (isGenreRankingSendFailure(result.message)) {
-                                    onGenreBranchFeedback?.invoke(false)
-                                }
-                                Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        onGenreBranchFeedback?.invoke(false)
-                        Toast.makeText(
-                            context,
-                            e.message ?: "Send failed",
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    } finally {
-                        loading = false
+                if (duplicate && onOpenUploaded != null && uploadedNavigationKey() != null) {
+                    TextButton(
+                        onClick = {
+                            uploadedNavigationKey()?.let { key -> onOpenUploaded(key) }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("View in Uploaded")
                     }
                 }
-            },
-            enabled = seedboxConfigured && downloadDirConfigured && !loading &&
-                !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-            colors = missyFilledButtonColors(),
-        ) {
-            Text(
-                when {
-                    loading -> "Sending…"
-                    pendingPersist -> "Retry save to Uploaded"
-                    else -> "Send to seedbox"
-                },
-            )
-        }
-        if (duplicate && onOpenUploaded != null && uploadedNavigationKey() != null) {
-            TextButton(
-                onClick = {
-                    uploadedNavigationKey()?.let { key -> onOpenUploaded(key) }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-            ) {
-                Text("View in Uploaded")
             }
         }
     }

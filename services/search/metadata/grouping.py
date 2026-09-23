@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from metadata.title_parse import group_key_for, parse_torrent_movie_title
+from torrtux_core.filters import interleave_by_site
 from metadata.tmdb_client import TmdbClient, TmdbMovieInfo
 from metadata.web_poster import fill_missing_posters, is_usable_poster_url
 from metadata.web_trailer import extract_youtube_id, fill_missing_trailers, is_usable_trailer_key
@@ -64,6 +65,7 @@ def _year_from_row(row: dict) -> int | None:
 
 
 def _append_group(bucket: dict, releases: list[dict], groups: list[dict]) -> None:
+    releases = interleave_by_site(releases)
     poster = bucket["poster_url"]
     if poster:
         for release in releases:

@@ -1,6 +1,7 @@
 from torrtux_core.filters import (
     apply_filters,
     filter_movie_profile,
+    interleave_by_site,
     is_likely_movie_release,
     parse_size,
     seed_count,
@@ -103,6 +104,31 @@ def test_sort_by_seeds_desc():
     rows = [{"seeds": "3"}, {"seeds": "99"}, {"seeds": "-"}]
     out = sort_by_seeds_desc(rows)
     assert out[0]["seeds"] == "99"
+
+
+def test_interleave_by_site_prevents_one_indexer_monopoly():
+    rows = [
+        {"name": "a1", "site": "1337x", "seeds": "500"},
+        {"name": "a2", "site": "1337x", "seeds": "400"},
+        {"name": "a3", "site": "1337x", "seeds": "300"},
+        {"name": "y1", "site": "YTS", "seeds": "50"},
+        {"name": "t1", "site": "The Pirate Bay", "seeds": "40"},
+    ]
+    out = interleave_by_site(rows, limit=4)
+    sites = [row["site"] for row in out]
+    assert sites.count("1337x") == 2
+    assert "YTS" in sites
+    assert "The Pirate Bay" in sites
+
+
+def test_interleave_zero_seeds_rank_above_unknown():
+    rows = [
+        {"name": "zero", "site": "YTS", "seeds": "0"},
+        {"name": "unknown", "site": "YTS", "seeds": "-"},
+        {"name": "live", "site": "YTS", "seeds": "12"},
+    ]
+    out = interleave_by_site(rows)
+    assert [row["name"] for row in out] == ["live", "zero", "unknown"]
 
 
 def test_movie_profile_filters_tv_and_software():
