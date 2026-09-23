@@ -125,6 +125,21 @@ As a user, I filter by minimum seeds and maximum size so I quickly find a health
 
 ---
 
+### User Story 9 - Kodi-style search autocomplete (Priority: P2)
+
+As a user typing a movie title, I see TMDB title suggestions (poster, year) and tap one to search torrents — like Kodi metadata autocomplete — without running a full indexer search on every keystroke.
+
+**Independent Test**: Configure TMDB on search service → type `ince` → see "Inception (2010)" → tap → grouped torrent results for Inception.
+
+**Acceptance Scenarios**:
+
+1. **Given** TMDB configured and Search API reachable, **When** the user types ≥2 characters in plain search mode, **Then** a suggestion list appears after a short debounce.
+2. **Given** suggestions shown, **When** the user taps a row, **Then** the query becomes `Title Year` and a normal `/v1/search` runs.
+3. **Given** genre or 1337x browse mode active, **When** the user types, **Then** autocomplete does not appear.
+4. **Given** TMDB not configured, **When** the user types, **Then** search still works manually with no autocomplete errors.
+
+---
+
 ### User Story 8 - Kodi-style movie library cards (Priority: P2)
 
 As a user searching for a movie, I see **one card per film** (poster, title, year, short description) with duplicate releases from different indexers grouped underneath — like Kodi's movie library — and I can watch a trailer before picking a torrent release.
@@ -240,6 +255,7 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-038**: Torrent detail screen MUST show movie metadata (poster, overview, trailer) when available from grouped search; Settings MAY store optional TMDB API key passed to search API as `tmdb_api_key`.
 - **FR-039**: Android launcher and in-app title MUST display **Missy's Movies**. Brand color MUST be Pantone Red 032 C (`#EF3340`). The launcher icon MUST use the Missy portrait on that red fill.
 - **FR-039a**: In-app chrome MUST match the reference layout: **red** top app bar with **white** title/icons; **white** main content and bottom navigation; **charcoal** body text; **light gray** rounded search fields; **pill-shaped** primary buttons in Pantone red with white labels; selected nav/chips in red, unselected in neutral gray.
+- **FR-041**: While the user types a movie search (not genre/browse mode), the app MUST debounce and call `GET /v1/suggest` on the Search API for Kodi-style title autocomplete. Suggestions MUST come from TMDB only (no indexer traffic). When the user picks a suggestion, the app MUST run the existing torrent search using **title + year** when year is known. If TMDB is not configured on the search service, autocomplete MUST be omitted without error. Minimum **2** characters before suggest; default **8** suggestions; debounce **~350ms**.
 - **FR-040**: Android MUST minimize manual Search API setup. On first install, when the user has not saved a Search API URL, the app MUST resolve a base URL in order: (1) **bundled default** baked into the release APK (operator-hosted search service), (2) **LAN discovery** — probe `GET /v1/health` on port **8765** for hosts on the device’s Wi‑Fi subnet (same network as a PC running the search service), (3) emulator dev default `http://10.0.2.2:8765`. When auto-configured, the URL MUST be persisted so search works without opening Settings. Manual override in Settings MUST remain available. Long-term **on-device search** (Kotlin port of torrtux_core, no external API) is out of scope for FR-040 v1 but is the target for fully offline-capable installs.
 
 ### Key Entities

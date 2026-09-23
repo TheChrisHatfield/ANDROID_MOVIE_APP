@@ -84,6 +84,33 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         }
     }
 
+    suspend fun suggest(query: String, limit: Int = 8): List<MovieSearchSuggestion> {
+        val settings = settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) return emptyList()
+        return try {
+            val response = api().suggest(
+                query = query,
+                limit = limit,
+                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
+            )
+            if (!response.tmdbConfigured) return emptyList()
+            response.suggestions.map { row ->
+                MovieSearchSuggestion(
+                    tmdbId = row.tmdbId,
+                    title = row.title,
+                    year = row.year,
+                    posterUrl = row.posterUrl,
+                )
+            }
+        } catch (e: HttpException) {
+            emptyList()
+        } catch (e: IllegalArgumentException) {
+            emptyList()
+        } catch (e: IOException) {
+            emptyList()
+        }
+    }
+
     suspend fun browse1337x(
         feed: String,
         minSeeds: Int? = null,

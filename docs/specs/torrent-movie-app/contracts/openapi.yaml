@@ -56,6 +56,57 @@ paths:
                   count:
                     type: integer
 
+  /v1/suggest:
+    get:
+      summary: TMDB movie title autocomplete (Kodi-style)
+      operationId: suggest
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial movie title (min 2 characters for results)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+        - name: tmdb_api_key
+          in: query
+          schema:
+            type: string
+          description: Optional TMDB key override
+      responses:
+        '200':
+          description: Suggestions (empty when TMDB not configured)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  tmdb_configured:
+                    type: boolean
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tmdb_id:
+                          type: integer
+                        title:
+                          type: string
+                        year:
+                          type: integer
+                          nullable: true
+                        poster_url:
+                          type: string
+                          nullable: true
+
   /v1/search:
     get:
       summary: Search torrent indexers

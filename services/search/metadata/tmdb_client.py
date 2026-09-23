@@ -91,6 +91,22 @@ class TmdbClient:
             self._discover_cache[cache_key] = (time.time(), movies)
         return movies
 
+    def search_movies(self, query: str, *, limit: int = 8) -> list[TmdbDiscoverMovie]:
+        """TMDB movie search for Kodi-style query autocomplete (no indexers)."""
+        q = query.strip()
+        if not self.configured or not q or limit <= 0:
+            return []
+        cache_key = f"search|{q.lower()}|{limit}"
+        with self._lock:
+            cached = self._discover_cache.get(cache_key)
+            if cached and time.time() - cached[0] < _CACHE_TTL_SECONDS:
+                return list(cached[1])
+
+        movies = self._fetch_search(q, limit=limit)
+        with self._lock:
+            self._discover_cache[cache_key] = (time.time(), movies)
+        return movies
+
     def lookup(self, title: str, year: int | None = None) -> TmdbMovieInfo | None:
         if not self.configured or not title.strip():
             return None
@@ -106,6 +122,57 @@ class TmdbClient:
         with self._lock:
             self._cache[cache_key] = (time.time(), info)
         return info
+
+    def _fetch_search(self, query: str, *, limit: int) -> list[TmdbDiscoverMovie]:
+        try:
+            resp = requests.get(
+                f"{_TMDB_BASE}/search/movie",
+                params={"api_key": self.api_key, "query": query, "include_adult": "false"},
+                timeout=self.timeout,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("results") or []
+            return self._movies_from_tmdb_results(results, limit=limit, poster_size="w92")
+        except Exception as exc:
+            logger.warning("TMDB search failed for %s: %s", query, exc)
+            return []
+
+    def _movies_from_tmdb_results(
+        self,
+        results: list[dict],
+        *,
+        limit: int,
+        poster_size: str = "w342",
+    ) -> list[TmdbDiscoverMovie]:
+        movies: list[TmdbDiscoverMovie] = []
+        for item in results[:limit]:
+            movie_id = item.get("id")
+            title = (item.get("title") or item.get("name") or "").strip()
+            if not movie_id or not title:
+                continue
+            release_date = str(item.get("release_date") or "")
+            year = None
+            if len(release_date) >= 4:
+                try:
+                    year = int(release_date[:4])
+                except ValueError:
+                    year = None
+            poster_path = item.get("poster_path")
+            poster_url = (
+                f"https://image.tmdb.org/t/p/{poster_size}{poster_path}" if poster_path else None
+            )
+            movies.append(
+                TmdbDiscoverMovie(
+                    tmdb_id=int(movie_id),
+                    title=title,
+                    year=year,
+                    overview=(item.get("overview") or "").strip() or None,
+                    poster_url=poster_url,
+                    popularity=float(item.get("popularity") or 0.0),
+                    vote_average=float(item.get("vote_average") or 0.0),
+                )
+            )
+        return movies
 
     def _fetch_discover(self, genre_id: int, *, page: int, limit: int) -> list[TmdbDiscoverMovie]:
         try:
@@ -123,35 +190,7 @@ class TmdbClient:
             )
             resp.raise_for_status()
             results = resp.json().get("results") or []
-            movies: list[TmdbDiscoverMovie] = []
-            for item in results[:limit]:
-                movie_id = item.get("id")
-                title = (item.get("title") or item.get("name") or "").strip()
-                if not movie_id or not title:
-                    continue
-                release_date = str(item.get("release_date") or "")
-                year = None
-                if len(release_date) >= 4:
-                    try:
-                        year = int(release_date[:4])
-                    except ValueError:
-                        year = None
-                poster_path = item.get("poster_path")
-                poster_url = (
-                    f"https://image.tmdb.org/t/p/w342{poster_path}" if poster_path else None
-                )
-                movies.append(
-                    TmdbDiscoverMovie(
-                        tmdb_id=int(movie_id),
-                        title=title,
-                        year=year,
-                        overview=(item.get("overview") or "").strip() or None,
-                        poster_url=poster_url,
-                        popularity=float(item.get("popularity") or 0.0),
-                        vote_average=float(item.get("vote_average") or 0.0),
-                    )
-                )
-            return movies
+            return self._movies_from_tmdb_results(results, limit=limit)
         except Exception as exc:
             logger.warning("TMDB discover failed for genre %s: %s", genre_id, exc)
             return []

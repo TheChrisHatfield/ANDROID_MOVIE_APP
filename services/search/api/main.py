@@ -17,7 +17,16 @@ from fastapi.responses import FileResponse
 from api.cache import ResultCache
 from api.genre_pool_cache import GenrePoolCache
 from api.genre_service import GenreBrowseService, record_genre_feedback
-from api.models import HealthResponse, MagnetResponse, MovieGroup, SearchResponse, SitesHealthResponse, TorrentResult
+from api.models import (
+    HealthResponse,
+    MagnetResponse,
+    MovieGroup,
+    MovieSuggestion,
+    SearchResponse,
+    SitesHealthResponse,
+    SuggestResponse,
+    TorrentResult,
+)
 from metadata.grouping import build_movie_groups
 from metadata.tmdb_client import TmdbClient
 from metadata.web_poster import POSTER_PATH_PREFIX, cached_poster_path, is_poster_id
@@ -186,6 +195,32 @@ def health() -> HealthResponse:
 def sites_health(refresh: bool = Query(False)) -> SitesHealthResponse:
     working = _refresh_sites_health(force=refresh)
     return SitesHealthResponse(working=working, count=len(working))
+
+
+@app.get("/v1/suggest", response_model=SuggestResponse)
+def suggest(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(8, ge=1, le=20),
+    tmdb_api_key: str | None = Query(None, description="Optional TMDB API key override (else TMDB_API_KEY env)"),
+) -> SuggestResponse:
+    """Kodi-style movie title autocomplete via TMDB (no indexer traffic)."""
+    query = q.strip()
+    if len(query) < 2:
+        return SuggestResponse(query=query, suggestions=[], tmdb_configured=_tmdb.configured)
+    tmdb_client, _ = _tmdb_for_request(tmdb_api_key)
+    if not tmdb_client.configured:
+        return SuggestResponse(query=query, suggestions=[], tmdb_configured=False)
+    movies = tmdb_client.search_movies(query, limit=limit)
+    suggestions = [
+        MovieSuggestion(
+            tmdb_id=movie.tmdb_id,
+            title=movie.title,
+            year=movie.year,
+            poster_url=movie.poster_url,
+        )
+        for movie in movies
+    ]
+    return SuggestResponse(query=query, suggestions=suggestions, tmdb_configured=True)
 
 
 @app.get("/v1/search", response_model=SearchResponse)

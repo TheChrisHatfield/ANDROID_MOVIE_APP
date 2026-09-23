@@ -195,11 +195,19 @@ fun SearchScreen(
                 label = { Text("Search movies") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { vm.search() }),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        vm.dismissSearchSuggestions()
+                        vm.search()
+                    },
+                ),
                 colors = missyOutlinedTextFieldColors(),
                 shape = MissySearchFieldShape,
                 trailingIcon = {
-                    IconButton(onClick = { showFilters = true }) {
+                    IconButton(onClick = {
+                        vm.dismissSearchSuggestions()
+                        showFilters = true
+                    }) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filters",
@@ -210,6 +218,13 @@ fun SearchScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+            SearchSuggestionsPanel(
+                suggestions = state.suggestions,
+                loading = state.suggestionsLoading,
+                searchApiBaseUrl = searchApiBaseUrl,
+                onSelect = vm::selectSearchSuggestion,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
             )
             BrowseGenreChipRow(
                 genrePanelExpanded = state.genrePanelExpanded,
@@ -224,7 +239,10 @@ fun SearchScreen(
             )
             if (state.activeBrowseFeed == null && state.activeGenre == null) {
                 Button(
-                    onClick = { vm.search() },
+                    onClick = {
+                        vm.dismissSearchSuggestions()
+                        vm.search()
+                    },
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
                     enabled = !state.loading && state.query.isNotBlank(),
                     colors = missyFilledButtonColors(),

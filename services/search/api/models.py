@@ -59,3 +59,16 @@ class SearchResponse(BaseModel):
 class MagnetResponse(BaseModel):
     id: str
     magnet: str
+
+
+class MovieSuggestion(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None = None
+    poster_url: str | None = None
+
+
+class SuggestResponse(BaseModel):
+    query: str
+    suggestions: list[MovieSuggestion] = Field(default_factory=list)
+    tmdb_configured: bool = True

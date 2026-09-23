@@ -10,6 +10,13 @@ interface SearchApi {
     @GET("/v1/health")
     suspend fun health(): HealthResponseDto
 
+    @GET("/v1/suggest")
+    suspend fun suggest(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 8,
+        @Query("tmdb_api_key") tmdbApiKey: String? = null,
+    ): SuggestResponseDto
+
     @GET("/v1/search")
     suspend fun search(
         @Query("q") query: String,
@@ -141,6 +148,24 @@ data class WarmGenreResponseDto(
 data class HealthResponseDto(
     val status: String,
     val tmdb_configured: Boolean = false,
+) {
+    val tmdbConfigured: Boolean get() = tmdb_configured
+}
+
+data class MovieSuggestionDto(
+    val tmdb_id: Int,
+    val title: String,
+    val year: Int? = null,
+    val poster_url: String? = null,
+) {
+    val tmdbId: Int get() = tmdb_id
+    val posterUrl: String? get() = poster_url
+}
+
+data class SuggestResponseDto(
+    val query: String,
+    val suggestions: List<MovieSuggestionDto> = emptyList(),
+    val tmdb_configured: Boolean = true,
 ) {
     val tmdbConfigured: Boolean get() = tmdb_configured
 }

@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.torrentmovie.app.ui.util.resolveGenreForRankingFeedback
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MovieMetadata
+import com.torrentmovie.core.data.MovieSearchSuggestion
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.data.SearchResult
 import com.torrentmovie.core.network.MovieGroupDto
 import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +35,8 @@ data class SearchUiState(
     val activeBrowseFeed: String? = null,
     val genrePanelExpanded: Boolean = false,
     val activeGenre: String? = null,
+    val suggestions: List<MovieSearchSuggestion> = emptyList(),
+    val suggestionsLoading: Boolean = false,
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
@@ -41,7 +45,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
+    private var suggestJob: Job? = null
     private var searchGeneration = 0
+    private var suggestGeneration = 0
     private var lastSearchedQuery: String? = null
     private var lastSearchMinSeeds: Int? = null
     private var lastSearchMaxSeeds: Int? = null
@@ -115,6 +121,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val stale = lastSearchedQuery != null && trimmed != lastSearchedQuery
         if (stale) {
             searchJob?.cancel()
+            suggestJob?.cancel()
             searchGeneration += 1
         }
         val revertingToLastSearch = !stale &&
@@ -144,7 +151,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             genrePanelExpanded = if (clearingGenre) false else _state.value.genrePanelExpanded,
             activeGenre = if (clearingGenre) null else _state.value.activeGenre,
             lastExecutedQuery = if (modeCleared) "" else _state.value.lastExecutedQuery,
+            suggestions = if (stale || modeCleared) emptyList() else _state.value.suggestions,
+            suggestionsLoading = if (stale || modeCleared) false else _state.value.suggestionsLoading,
         )
+        refreshSearchSuggestions(q)
         if (revertingToLastSearch) {
             val movieSitesOnly = container.settingsRepository.load().movieSitesOnly
             val labelFeed = X1337BrowseFeed.entriesList
@@ -177,6 +187,66 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setMaxSize(value: String?) {
         _state.value = _state.value.copy(maxSize = value?.takeIf { it.isNotBlank() })
+    }
+
+    fun selectSearchSuggestion(suggestion: MovieSearchSuggestion) {
+        suggestJob?.cancel()
+        val q = torrentSearchQuery(suggestion.title, suggestion.year)
+        _state.value = _state.value.copy(
+            query = q,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
+        )
+        search()
+    }
+
+    fun dismissSearchSuggestions() {
+        suggestJob?.cancel()
+        _state.value = _state.value.copy(suggestions = emptyList(), suggestionsLoading = false)
+    }
+
+    private fun refreshSearchSuggestions(raw: String) {
+        suggestJob?.cancel()
+        val trimmed = raw.trim()
+        val snapshot = _state.value
+        if (
+            !shouldLoadSearchSuggestions(
+                trimmed,
+                snapshot.activeBrowseFeed,
+                snapshot.activeGenre,
+                snapshot.genrePanelExpanded,
+            )
+        ) {
+            _state.value = snapshot.copy(suggestions = emptyList(), suggestionsLoading = false)
+            return
+        }
+        if (container.settingsRepository.load().searchApiBaseUrl.isBlank()) {
+            _state.value = snapshot.copy(suggestions = emptyList(), suggestionsLoading = false)
+            return
+        }
+        val generation = ++suggestGeneration
+        suggestJob = viewModelScope.launch {
+            delay(SEARCH_SUGGEST_DEBOUNCE_MS)
+            _state.value = _state.value.copy(suggestionsLoading = true)
+            try {
+                val items = container.searchRepository.suggest(trimmed)
+                if (generation == suggestGeneration) {
+                    _state.value = _state.value.copy(
+                        suggestions = items,
+                        suggestionsLoading = false,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (generation == suggestGeneration) {
+                    _state.value = _state.value.copy(
+                        suggestions = emptyList(),
+                        suggestionsLoading = false,
+                    )
+                }
+            }
+        }
     }
 
     fun recordGenreBranchFeedback(
@@ -294,11 +364,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             showTmdbSetupHint = false,
             lastExecutedQuery = "",
             loading = false,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
         )
     }
 
     fun loadBrowse1337x(feed: X1337BrowseFeed) {
         searchJob?.cancel()
+        suggestJob?.cancel()
         val settings = container.settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) {
             _state.value = _state.value.copy(
@@ -314,6 +387,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 activeBrowseFeed = feed.id,
                 genrePanelExpanded = false,
                 activeGenre = null,
+                suggestions = emptyList(),
+                suggestionsLoading = false,
             )
             return
         }
@@ -334,6 +409,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             info = null,
             results = previousResults,
             groups = previousGroups,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -391,6 +468,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun loadGenreBrowse(genre: X1337MovieGenre, forceRefresh: Boolean = false) {
         searchJob?.cancel()
+        suggestJob?.cancel()
         val settings = container.settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) {
             _state.value = _state.value.copy(
@@ -406,6 +484,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 activeBrowseFeed = null,
                 genrePanelExpanded = true,
                 activeGenre = genre.id,
+                suggestions = emptyList(),
+                suggestionsLoading = false,
             )
             return
         }
@@ -426,6 +506,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             info = null,
             results = previousResults,
             groups = previousGroups,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
         )
         searchJob = viewModelScope.launch {
             val minSeeds = _state.value.minSeeds
@@ -575,7 +657,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             genrePanelExpanded = false,
             results = previousResults,
             groups = previousGroups,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
         )
+        suggestJob?.cancel()
         searchJob = viewModelScope.launch {
             fun requestStillCurrent(): Boolean {
                 return generation == searchGeneration &&
