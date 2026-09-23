@@ -235,6 +235,22 @@ fun AppNavGraph(
                         }
                         replacePhoneDetail(matched.id, matched.name, matched.site)
                     }
+                    if (!useTwoPane) {
+                        val prior = container.foldActiveSelection
+                        container.foldActiveSelection = PendingFoldDetail(
+                            resultId = matched.id,
+                            name = matched.name,
+                            site = matched.site,
+                            genreId = snapshotGenreAtDetailOpen(
+                                prior?.genreId,
+                                searchState.activeGenre,
+                            ),
+                            detailUrl = magnetFallbackDetailUrl(
+                                merged.detail_url,
+                                prior?.detailUrl,
+                            ),
+                        )
+                    }
                     return@LaunchedEffect
                 }
                 if (!shouldPopExpiredPhoneDetail(
