@@ -23,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import com.torrentmovie.app.ui.theme.MissySearchFieldShape
+import com.torrentmovie.app.ui.theme.OnPantone
+import com.torrentmovie.app.ui.theme.PantoneRed
 import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -182,6 +186,7 @@ fun SearchScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.search() }),
             colors = missyOutlinedTextFieldColors(),
+            shape = MissySearchFieldShape,
             trailingIcon = {
                 IconButton(onClick = { showFilters = true }) {
                     Icon(Icons.Default.FilterList, contentDescription = "Filters")
@@ -394,6 +399,11 @@ private fun BrowseGenreChipRow(
     onLoadGenre: (X1337MovieGenre) -> Unit,
     onLoadBrowse: (X1337BrowseFeed) -> Unit,
 ) {
+    val chipColors = FilterChipDefaults.filterChipColors(
+        selectedContainerColor = PantoneRed,
+        selectedLabelColor = OnPantone,
+        selectedLeadingIconColor = OnPantone,
+    )
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -407,6 +417,7 @@ private fun BrowseGenreChipRow(
                 onClick = onCollapseGenrePanel,
                 label = { Text("Lists") },
                 enabled = !loading,
+                colors = chipColors,
             )
             X1337MovieGenre.entriesList.forEach { genre ->
                 FilterChip(
@@ -414,6 +425,7 @@ private fun BrowseGenreChipRow(
                     onClick = { onLoadGenre(genre) },
                     label = { Text(genre.buttonLabel) },
                     enabled = !loading,
+                    colors = chipColors,
                 )
             }
         } else {
@@ -423,6 +435,7 @@ private fun BrowseGenreChipRow(
                     onClick = { onLoadBrowse(feed) },
                     label = { Text(feed.buttonLabel) },
                     enabled = !loading,
+                    colors = chipColors,
                 )
             }
             FilterChip(
@@ -430,6 +443,7 @@ private fun BrowseGenreChipRow(
                 onClick = onExpandGenrePanel,
                 label = { Text("By Genre") },
                 enabled = !loading,
+                colors = chipColors,
             )
         }
     }

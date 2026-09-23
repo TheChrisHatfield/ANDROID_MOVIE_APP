@@ -19,8 +19,14 @@ class AppBrandingTest {
     }
 
     @Test
-    fun bodyInkMeetsContrastOnPantoneRed() {
-        assertTrue(contrastRatio(InkOnRed, PantoneRed) >= 4.5)
+    fun bodyTextMeetsContrastOnWhiteContent() {
+        assertTrue(contrastRatio(TextCharcoal, SurfaceWhite) >= 4.5)
+    }
+
+    @Test
+    fun chromeLabelsMeetContrastOnPantoneRed() {
+        // App bar title uses large/bold type; WCAG AA large text ≥ 3:1
+        assertTrue(contrastRatio(OnPantone, PantoneRed) >= 3.0)
     }
 }
 

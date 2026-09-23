@@ -28,6 +28,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.theme.AppBranding
+import com.torrentmovie.app.ui.theme.OnPantone
+import com.torrentmovie.app.ui.theme.PantoneRed
 import com.torrentmovie.core.data.AppContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,10 +75,10 @@ fun MainScaffold(container: AppContainer) {
                 TopAppBar(
                     title = { Text(AppBranding.DISPLAY_NAME) },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        containerColor = PantoneRed,
+                        titleContentColor = OnPantone,
+                        navigationIconContentColor = OnPantone,
+                        actionIconContentColor = OnPantone,
                     ),
                     navigationIcon = {
                         if (onDetailRoute && !useNavigationRail) {

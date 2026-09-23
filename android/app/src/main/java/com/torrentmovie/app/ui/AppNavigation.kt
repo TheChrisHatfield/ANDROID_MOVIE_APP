@@ -7,14 +7,20 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.torrentmovie.app.ui.theme.NavInactive
+import com.torrentmovie.app.ui.theme.PantoneRed
+import com.torrentmovie.app.ui.theme.SurfaceWhite
 import androidx.navigation.NavHostController
 
 internal data class AppDestination(
@@ -60,13 +66,23 @@ internal fun AppNavigationRail(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationRail(modifier = modifier.padding(vertical = 8.dp)) {
+    NavigationRail(
+        modifier = modifier.padding(vertical = 8.dp),
+        containerColor = SurfaceWhite,
+    ) {
         appDestinations.forEach { dest ->
             NavigationRailItem(
                 icon = { Icon(destinationIcon(dest.label), contentDescription = dest.label) },
                 label = { Text(dest.label) },
                 selected = dest.selected(route, onDetailRoute),
                 onClick = { onNavigate(dest.route) },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = PantoneRed,
+                    selectedTextColor = PantoneRed,
+                    unselectedIconColor = NavInactive,
+                    unselectedTextColor = NavInactive,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
             )
         }
     }
@@ -79,13 +95,23 @@ internal fun AppNavigationBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationBar(modifier = modifier) {
+    NavigationBar(
+        modifier = modifier,
+        containerColor = SurfaceWhite,
+    ) {
         appDestinations.forEach { dest ->
             NavigationBarItem(
                 icon = { Icon(destinationIcon(dest.label), contentDescription = dest.label) },
                 label = { Text(dest.label) },
                 selected = dest.selected(route, onDetailRoute),
                 onClick = { onNavigate(dest.route) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = PantoneRed,
+                    selectedTextColor = PantoneRed,
+                    unselectedIconColor = NavInactive,
+                    unselectedTextColor = NavInactive,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
             )
         }
     }

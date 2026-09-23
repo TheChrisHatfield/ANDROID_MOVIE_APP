@@ -5,28 +5,32 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val MissyColors = lightColorScheme(
-    primary = InkOnRed,
-    onPrimary = Cream,
-    primaryContainer = Cream,
-    onPrimaryContainer = InkOnRed,
-    secondary = Cream,
-    onSecondary = InkOnRed,
-    secondaryContainer = Cream,
-    onSecondaryContainer = InkOnRed,
-    tertiary = Cream,
-    onTertiary = InkOnRed,
-    background = PantoneRed,
-    onBackground = InkOnRed,
-    surface = PantoneRed,
-    onSurface = InkOnRed,
-    surfaceVariant = Cream,
-    onSurfaceVariant = InkOnRed,
-    error = InkOnRed,
-    onError = Cream,
-    outline = InkOnRed,
+    primary = PantoneRed,
+    onPrimary = OnPantone,
+    primaryContainer = CardSurface,
+    onPrimaryContainer = TextCharcoal,
+    secondary = PantoneRedDark,
+    onSecondary = OnPantone,
+    secondaryContainer = SearchFieldGray,
+    onSecondaryContainer = TextCharcoal,
+    tertiary = PantoneRed,
+    onTertiary = OnPantone,
+    background = SurfaceWhite,
+    onBackground = TextCharcoal,
+    surface = SurfaceWhite,
+    onSurface = TextCharcoal,
+    surfaceVariant = SearchFieldGray,
+    onSurfaceVariant = TextMuted,
+    error = PantoneRedDark,
+    onError = OnPantone,
+    outline = DividerGray,
 )
 
 @Composable
 fun TorrentMovieTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = MissyColors, content = content)
+    MaterialTheme(
+        colorScheme = MissyColors,
+        shapes = MissyShapes,
+        content = content,
+    )
 }
