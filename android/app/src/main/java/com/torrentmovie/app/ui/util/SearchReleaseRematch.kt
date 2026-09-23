@@ -25,7 +25,8 @@ object SearchReleaseRematch {
         val nameMatches = releases.filter { it.name.equals(name, ignoreCase = true) }
         if (site.isNotBlank()) {
             nameMatches.find { it.site.equals(site, ignoreCase = true) }?.let { return it }
+            return null
         }
-        return nameMatches.firstOrNull()
+        return nameMatches.singleOrNull()
     }
 }

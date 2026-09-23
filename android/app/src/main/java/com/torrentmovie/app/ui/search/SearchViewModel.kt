@@ -618,6 +618,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 activeBrowseFeed = null,
                 genrePanelExpanded = false,
                 activeGenre = null,
+                suggestions = emptyList(),
+                suggestionsLoading = false,
             )
             return
         }
@@ -633,6 +635,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 hasSearched = true,
                 showTmdbSetupHint = false,
                 activeBrowseFeed = _state.value.activeBrowseFeed,
+                suggestions = emptyList(),
+                suggestionsLoading = false,
             )
             return
         }

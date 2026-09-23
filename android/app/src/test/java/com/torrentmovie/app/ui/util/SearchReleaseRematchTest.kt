@@ -22,8 +22,8 @@ class SearchReleaseRematchTest {
     }
 
     @Test
-    fun rematchFallsBackToFirstNameMatchWhenSiteOmitted() {
-        assertEquals("1", SearchReleaseRematch.find(releases, "old", "Inception 2010", "")?.id)
+    fun rematchDoesNotGuessWhenMultipleNameMatchesLackSite() {
+        assertNull(SearchReleaseRematch.find(releases, "old", "Inception 2010", "")?.id)
     }
 
     @Test
