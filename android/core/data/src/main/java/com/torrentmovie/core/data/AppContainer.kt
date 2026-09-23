@@ -51,7 +51,7 @@ class AppContainer(
     private var resolveInFlight = false
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
-        onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi() } },
+        onWifiReady = { bootstrapSearchApiIfNeeded() },
         shouldKeepListening = { settingsRepository.needsSearchApiAutoConfiguration() },
     )
 

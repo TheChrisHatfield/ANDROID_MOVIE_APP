@@ -41,4 +41,16 @@ class SearchApiBootstrapTest {
             ),
         )
     }
+
+    @Test
+    fun emulatorFallsBackToLoopbackWhenLanMissing() {
+        val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
+            bundledSearchApiUrl = "",
+            isEmulator = true,
+            wifiIpv4 = null,
+            probeHealthy = { it.contains("10.0.2.2") },
+            discoverOnLan = { null },
+        )
+        assertEquals("http://10.0.2.2:8765", url)
+    }
 }
