@@ -55,6 +55,11 @@ class TmdbClient:
     def configured(self) -> bool:
         return bool(self.api_key)
 
+    @property
+    def key_permanently_rejected(self) -> bool:
+        """True only after TMDB returned 401/403 for this key."""
+        return self._key_valid is False
+
     def validate_key(self) -> bool:
         """Probe TMDB once; cache whether this API key is accepted."""
         if not self.configured:
@@ -68,11 +73,17 @@ class TmdbClient:
                 params={"api_key": self.api_key},
                 timeout=self.timeout,
             )
-            self._key_valid = resp.status_code == 200
+            if resp.status_code in (401, 403):
+                self._key_valid = False
+                return False
+            if resp.status_code == 200:
+                self._key_valid = True
+                return True
+            # Transient HTTP errors must not permanently reject a good key.
+            return False
         except Exception as exc:
             logger.warning("TMDB key validation failed: %s", exc)
-            self._key_valid = False
-        return self._key_valid
+            return False
 
     def discover_movies(
         self,
@@ -91,6 +102,8 @@ class TmdbClient:
                 return list(cached[1])
 
         movies = self._fetch_discover(genre_id, page=page, limit=limit)
+        if movies is None:
+            return []
         with self._lock:
             self._discover_cache[cache_key] = (time.time(), movies)
         return movies
@@ -107,6 +120,8 @@ class TmdbClient:
                 return list(cached[1])
 
         movies = self._fetch_search(q, limit=limit)
+        if movies is None:
+            return []
         with self._lock:
             self._discover_cache[cache_key] = (time.time(), movies)
         return movies
@@ -127,7 +142,7 @@ class TmdbClient:
             self._cache[cache_key] = (time.time(), info)
         return info
 
-    def _fetch_search(self, query: str, *, limit: int) -> list[TmdbDiscoverMovie]:
+    def _fetch_search(self, query: str, *, limit: int) -> list[TmdbDiscoverMovie] | None:
         try:
             resp = requests.get(
                 f"{_TMDB_BASE}/search/movie",
@@ -139,7 +154,7 @@ class TmdbClient:
             return self._movies_from_tmdb_results(results, limit=limit, poster_size="w92")
         except Exception as exc:
             logger.warning("TMDB search failed for %s: %s", query, exc)
-            return []
+            return None
 
     def _movies_from_tmdb_results(
         self,
@@ -178,7 +193,7 @@ class TmdbClient:
             )
         return movies
 
-    def _fetch_discover(self, genre_id: int, *, page: int, limit: int) -> list[TmdbDiscoverMovie]:
+    def _fetch_discover(self, genre_id: int, *, page: int, limit: int) -> list[TmdbDiscoverMovie] | None:
         try:
             resp = requests.get(
                 f"{_TMDB_BASE}/discover/movie",
@@ -197,7 +212,7 @@ class TmdbClient:
             return self._movies_from_tmdb_results(results, limit=limit)
         except Exception as exc:
             logger.warning("TMDB discover failed for genre %s: %s", genre_id, exc)
-            return []
+            return None
 
     def _fetch(self, title: str, year: int | None) -> TmdbMovieInfo | None:
         try:

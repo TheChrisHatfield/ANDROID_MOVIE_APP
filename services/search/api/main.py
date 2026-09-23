@@ -79,7 +79,7 @@ def _tmdb_for_request(api_key: str | None) -> tuple[TmdbClient, bool]:
         client = TmdbClient(api_key=user_key)
         _tmdb_clients[user_key] = client
     if not client.validate_key():
-        return _tmdb, True
+        return _tmdb, client.key_permanently_rejected
     return client, False
 
 
