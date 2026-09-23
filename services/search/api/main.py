@@ -511,7 +511,7 @@ def _fetch_magnet_for_row(row: dict) -> str | None:
         return str(magnet).strip()
     site_name = row.get("site")
     detail_url = row.get("detail_url")
-    site = _searcher.site_for_name(site_name)
+    site = _searcher.site_for_name(site_name) or _searcher.site_for_detail_url(detail_url)
     if not site or not detail_url:
         return None
     quality = _quality_from_result_name(row.get("name"))
@@ -559,13 +559,16 @@ def get_magnet(result_id: UUID) -> MagnetResponse:
 
 @app.get("/v1/magnet/resolve", response_model=MagnetResponse)
 def resolve_magnet_by_detail(
-    site: str = Query(..., min_length=1),
+    site: str | None = Query(None, description="Indexer name; inferred from detail_url when omitted"),
     detail_url: str = Query(..., min_length=1),
     result_id: UUID | None = None,
     name: str | None = None,
 ) -> MagnetResponse:
+    site_obj = _searcher.site_for_name(site) or _searcher.site_for_detail_url(detail_url)
+    if not site_obj:
+        raise HTTPException(status_code=404, detail="Magnet unavailable")
     row = {
-        "site": site,
+        "site": site_obj.name,
         "detail_url": detail_url,
         "name": name or "",
         "magnet": None,

@@ -132,3 +132,22 @@ def test_magnet_resolve_by_detail_url_without_cache():
         "https://1337x.to/torrent/999/cache-miss/",
         quality=None,
     )
+
+
+def test_magnet_resolve_infers_site_from_detail_host_when_name_omitted():
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    mock_site.known_hosts.return_value = {"1337x.to"}
+    mock_site.get_magnet_link.return_value = "magnet:?xt=urn:btih:deadbeef"
+
+    with patch.object(_searcher, "sites", [mock_site]), patch.object(_searcher, "working_sites", [mock_site]):
+        response = client.get(
+            "/v1/magnet/resolve",
+            params={
+                "detail_url": "https://1337x.to/torrent/7/no-site/",
+                "name": "No Site Label",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["magnet"].startswith("magnet:")

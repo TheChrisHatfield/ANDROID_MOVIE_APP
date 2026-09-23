@@ -66,6 +66,20 @@ def test_site_for_name_is_case_insensitive():
     assert searcher.site_for_name("1337x") is mock_site
 
 
+def test_site_for_detail_url_matches_unique_host():
+    searcher = TorrentSearcher(site_classes=[])
+    mock_site = MagicMock()
+    mock_site.name = "1337x"
+    mock_site.known_hosts.return_value = {"1337x.to", "www.1337x.to"}
+    other = MagicMock()
+    other.name = "YTS"
+    other.known_hosts.return_value = {"yts.mx"}
+    searcher.working_sites = [mock_site, other]
+    searcher.sites = [mock_site, other]
+    assert searcher.site_for_detail_url("https://1337x.to/torrent/1/inception/") is mock_site
+    assert searcher.site_for_detail_url("https://unknown.example/torrent/1/") is None
+
+
 def test_search_sorts_before_limit():
     searcher = TorrentSearcher(site_classes=[])
     searcher.working_sites = [MagicMock(name="MockSite")]

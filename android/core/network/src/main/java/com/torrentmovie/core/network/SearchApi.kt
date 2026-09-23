@@ -80,7 +80,7 @@ interface SearchApi {
 
     @GET("/v1/magnet/resolve")
     suspend fun resolveMagnetByDetail(
-        @Query("site") site: String,
+        @Query("site") site: String? = null,
         @Query("detail_url") detailUrl: String,
         @Query("result_id") resultId: String? = null,
         @Query("name") name: String? = null,

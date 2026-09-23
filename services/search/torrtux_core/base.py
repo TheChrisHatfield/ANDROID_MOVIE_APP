@@ -53,8 +53,7 @@ class TorrentSite:
             return absolute
         parsed = urlparse(absolute)
         path = parsed.path.lower()
-        known_hosts = {urlparse(url).netloc.lower() for url in self.base_urls if url}
-        known_hosts.add(urlparse(self.working_url).netloc.lower())
+        known_hosts = self.known_hosts()
         looks_like_detail = any(
             marker in path
             for marker in (
@@ -79,6 +78,12 @@ class TorrentSite:
                 parsed.fragment,
             )
         )
+
+    def known_hosts(self) -> set[str]:
+        hosts = {urlparse(url).netloc.lower() for url in self.base_urls if url}
+        if self.working_url:
+            hosts.add(urlparse(self.working_url).netloc.lower())
+        return {host for host in hosts if host}
 
     def make_result(
         self,

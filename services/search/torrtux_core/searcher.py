@@ -6,6 +6,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
+from urllib.parse import urlparse
+
 from torrtux_core.filters import apply_filters, filter_movie_profile, sort_by_seeds_desc
 from torrtux_core.http_client import http_get
 from torrtux_core.profiles import EXCLUDED_FROM_MOVIE_PROFILE, MOVIE_SITE_NAMES
@@ -76,6 +78,29 @@ class TorrentSearcher:
         if site is None:
             site = next((s for s in all_sites if s.name.casefold() == lowered), None)
         return site
+
+    def site_for_detail_url(self, detail_url: str | None):
+        """Match an indexer by detail-page host when the site label is missing."""
+        if not detail_url:
+            return None
+        host = urlparse(detail_url).netloc.lower()
+        if not host:
+            return None
+        with self._lock:
+            candidates = list(self.working_sites) + list(self.sites)
+        seen: set[str] = set()
+        matches = []
+        for site in candidates:
+            name = site.name.casefold()
+            if name in seen:
+                continue
+            seen.add(name)
+            hosts = site.known_hosts() if hasattr(site, "known_hosts") else set()
+            if host in hosts or any(host.endswith("." + known) for known in hosts):
+                matches.append(site)
+        if len(matches) == 1:
+            return matches[0]
+        return None
 
     def _search_site(self, site, query: str, page_limit: int) -> tuple[list[dict], bool]:
         results: list[dict] = []
