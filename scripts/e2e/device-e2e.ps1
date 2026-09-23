@@ -12,6 +12,15 @@ $adb = Join-Path $sdk "platform-tools\adb.exe"
 
 Set-AndroidEnv -SdkRoot $sdk -AvdHome $avdHome -Jdk $jdk
 
+function Stop-StaleTorrentMovieEmulator {
+    Get-Process -Name "qemu-system-x86_64", "emulator" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 2
+    $lock = Join-Path $avdHome "avd\torrent_movie_e2e.avd\hardware-qemu.ini.lock"
+    if (Test-Path $lock) {
+        Remove-Item -Recurse -Force $lock -ErrorAction SilentlyContinue
+    }
+}
+
 if (-not (Test-Path $apk)) {
     Write-Error "APK missing - run: cd android; .\gradlew.bat assembleDebug"
 }
@@ -47,8 +56,16 @@ if (-not $serial) {
     Write-Host "No emulator - starting torrent_movie_e2e AVD..."
     $emu = Join-Path $sdk "emulator\emulator.exe"
     if (-not (Test-Path $emu)) { Write-Error "Emulator missing - run setup-android-sdk.ps1" }
-    Start-Process $emu -ArgumentList "-avd","torrent_movie_e2e","-no-snapshot-save","-gpu","swiftshader_indirect" -WindowStyle Minimized
-    for ($i = 0; $i -lt 60; $i++) {
+    Stop-StaleTorrentMovieEmulator
+    # Host GPU: swiftshader often hangs here when opengl32sw is missing (emulator 37.x).
+    Start-Process $emu -ArgumentList @(
+        "-avd", "torrent_movie_e2e",
+        "-no-snapshot-load", "-no-snapshot-save",
+        "-gpu", "host",
+        "-no-audio"
+    ) -WindowStyle Minimized
+    & $adb wait-for-device
+    for ($i = 0; $i -lt 120; $i++) {
         Start-Sleep -Seconds 5
         $serial = (& $adb devices | Select-String "emulator-\d+\s+device" | ForEach-Object { ($_ -split "\s+")[0] } | Select-Object -First 1)
         if ($serial) {
