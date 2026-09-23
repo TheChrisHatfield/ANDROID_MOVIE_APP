@@ -32,4 +32,12 @@ class SearchBrowseChipCollapseTest {
             ),
         )
     }
+
+    @Test
+    fun landscapeChromeCollapsesOnlyWhenSidewaysAndScrolled() {
+        assertFalse(shouldCollapseLandscapeSearchChrome(false, 1, 0))
+        assertFalse(shouldCollapseLandscapeSearchChrome(true, 0, 0))
+        assertTrue(shouldCollapseLandscapeSearchChrome(true, 1, 0))
+        assertTrue(shouldCollapseLandscapeSearchChrome(true, 0, 40))
+    }
 }

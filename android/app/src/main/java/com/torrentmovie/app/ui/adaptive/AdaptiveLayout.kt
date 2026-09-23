@@ -44,6 +44,15 @@ object AdaptiveLayout {
         smallestScreenWidthDp < TWO_PANE_MIN_WIDTH_DP &&
             screenWidthDp > screenHeightDp &&
             screenHeightDp <= PHONE_LANDSCAPE_MAX_HEIGHT_DP
+
+    /** Drop the red title bar in landscape except on detail (needs Back). */
+    fun hidePhoneLandscapeTitleBar(
+        smallestScreenWidthDp: Int,
+        screenWidthDp: Int,
+        screenHeightDp: Int,
+        onDetailRoute: Boolean,
+    ): Boolean = isPhoneLandscape(smallestScreenWidthDp, screenWidthDp, screenHeightDp) &&
+        !onDetailRoute
 }
 
 @Composable

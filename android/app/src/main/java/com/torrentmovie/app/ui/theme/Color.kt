@@ -16,7 +16,11 @@ val CardSurface = Color(0xFFF7F7F7)
 val DividerGray = Color(0xFFE0E0E0)
 val NavInactive = Color(0xFF9E9E9E)
 
-/** Legacy aliases used by a few components. */
+/** Cream-filled controls for contrast on Pantone red chrome and white content (FR-039a). */
 val Cream = Color(0xFFFFF5F5)
 val WarningOnRed = Color(0xFFFFE8A3)
 val InkOnRed = OnPantone
+
+/** Send-to-seedbox CTA — blue fill, white reversed-out type (FR-038). */
+val SeedboxActionBlue = Color(0xFF1565C0)
+val OnSeedboxAction = Color(0xFFFFFFFF)

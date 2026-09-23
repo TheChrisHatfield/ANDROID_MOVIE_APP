@@ -33,5 +33,12 @@ internal fun collapsedBrowseBarLabel(
     return "Browse lists & genres"
 }
 
+internal fun shouldCollapseLandscapeSearchChrome(
+    phoneLandscape: Boolean,
+    firstVisibleItemIndex: Int,
+    firstVisibleItemScrollOffset: Int,
+): Boolean = phoneLandscape &&
+    shouldCollapseBrowseChipsOnScroll(firstVisibleItemIndex, firstVisibleItemScrollOffset)
+
 internal fun expandBrowseChipsActionLabel(genrePanelExpanded: Boolean): String =
     if (genrePanelExpanded) "Show genres" else "Show lists"

@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +47,12 @@ fun MainScaffold(container: AppContainer) {
     val onDetailRoute = route.startsWith("detail/")
     val configuration = LocalConfiguration.current
     val useNavigationRail = AdaptiveLayout.useNavigationRail(configuration.smallestScreenWidthDp)
+    val hideTitleBar = AdaptiveLayout.hidePhoneLandscapeTitleBar(
+        configuration.smallestScreenWidthDp,
+        configuration.screenWidthDp,
+        configuration.screenHeightDp,
+        onDetailRoute,
+    )
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
@@ -88,31 +95,33 @@ fun MainScaffold(container: AppContainer) {
             modifier = contentModifier,
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
-                TopAppBar(
-                    title = { Text(AppBranding.DISPLAY_NAME) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PantoneRed,
-                        titleContentColor = OnPantone,
-                        navigationIconContentColor = OnPantone,
-                        actionIconContentColor = OnPantone,
-                    ),
-                    navigationIcon = {
-                        if (onDetailRoute && !useNavigationRail) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                )
+                if (!hideTitleBar) {
+                    TopAppBar(
+                        title = { Text(AppBranding.DISPLAY_NAME) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = PantoneRed,
+                            titleContentColor = OnPantone,
+                            navigationIconContentColor = OnPantone,
+                            actionIconContentColor = OnPantone,
+                        ),
+                        navigationIcon = {
+                            if (onDetailRoute && !useNavigationRail) {
+                                IconButton(onClick = { navController.popBackStack() }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                    )
+                                }
                             }
-                        }
-                    },
-                    actions = {
-                        SeedboxStatusChip(
-                            container = container,
-                            onOpenSettings = { navigate(Routes.SETTINGS) },
-                        )
-                    },
-                )
+                        },
+                        actions = {
+                            SeedboxStatusChip(
+                                container = container,
+                                onOpenSettings = { navigate(Routes.SETTINGS) },
+                            )
+                        },
+                    )
+                }
             },
             bottomBar = {
                 if (!useNavigationRail && !onDetailRoute) {
@@ -127,7 +136,9 @@ fun MainScaffold(container: AppContainer) {
             AppNavGraph(
                 navController = navController,
                 container = container,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier
+                    .padding(padding)
+                    .then(if (hideTitleBar) Modifier.statusBarsPadding() else Modifier),
             )
         }
     }

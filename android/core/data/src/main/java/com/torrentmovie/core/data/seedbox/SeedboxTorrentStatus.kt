@@ -28,12 +28,18 @@ data class SeedboxTorrentStatus(
         return pct / 100f
     }
 
+    fun isDownloadComplete(): Boolean {
+        if (isHashChecking) return false
+        if (sizeBytes <= 0L) return false
+        return leftBytes == 0L || bytesDone >= sizeBytes
+    }
+
     fun statusLabel(): String {
         if (isHashChecking) return "Checking hash"
-        if (!isOpen || !isStarted) return "Paused"
-        if (sizeBytes > 0L && leftBytes == 0L && bytesDone >= sizeBytes) {
-            return if (upRate > 0L) "Seeding" else "Complete"
+        if (isDownloadComplete()) {
+            return if (isOpen && isStarted && upRate > 0L) "Seeding" else "Complete"
         }
+        if (!isOpen || !isStarted) return "Paused"
         if (
             sizeBytes > 0L &&
             leftBytes > 0L &&
@@ -57,8 +63,7 @@ data class SeedboxTorrentStatus(
     }
 
     fun isActivelyDownloading(): Boolean {
-        if (isHashChecking || !isOpen || !isStarted) return false
-        if (sizeBytes > 0L && leftBytes == 0L && bytesDone >= sizeBytes) return false
+        if (isHashChecking || isDownloadComplete() || !isOpen || !isStarted) return false
         return downRate > 0L || leftBytes > 0L
     }
 

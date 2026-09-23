@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.theme.missyFilledButtonColors
+import com.torrentmovie.app.ui.theme.seedboxSendButtonColors
 import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.app.ui.util.shouldClearMagnetLoading
 import com.torrentmovie.core.data.AppContainer
@@ -368,7 +369,7 @@ fun TorrentDetailScreen(
                     enabled = seedboxConfigured && downloadDirConfigured && !loading &&
                         !magnet.isNullOrBlank() && !duplicate && !magnetLoading && !resultExpired,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = missyFilledButtonColors(),
+                    colors = seedboxSendButtonColors(),
                 ) {
                     Text(
                         when {

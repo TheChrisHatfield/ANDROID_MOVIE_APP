@@ -31,11 +31,20 @@ class AdaptiveLayoutTest {
                 screenHeightDp = 411,
             ),
         )
-        assertFalse(
-            AdaptiveLayout.isPhoneLandscape(
-                smallestScreenWidthDp = 673,
+        assertTrue(
+            AdaptiveLayout.hidePhoneLandscapeTitleBar(
+                smallestScreenWidthDp = 411,
                 screenWidthDp = 840,
-                screenHeightDp = 673,
+                screenHeightDp = 411,
+                onDetailRoute = false,
+            ),
+        )
+        assertFalse(
+            AdaptiveLayout.hidePhoneLandscapeTitleBar(
+                smallestScreenWidthDp = 411,
+                screenWidthDp = 840,
+                screenHeightDp = 411,
+                onDetailRoute = true,
             ),
         )
     }

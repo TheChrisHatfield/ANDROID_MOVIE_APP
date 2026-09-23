@@ -45,6 +45,14 @@ class AppBrandingTest {
         assertEquals(OnPantone, InkOnRed)
         assertTrue(contrastRatio(InkOnRed, PantoneRed) >= 3.0)
     }
+
+    @Test
+    fun seedboxSendIsBlueWithReversedOutType() {
+        assertEquals(Color(0xFF1565C0), SeedboxActionBlue)
+        assertEquals(Color(0xFFFFFFFF), OnSeedboxAction)
+        assertTrue(contrastRatio(OnSeedboxAction, SeedboxActionBlue) >= 4.5)
+        assertTrue(contrastRatio(SeedboxActionBlue, SurfaceWhite) >= 3.0)
+    }
 }
 
 internal fun contrastRatio(a: Color, b: Color): Double {

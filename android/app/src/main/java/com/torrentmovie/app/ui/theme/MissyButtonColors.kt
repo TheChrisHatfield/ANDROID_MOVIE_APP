@@ -20,6 +20,16 @@ fun missyFilledButtonColors(): ButtonColors {
 }
 
 @Composable
+fun seedboxSendButtonColors(): ButtonColors {
+    return ButtonDefaults.buttonColors(
+        containerColor = SeedboxActionBlue,
+        contentColor = OnSeedboxAction,
+        disabledContainerColor = SeedboxActionBlue.copy(alpha = 0.38f),
+        disabledContentColor = OnSeedboxAction.copy(alpha = 0.70f),
+    )
+}
+
+@Composable
 fun missyFilterChipColors(): SelectableChipColors {
     return FilterChipDefaults.filterChipColors(
         containerColor = Cream,

@@ -32,7 +32,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import com.torrentmovie.app.ui.SeedboxStatusChip
 import com.torrentmovie.app.ui.theme.MissySearchFieldShape
+import com.torrentmovie.app.ui.theme.OnPantone
 import com.torrentmovie.app.ui.theme.PantoneRed
 import com.torrentmovie.app.ui.theme.TextCharcoal
 import com.torrentmovie.app.ui.theme.missyFilledButtonColors
@@ -55,6 +57,7 @@ import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -138,8 +141,12 @@ fun SearchScreen(
     )
     val resultsListState = rememberLazyListState()
     var browseChipsCollapsed by rememberSaveable { mutableStateOf(false) }
+    var landscapeChromeCollapsed by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.genrePanelExpanded, state.activeGenre, state.activeBrowseFeed, phoneLandscape) {
         browseChipsCollapsed = phoneLandscape
+        if (!phoneLandscape) {
+            landscapeChromeCollapsed = false
+        }
     }
     LaunchedEffect(resultsListState) {
         snapshotFlow {
@@ -149,6 +156,9 @@ fun SearchScreen(
             .collect { (index, offset) ->
                 if (shouldCollapseBrowseChipsOnScroll(index, offset)) {
                     browseChipsCollapsed = true
+                }
+                if (shouldCollapseLandscapeSearchChrome(phoneLandscape, index, offset)) {
+                    landscapeChromeCollapsed = true
                 }
             }
     }
@@ -223,7 +233,16 @@ fun SearchScreen(
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = vm::setQuery,
-                    label = { Text("Search movies") },
+                    label = if (phoneLandscape) {
+                        null
+                    } else {
+                        { Text("Search movies") }
+                    },
+                    placeholder = if (phoneLandscape) {
+                        { Text("Search movies") }
+                    } else {
+                        null
+                    },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
@@ -249,7 +268,41 @@ fun SearchScreen(
                     modifier = fieldModifier,
                 )
             }
-            if (phoneLandscape) {
+            if (phoneLandscape && landscapeChromeCollapsed) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = collapsedBrowseBarLabel(
+                            genrePanelExpanded = state.genrePanelExpanded,
+                            activeGenre = state.activeGenre,
+                            activeBrowseFeed = state.activeBrowseFeed,
+                            movieSitesOnly = movieSitesOnly,
+                        ).takeIf { state.activeGenre != null || state.activeBrowseFeed != null || state.genrePanelExpanded }
+                            ?: state.query.trim().ifBlank { "Search" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnPantone,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            landscapeChromeCollapsed = false
+                            browseChipsCollapsed = true
+                        },
+                        label = { Text("Show search") },
+                        enabled = true,
+                        colors = missyFilterChipColors(),
+                        border = missyFilterChipBorder(selected = false, enabled = true),
+                    )
+                }
+            } else if (phoneLandscape) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -257,7 +310,7 @@ fun SearchScreen(
                     searchField(
                         Modifier
                             .weight(1f)
-                            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                            .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                     )
                     if (inTextSearchMode) {
                         Button(
@@ -265,11 +318,47 @@ fun SearchScreen(
                                 vm.dismissSearchSuggestions()
                                 vm.search()
                             },
-                            modifier = Modifier.padding(end = 16.dp),
+                            modifier = Modifier.padding(end = 8.dp),
                             enabled = !state.loading && state.query.isNotBlank(),
                             colors = missyFilledButtonColors(),
                         ) { Text("Search") }
                     }
+                    if (browseChipsCollapsed) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { browseChipsCollapsed = false },
+                            label = { Text(expandBrowseChipsActionLabel(state.genrePanelExpanded)) },
+                            enabled = !state.loading,
+                            colors = missyFilterChipColors(),
+                            border = missyFilterChipBorder(selected = false, enabled = !state.loading),
+                        )
+                    }
+                    SeedboxStatusChip(
+                        container = container,
+                        onOpenSettings = onOpenSettings,
+                    )
+                }
+                SearchSuggestionsPanel(
+                    suggestions = state.suggestions,
+                    loading = state.suggestionsLoading,
+                    searchApiBaseUrl = searchApiBaseUrl,
+                    onSelect = vm::selectSearchSuggestion,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 0.dp),
+                )
+                if (!browseChipsCollapsed) {
+                    BrowseGenreChipRow(
+                        genrePanelExpanded = state.genrePanelExpanded,
+                        activeGenre = state.activeGenre,
+                        activeBrowseFeed = state.activeBrowseFeed,
+                        movieSitesOnly = movieSitesOnly,
+                        loading = state.loading,
+                        browseChipsCollapsed = false,
+                        onExpandBrowseChips = { browseChipsCollapsed = false },
+                        onCollapseGenrePanel = vm::collapseGenrePanel,
+                        onExpandGenrePanel = vm::expandGenrePanel,
+                        onLoadGenre = vm::loadGenreBrowse,
+                        onLoadBrowse = vm::loadBrowse1337x,
+                    )
                 }
             } else {
                 searchField(
@@ -277,41 +366,42 @@ fun SearchScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                 )
-            }
-            SearchSuggestionsPanel(
-                suggestions = state.suggestions,
-                loading = state.suggestionsLoading,
-                searchApiBaseUrl = searchApiBaseUrl,
-                onSelect = vm::selectSearchSuggestion,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
-            )
-            BrowseGenreChipRow(
-                genrePanelExpanded = state.genrePanelExpanded,
-                activeGenre = state.activeGenre,
-                activeBrowseFeed = state.activeBrowseFeed,
-                movieSitesOnly = movieSitesOnly,
-                loading = state.loading,
-                browseChipsCollapsed = browseChipsCollapsed,
-                onExpandBrowseChips = { browseChipsCollapsed = false },
-                onCollapseGenrePanel = vm::collapseGenrePanel,
-                onExpandGenrePanel = vm::expandGenrePanel,
-                onLoadGenre = vm::loadGenreBrowse,
-                onLoadBrowse = vm::loadBrowse1337x,
-            )
-            if (showStandaloneSearchButton) {
-                Button(
-                    onClick = {
-                        vm.dismissSearchSuggestions()
-                        vm.search()
-                    },
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
-                    enabled = !state.loading && state.query.isNotBlank(),
-                    colors = missyFilledButtonColors(),
-                ) { Text("Search") }
+                SearchSuggestionsPanel(
+                    suggestions = state.suggestions,
+                    loading = state.suggestionsLoading,
+                    searchApiBaseUrl = searchApiBaseUrl,
+                    onSelect = vm::selectSearchSuggestion,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
+                )
+                BrowseGenreChipRow(
+                    genrePanelExpanded = state.genrePanelExpanded,
+                    activeGenre = state.activeGenre,
+                    activeBrowseFeed = state.activeBrowseFeed,
+                    movieSitesOnly = movieSitesOnly,
+                    loading = state.loading,
+                    browseChipsCollapsed = browseChipsCollapsed,
+                    onExpandBrowseChips = { browseChipsCollapsed = false },
+                    onCollapseGenrePanel = vm::collapseGenrePanel,
+                    onExpandGenrePanel = vm::expandGenrePanel,
+                    onLoadGenre = vm::loadGenreBrowse,
+                    onLoadBrowse = vm::loadBrowse1337x,
+                )
+                if (showStandaloneSearchButton) {
+                    Button(
+                        onClick = {
+                            vm.dismissSearchSuggestions()
+                            vm.search()
+                        },
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+                        enabled = !state.loading && state.query.isNotBlank(),
+                        colors = missyFilledButtonColors(),
+                    ) { Text("Search") }
+                }
             }
         }
 
-        if (shouldShowSearchApiSetupBanner(searchApiBaseUrl, searchApiAutoConfigPending)) {
+        val showSetupBanners = !phoneLandscape || !landscapeChromeCollapsed
+        if (showSetupBanners && shouldShowSearchApiSetupBanner(searchApiBaseUrl, searchApiAutoConfigPending)) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -357,7 +447,7 @@ fun SearchScreen(
             }
         }
 
-        if (state.showTmdbSetupHint) {
+        if (showSetupBanners && state.showTmdbSetupHint) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

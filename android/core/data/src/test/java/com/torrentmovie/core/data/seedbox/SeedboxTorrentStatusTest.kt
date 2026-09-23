@@ -86,7 +86,29 @@ class SeedboxTorrentStatusTest {
             bytesDone = 1000L,
             sizeBytes = 1000L,
         ).copy(isStarted = false)
-        assertEquals("Paused", pausedComplete.statusLabel())
+        assertEquals("Complete", pausedComplete.statusLabel())
+    }
+
+    @Test
+    fun statusLabelShowsCompleteWhenClosedAfterFinish() {
+        val closedComplete = downloading(
+            leftBytes = 0L,
+            downRate = 0L,
+            bytesDone = 1000L,
+            sizeBytes = 1000L,
+        ).copy(isOpen = false, isStarted = false)
+        assertEquals("Complete", closedComplete.statusLabel())
+    }
+
+    @Test
+    fun statusLabelShowsSeedingWhenCompleteAndUploading() {
+        val seeding = downloading(
+            leftBytes = 0L,
+            downRate = 0L,
+            bytesDone = 1000L,
+            sizeBytes = 1000L,
+        ).copy(upRate = 64_000L, isStarted = true)
+        assertEquals("Seeding", seeding.statusLabel())
     }
 
     @Test
