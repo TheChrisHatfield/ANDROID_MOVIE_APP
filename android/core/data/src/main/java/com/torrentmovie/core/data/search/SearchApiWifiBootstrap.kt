@@ -42,6 +42,16 @@ class SearchApiWifiBootstrap(
             .build()
         cm.registerNetworkCallback(request, callback)
         registered = true
+        if (shouldKeepListening() && isOnWifi(cm)) {
+            onWifiReady()
+        }
+    }
+
+    private fun isOnWifi(cm: ConnectivityManager): Boolean {
+        return cm.allNetworks.any { network ->
+            cm.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        }
     }
 
     fun unregister() {

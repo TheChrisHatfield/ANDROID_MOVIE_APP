@@ -39,6 +39,8 @@ class AppContainer(
     }
 
     val settingsRepository = SettingsRepository(context, bundledSearchApiUrl)
+    @Volatile
+    private var bootstrapThreadActive = false
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
         onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi() } },
@@ -60,7 +62,10 @@ class AppContainer(
 
     private fun bootstrapSearchApiIfNeeded() {
         if (!settingsRepository.needsSearchApiAutoConfiguration()) return
+        if (bootstrapThreadActive) return
+        bootstrapThreadActive = true
         thread(name = "search-api-bootstrap") {
+            try {
             repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
                 if (!settingsRepository.needsSearchApiAutoConfiguration()) {
                     wifiBootstrap.unregister()
@@ -73,6 +78,9 @@ class AppContainer(
                 if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
                     Thread.sleep(BOOTSTRAP_RETRY_MS)
                 }
+            }
+            } finally {
+                bootstrapThreadActive = false
             }
         }
     }

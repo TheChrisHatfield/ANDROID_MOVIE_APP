@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,6 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
@@ -45,8 +49,19 @@ fun MainScaffold(container: AppContainer) {
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(route, settingsRevision) {
         settings = container.settingsRepository.load()
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                container.restartSearchApiBootstrapIfNeeded()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     if (!settings.disclaimerAccepted) {
