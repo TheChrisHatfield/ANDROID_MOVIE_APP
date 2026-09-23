@@ -12,7 +12,6 @@ import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -66,7 +65,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     init {
         lastSearchSettingsKey = searchSettingsKey()
         viewModelScope.launch {
-            container.settingsRepository.revision.drop(1).collect {
+            var observedSettingsKey: String? = null
+            container.settingsRepository.revision.collect {
                 val settings = container.settingsRepository.load()
                 val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
                 if (settings.movieSitesOnly && activeFeed != null && !activeFeed.visibleFor(true)) {
@@ -77,16 +77,20 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.genrePanelExpanded ||
                     _state.value.activeBrowseFeed != null ||
                     _state.value.activeGenre != null
-                if (key != lastSearchSettingsKey) {
-                    if (modeActive) {
-                        _state.value = _state.value.copy(
-                            loading = true,
-                            error = null,
-                            errorCode = null,
-                            info = null,
-                        )
-                        refreshCurrentResults()
-                    }
+                val settingsChanged = observedSettingsKey != null && key != observedSettingsKey
+                val apiReadyAfterBootstrap = observedSettingsKey == null &&
+                    modeActive &&
+                    settings.searchApiBaseUrl.isNotBlank() &&
+                    _state.value.error?.contains("Configure Search API", ignoreCase = true) == true
+                observedSettingsKey = key
+                if ((settingsChanged || apiReadyAfterBootstrap) && modeActive) {
+                    _state.value = _state.value.copy(
+                        loading = true,
+                        error = null,
+                        errorCode = null,
+                        info = null,
+                    )
+                    refreshCurrentResults()
                 }
             }
         }
