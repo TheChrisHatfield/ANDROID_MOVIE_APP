@@ -1,6 +1,7 @@
 package com.torrentmovie.core.data.search
 
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -12,7 +13,6 @@ object SearchApiLanDiscovery {
     private const val SEARCH_PORT = 8765
     private const val HEALTH_PATH = "/v1/health"
     private const val PARALLEL_PROBES = 24
-    private const val DISCOVERY_TIMEOUT_SEC = 90L
 
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(750, TimeUnit.MILLISECONDS)
@@ -36,19 +36,19 @@ object SearchApiLanDiscovery {
     fun discoverOnLan(wifiIpv4: String): String? {
         val hosts = LanNetworkAddress.candidateHosts(wifiIpv4)
         val found = AtomicReference<String?>(null)
-        val pool = Executors.newFixedThreadPool(PARALLEL_PROBES)
+        val pool: ExecutorService = Executors.newFixedThreadPool(PARALLEL_PROBES)
         try {
             for (host in hosts) {
                 pool.submit {
                     if (found.get() != null) return@submit
                     val candidate = normalizeSearchApiUrl("http://$host:$SEARCH_PORT")
-                    if (probeSearchApiBaseUrl(candidate)) {
-                        found.compareAndSet(null, candidate)
+                    if (probeSearchApiBaseUrl(candidate) && found.compareAndSet(null, candidate)) {
+                        pool.shutdownNow()
                     }
                 }
             }
             pool.shutdown()
-            pool.awaitTermination(DISCOVERY_TIMEOUT_SEC, TimeUnit.SECONDS)
+            pool.awaitTermination(30, TimeUnit.SECONDS)
         } finally {
             pool.shutdownNow()
         }
