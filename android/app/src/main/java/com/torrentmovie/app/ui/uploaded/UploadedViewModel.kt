@@ -56,6 +56,14 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
     private var pollLoopJob: Job? = null
     private var etaTickJob: Job? = null
 
+    private val seedboxConfiguredFlow = container.settingsRepository.revision
+        .map { container.settingsRepository.isSeedboxConfigured() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = container.settingsRepository.isSeedboxConfigured(),
+        )
+
     val uiState: StateFlow<UploadedUiState> = combine(
         combine(
             container.uploadedRepository.observeAll(),
@@ -67,8 +75,8 @@ class UploadedViewModel(private val container: AppContainer) : ViewModel() {
             PollUiInputs(entries, refreshing, statusError, remoteByHash, pollSucceeded)
         },
         _syncClock,
-    ) { inputs, clock ->
-        val configured = container.settingsRepository.isSeedboxConfigured()
+        seedboxConfiguredFlow,
+    ) { inputs, clock, configured ->
         val elapsedSincePollSeconds = clock.elapsedSincePollSeconds()
         UploadedUiState(
             rows = inputs.entries.map { entry ->
