@@ -250,14 +250,15 @@ fun AppNavGraph(
 
             DisposableEffect(resultId, useTwoPane) {
                 if (!useTwoPane) {
-                    val prior = container.foldActiveSelection
+                    val prior = container.foldActiveSelection?.takeIf { it.resultId == resultId }
+                    val stored = container.searchResultStore.get(resultId)
                     container.foldActiveSelection = PendingFoldDetail(
                         resultId = resultId,
-                        name = navName,
-                        site = navSite,
+                        name = detailHandoffName(navName, stored?.name, prior?.name),
+                        site = detailHandoffSite(navSite, stored?.site, prior?.site),
                         genreId = snapshotGenreAtDetailOpen(prior?.genreId, searchState.activeGenre),
                         detailUrl = magnetFallbackDetailUrl(
-                            container.searchResultStore.get(resultId)?.detail_url,
+                            stored?.detail_url,
                             prior?.detailUrl,
                         ),
                     )
