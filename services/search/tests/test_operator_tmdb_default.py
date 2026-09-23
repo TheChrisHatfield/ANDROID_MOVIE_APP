@@ -15,3 +15,13 @@ def test_env_overrides_bundled_default(monkeypatch):
     monkeypatch.setenv("TMDB_API_KEY", "override-key")
     client = TmdbClient()
     assert client.api_key == "override-key"
+
+
+def test_health_endpoint_reports_operator_tmdb_configured():
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+
+    response = TestClient(app).get("/v1/health")
+    assert response.status_code == 200
+    assert response.json()["tmdb_configured"] is True
