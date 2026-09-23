@@ -9,6 +9,6 @@ class MovieTorrentApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        container = AppContainer(this, BuildConfig.BUNDLED_SEARCH_API_URL)
     }
 }

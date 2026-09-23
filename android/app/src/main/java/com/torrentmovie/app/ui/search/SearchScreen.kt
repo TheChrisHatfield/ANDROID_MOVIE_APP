@@ -225,7 +225,7 @@ fun SearchScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = "Run the search service on your PC, then set Search API to http://<PC-LAN-IP>:8765 in Settings (same Wi-Fi as this phone).",
+                        text = "On the same Wi-Fi, run the search service on your PC (port 8765). The app will try to find it automatically; you can also set Search API manually in Settings.",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )

@@ -32,7 +32,10 @@ data class AppSettings(
     }
 }
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(
+    private val context: Context,
+    private val bundledSearchApiUrl: String = "",
+) {
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision.asStateFlow()
 
@@ -73,7 +76,25 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
+    fun hasUserConfiguredSearchApi(): Boolean = prefs.contains(KEY_SEARCH_API)
+
+    /** Persist LAN/bundled bootstrap without overriding an explicit user save (FR-040). */
+    fun applyAutoConfiguredSearchApi(url: String): Boolean {
+        if (hasUserConfiguredSearchApi()) return false
+        val normalized = normalizeSearchApiUrl(url)
+        if (normalized.isBlank()) return false
+        prefs.edit().putString(KEY_SEARCH_API, normalized).apply()
+        _revision.value += 1
+        return true
+    }
+
+    fun needsSearchApiAutoConfiguration(): Boolean = !hasUserConfiguredSearchApi()
+
+    fun bundledSearchApiUrlForBootstrap(): String = normalizeSearchApiUrl(bundledSearchApiUrl)
+
     private fun defaultSearchApiUrl(): String {
+        val bundled = normalizeSearchApiUrl(bundledSearchApiUrl)
+        if (bundled.isNotBlank()) return bundled
         return if (DeviceProfile.isEmulator()) {
             AppSettings.EMULATOR_SEARCH_API
         } else {
