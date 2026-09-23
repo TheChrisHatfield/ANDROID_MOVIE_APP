@@ -52,9 +52,8 @@ fun MainScaffold(container: AppContainer) {
     if (!settings.disclaimerAccepted) {
         DisclaimerDialog(
             onAccept = {
-                val updated = settings.copy(disclaimerAccepted = true)
-                if (container.settingsRepository.save(updated)) {
-                    settings = updated
+                if (container.settingsRepository.acceptDisclaimer()) {
+                    settings = container.settingsRepository.load()
                 } else {
                     Toast.makeText(context, "Failed to save — try again", Toast.LENGTH_SHORT).show()
                 }

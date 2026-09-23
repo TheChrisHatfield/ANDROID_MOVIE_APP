@@ -91,6 +91,14 @@ class SettingsRepository(
 
     fun needsSearchApiAutoConfiguration(): Boolean = !hasUserConfiguredSearchApi()
 
+    fun acceptDisclaimer(): Boolean {
+        val ok = prefs.edit().putBoolean(KEY_DISCLAIMER, true).commit()
+        if (ok) {
+            _revision.value += 1
+        }
+        return ok
+    }
+
     fun bundledSearchApiUrlForBootstrap(): String = normalizeSearchApiUrl(bundledSearchApiUrl)
 
     private fun defaultSearchApiUrl(): String {
@@ -111,8 +119,13 @@ class SettingsRepository(
         val downloadDir = settings.downloadDirectory.trim()
         val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
         val authScheme = normalizeAuthScheme(settings.authScheme)
-        val ok = prefs.edit()
-            .putString(KEY_SEARCH_API, searchApiUrl)
+        val editor = prefs.edit()
+        if (searchApiUrl.isBlank()) {
+            editor.remove(KEY_SEARCH_API)
+        } else {
+            editor.putString(KEY_SEARCH_API, searchApiUrl)
+        }
+        val ok = editor
             .putString(KEY_RUTORRENT_URL, rutorrentUrl)
             .putString(KEY_USERNAME, settings.username.trim())
             .putString(KEY_PASSWORD, settings.password.trim())
