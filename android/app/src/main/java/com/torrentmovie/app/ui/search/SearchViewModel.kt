@@ -221,6 +221,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 snapshot.activeBrowseFeed,
                 snapshot.activeGenre,
                 snapshot.genrePanelExpanded,
+                snapshot.hasSearched,
+                snapshot.lastExecutedQuery,
             )
         ) {
             _state.value = snapshot.copy(suggestions = emptyList(), suggestionsLoading = false)

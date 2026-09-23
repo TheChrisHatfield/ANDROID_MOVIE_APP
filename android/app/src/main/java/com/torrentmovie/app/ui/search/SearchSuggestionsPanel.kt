@@ -54,7 +54,10 @@ fun SearchSuggestionsPanel(
                     .fillMaxWidth()
                     .heightIn(max = 280.dp),
             ) {
-                items(suggestions, key = { it.tmdbId }) { suggestion ->
+                items(
+                    suggestions,
+                    key = { "${it.tmdbId}-${it.title}-${it.year}" },
+                ) { suggestion ->
                     Row(
                         Modifier
                             .fillMaxWidth()

@@ -46,5 +46,25 @@ class SearchSuggestTest {
                 genrePanelExpanded = true,
             ),
         )
+        assertFalse(
+            shouldLoadSearchSuggestions(
+                query = "Inception 2010",
+                activeBrowseFeed = null,
+                activeGenre = null,
+                genrePanelExpanded = false,
+                hasSearched = true,
+                lastExecutedQuery = "Inception 2010",
+            ),
+        )
+        assertTrue(
+            shouldLoadSearchSuggestions(
+                query = "Inception 201",
+                activeBrowseFeed = null,
+                activeGenre = null,
+                genrePanelExpanded = false,
+                hasSearched = true,
+                lastExecutedQuery = "Inception 2010",
+            ),
+        )
     }
 }

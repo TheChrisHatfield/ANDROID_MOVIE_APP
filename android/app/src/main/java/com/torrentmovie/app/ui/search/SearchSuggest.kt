@@ -12,9 +12,16 @@ internal fun shouldLoadSearchSuggestions(
     activeBrowseFeed: String?,
     activeGenre: String?,
     genrePanelExpanded: Boolean,
+    hasSearched: Boolean = false,
+    lastExecutedQuery: String = "",
 ): Boolean {
     if (activeBrowseFeed != null || activeGenre != null || genrePanelExpanded) return false
-    return query.trim().length >= MIN_SEARCH_SUGGEST_CHARS
+    val trimmed = query.trim()
+    if (trimmed.length < MIN_SEARCH_SUGGEST_CHARS) return false
+    if (hasSearched && trimmed.equals(lastExecutedQuery.trim(), ignoreCase = true)) {
+        return false
+    }
+    return true
 }
 
 internal const val MIN_SEARCH_SUGGEST_CHARS = 2
