@@ -10,4 +10,4 @@ if (-not (Test-Path $example)) {
     Write-Error "Missing .env.example in $searchDir"
 }
 Copy-Item $example $envFile
-Write-Host "Created $envFile — set TMDB_API_KEY=your key from themoviedb.org"
+Write-Host "Created $envFile - set TMDB_API_KEY (themoviedb.org) or rely on operator_defaults.py"
