@@ -113,13 +113,23 @@ fun InlineYoutubePlayer(
     AndroidView(
         modifier = playerModifier,
         factory = { ctx ->
-            WebView(ctx).apply {
-                tag = PlayerLoadTag(videoId, autoplay, muted)
-                loadPlayer(this)
+            try {
+                WebView(ctx).apply {
+                    tag = PlayerLoadTag(videoId, autoplay, muted)
+                    loadPlayer(this)
+                }
+            } catch (_: Throwable) {
+                playerError = true
+                android.widget.FrameLayout(ctx)
             }
         },
-        update = { webView ->
+        update = { view ->
+            val webView = view as? WebView
             webViewRef = webView
+            if (webView == null) {
+                playerError = true
+                return@AndroidView
+            }
             val expectedTag = PlayerLoadTag(videoId, autoplay, muted)
             if (webView.tag != expectedTag) {
                 webView.tag = expectedTag
@@ -127,9 +137,14 @@ fun InlineYoutubePlayer(
                 loadPlayer(webView)
             }
         },
-        onRelease = { webView ->
-            webView.stopLoading()
-            webView.destroy()
+        onRelease = { view ->
+            val webView = view as? WebView
+            try {
+                webView?.stopLoading()
+                webView?.destroy()
+            } catch (_: Throwable) {
+                // Missing WebView provider or already destroyed.
+            }
             if (webViewRef === webView) {
                 webViewRef = null
             }

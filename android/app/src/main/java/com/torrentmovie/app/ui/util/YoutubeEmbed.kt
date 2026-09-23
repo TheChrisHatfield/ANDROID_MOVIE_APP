@@ -89,18 +89,23 @@ private fun youtubePlayerHtml(
 
 @SuppressLint("SetJavaScriptEnabled")
 fun WebView.configureForYoutubeEmbed() {
-    settings.javaScriptEnabled = true
-    settings.domStorageEnabled = true
-    settings.mediaPlaybackRequiresUserGesture = false
-    settings.loadWithOverviewMode = true
-    settings.useWideViewPort = true
-    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-    settings.userAgentString = settings.userAgentString.replace("; wv)", ")")
-    setBackgroundColor(Color.BLACK)
-    isFocusable = true
-    isFocusableInTouchMode = true
-    webViewClient = WebViewClient()
-    webChromeClient = WebChromeClient()
+    try {
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.mediaPlaybackRequiresUserGesture = false
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        settings.userAgentString = settings.userAgentString.replace("; wv)", ")")
+        setBackgroundColor(Color.BLACK)
+        isFocusable = true
+        isFocusableInTouchMode = true
+        webViewClient = WebViewClient()
+        webChromeClient = WebChromeClient()
+    } catch (_: Throwable) {
+        // Missing WebView provider (AOSP / some Huawei) — caller shows fallback.
+        throw IllegalStateException("WebView unavailable")
+    }
 }
 
 /** Load trailer via YouTube IFrame Player API (reliable playback; avoids Error 153 / black screen). */

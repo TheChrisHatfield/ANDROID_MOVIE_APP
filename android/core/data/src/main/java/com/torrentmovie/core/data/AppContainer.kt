@@ -47,6 +47,8 @@ class AppContainer(
 
     @Volatile
     private var bootstrapThreadActive = false
+    @Volatile
+    private var resolveInFlight = false
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
         onWifiReady = { thread(name = "search-api-wifi-retry") { resolveAndPersistSearchApi() } },
@@ -54,16 +56,25 @@ class AppContainer(
     )
 
     init {
-        settingsRepository.applyBundledTmdbIfNeeded()
-        restartSearchApiBootstrapIfNeeded()
+        try {
+            settingsRepository.applyBundledTmdbIfNeeded()
+        } catch (_: Throwable) {
+            // Keystore / prefs OEM failures must not kill process create.
+        }
+        // LAN/Wi-Fi bootstrap waits for Activity ON_RESUME so Application.onCreate
+        // stays cheap on low-RAM phones and OEM process-start scanners.
     }
 
     fun restartSearchApiBootstrapIfNeeded() {
-        if (settingsRepository.needsSearchApiAutoConfiguration()) {
-            wifiBootstrap.register()
-            bootstrapSearchApiIfNeeded()
-        } else {
-            wifiBootstrap.unregister()
+        try {
+            if (settingsRepository.needsSearchApiAutoConfiguration()) {
+                wifiBootstrap.register()
+                bootstrapSearchApiIfNeeded()
+            } else {
+                wifiBootstrap.unregister()
+            }
+        } catch (_: Throwable) {
+            // Search still loads; user can set the API URL in Settings.
         }
     }
 
@@ -73,19 +84,21 @@ class AppContainer(
         bootstrapThreadActive = true
         thread(name = "search-api-bootstrap") {
             try {
-            repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
-                if (!settingsRepository.needsSearchApiAutoConfiguration()) {
-                    wifiBootstrap.unregister()
-                    return@thread
+                repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
+                    if (!settingsRepository.needsSearchApiAutoConfiguration()) {
+                        wifiBootstrap.unregister()
+                        return@thread
+                    }
+                    if (resolveAndPersistSearchApi()) {
+                        wifiBootstrap.unregister()
+                        return@thread
+                    }
+                    if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
+                        Thread.sleep(BOOTSTRAP_RETRY_MS)
+                    }
                 }
-                if (resolveAndPersistSearchApi()) {
-                    wifiBootstrap.unregister()
-                    return@thread
-                }
-                if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
-                    Thread.sleep(BOOTSTRAP_RETRY_MS)
-                }
-            }
+            } catch (_: Throwable) {
+                // Never take down the process from bootstrap; search UI still loads.
             } finally {
                 bootstrapThreadActive = false
             }
@@ -94,14 +107,24 @@ class AppContainer(
 
     private fun resolveAndPersistSearchApi(): Boolean {
         if (!settingsRepository.needsSearchApiAutoConfiguration()) return false
-        val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
-        val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
-            bundledSearchApiUrl = bundled,
-            isEmulator = DeviceProfile.isEmulator(),
-            wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext),
-            probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
-        )
-        return resolved != null && settingsRepository.applyAutoConfiguredSearchApi(resolved)
+        synchronized(this) {
+            if (resolveInFlight) return false
+            resolveInFlight = true
+        }
+        return try {
+            val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
+            val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
+                bundledSearchApiUrl = bundled,
+                isEmulator = DeviceProfile.isEmulator(),
+                wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext),
+                probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
+            )
+            resolved != null && settingsRepository.applyAutoConfiguredSearchApi(resolved)
+        } catch (_: Throwable) {
+            false
+        } finally {
+            resolveInFlight = false
+        }
     }
 
     private companion object {

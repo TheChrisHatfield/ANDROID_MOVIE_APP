@@ -14,18 +14,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = (application as MovieTorrentApplication).container
-        val brandRed = Color.parseColor(AppBranding.PANTONE_RED_HEX)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(brandRed),
-            navigationBarStyle = SystemBarStyle.light(
-                Color.parseColor(AppBranding.CREAM_HEX),
-                Color.parseColor(AppBranding.CREAM_HEX),
-            ),
-        )
+        applyEdgeToEdgeSafely()
         setContent {
             TorrentMovieTheme {
                 MainScaffold(container = container)
             }
+        }
+    }
+
+    private fun applyEdgeToEdgeSafely() {
+        try {
+            val brandRed = Color.parseColor(AppBranding.PANTONE_RED_HEX)
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(brandRed),
+                navigationBarStyle = SystemBarStyle.light(
+                    Color.parseColor(AppBranding.CREAM_HEX),
+                    Color.parseColor(AppBranding.CREAM_HEX),
+                ),
+            )
+        } catch (_: Throwable) {
+            // OEM WindowInsets gaps (MIUI / One UI / API 26–28) — XML theme bar colors remain.
         }
     }
 }

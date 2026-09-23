@@ -12,4 +12,11 @@ class LanNetworkAddressTest {
         assertTrue(hosts.indexOf("192.168.1.1") < hosts.indexOf("192.168.1.50"))
         assertEquals(254, hosts.size)
     }
+
+    @Test
+    fun candidateHostsRejectsNonIpv4() {
+        assertTrue(LanNetworkAddress.candidateHosts("fe80::1").isEmpty())
+        assertTrue(LanNetworkAddress.candidateHosts("not-an-ip").isEmpty())
+        assertTrue(LanNetworkAddress.candidateHosts("").isEmpty())
+    }
 }

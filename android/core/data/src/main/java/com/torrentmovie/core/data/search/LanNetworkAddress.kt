@@ -2,17 +2,43 @@ package com.torrentmovie.core.data.search
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
 import android.net.NetworkCapabilities
 
 /** Wi‑Fi IPv4 helpers for LAN Search API discovery (FR-040). */
 object LanNetworkAddress {
     fun wifiIpv4(context: Context): String? {
-        val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        return try {
+            val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+                as? ConnectivityManager ?: return null
+            ipv4FromProperties(linkPropertiesForWifi(cm))
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun linkPropertiesForWifi(cm: ConnectivityManager): LinkProperties? {
+        val active = cm.activeNetwork
+        if (active != null && hasWifiTransport(cm, active)) {
+            cm.getLinkProperties(active)?.let { return it }
+        }
+        val wifiNetwork = cm.allNetworks.firstOrNull { net -> hasWifiTransport(cm, net) }
             ?: return null
-        val network = cm.allNetworks.firstOrNull { net ->
-            cm.getNetworkCapabilities(net)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-        } ?: return null
-        val props = cm.getLinkProperties(network) ?: return null
+        return cm.getLinkProperties(wifiNetwork)
+    }
+
+    private fun hasWifiTransport(cm: ConnectivityManager, network: Network): Boolean {
+        return try {
+            cm.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun ipv4FromProperties(props: LinkProperties?): String? {
+        if (props == null) return null
         for (addr in props.linkAddresses) {
             val host = addr.address.hostAddress ?: continue
             if (host.contains(':')) continue

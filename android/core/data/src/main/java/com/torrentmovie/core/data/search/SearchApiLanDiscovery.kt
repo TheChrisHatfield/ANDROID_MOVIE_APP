@@ -12,7 +12,8 @@ import okhttp3.Request
 object SearchApiLanDiscovery {
     private const val SEARCH_PORT = 8765
     private const val HEALTH_PATH = "/v1/health"
-    private const val PARALLEL_PROBES = 24
+    /** Keep low: 24-wide fan-out OOM/kills low-RAM and OEM-security phones at first launch. */
+    internal const val PARALLEL_PROBES = 8
 
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(750, TimeUnit.MILLISECONDS)
@@ -28,13 +29,14 @@ object SearchApiLanDiscovery {
             probeClient.newCall(Request.Builder().url(url).get().build()).execute().use { resp ->
                 resp.isSuccessful && resp.body?.string()?.contains("ok", ignoreCase = true) == true
             }
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             false
         }
     }
 
     fun discoverOnLan(wifiIpv4: String): String? {
         val hosts = LanNetworkAddress.candidateHosts(wifiIpv4)
+        if (hosts.isEmpty()) return null
         val found = AtomicReference<String?>(null)
         val pool: ExecutorService = Executors.newFixedThreadPool(PARALLEL_PROBES)
         try {
@@ -49,6 +51,8 @@ object SearchApiLanDiscovery {
             }
             pool.shutdown()
             pool.awaitTermination(30, TimeUnit.SECONDS)
+        } catch (_: Throwable) {
+            // Thread-pool / OEM network policy — discovery is best-effort.
         } finally {
             pool.shutdownNow()
         }

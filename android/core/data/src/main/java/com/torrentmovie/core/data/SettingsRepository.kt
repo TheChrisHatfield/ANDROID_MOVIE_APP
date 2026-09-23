@@ -54,7 +54,7 @@ class SettingsRepository(
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             context.getSharedPreferences("torrent_movie_settings_plain", Context.MODE_PRIVATE)
         }
     }

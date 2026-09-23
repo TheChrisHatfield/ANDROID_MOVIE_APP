@@ -7,6 +7,20 @@ import org.junit.Test
 
 class AdaptiveLayoutTest {
     @Test
+    fun phoneAndFoldCoverStaySinglePane() {
+        assertFalse(AdaptiveLayout.useTwoPaneSearchDetail(360))
+        assertFalse(AdaptiveLayout.useTwoPaneSearchDetail(373))
+        assertFalse(AdaptiveLayout.useNavigationRail(411))
+    }
+
+    @Test
+    fun foldInnerAndTabletUseTwoPane() {
+        assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(673))
+        assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(800))
+        assertTrue(AdaptiveLayout.useNavigationRail(840))
+    }
+
+    @Test
     fun twoPaneActivatesAt600dp() {
         assertFalse(AdaptiveLayout.useTwoPaneSearchDetail(599))
         assertTrue(AdaptiveLayout.useTwoPaneSearchDetail(600))

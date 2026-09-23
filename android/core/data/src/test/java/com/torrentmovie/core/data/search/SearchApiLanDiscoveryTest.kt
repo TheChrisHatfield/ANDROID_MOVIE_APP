@@ -26,4 +26,9 @@ class SearchApiLanDiscoveryTest {
         assertFalse(SearchApiLanDiscovery.probeSearchApiBaseUrl(base))
         server.shutdown()
     }
+
+    @Test
+    fun lanDiscoveryUsesAPhoneSafeProbeFanOut() {
+        assertTrue(SearchApiLanDiscovery.PARALLEL_PROBES in 1..8)
+    }
 }

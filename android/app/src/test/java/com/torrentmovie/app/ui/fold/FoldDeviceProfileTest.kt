@@ -39,7 +39,29 @@ class FoldDeviceProfileTest {
     }
 
     @Test
-    fun rejectsOtherManufacturers() {
+    fun detectsGalaxyZFold6AndDeviceName() {
+        assertTrue(
+            FoldDeviceProfile.isSamsungGalaxyZFoldModel(
+                manufacturer = "samsung",
+                model = "SM-F956U",
+                device = "pa3q",
+            ),
+        )
+    }
+
+    @Test
+    fun pixelFoldUsesWidthBasedTwoPaneNotSamsungProfile() {
+        assertFalse(
+            FoldDeviceProfile.isSamsungGalaxyZFoldModel(
+                manufacturer = "Google",
+                model = "Pixel Fold",
+                device = "felix",
+            ),
+        )
+    }
+
+    @Test
+    fun rejectsPixelPhone() {
         assertFalse(
             FoldDeviceProfile.isSamsungGalaxyZFoldModel(
                 manufacturer = "Google",
