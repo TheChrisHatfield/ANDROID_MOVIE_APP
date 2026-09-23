@@ -28,6 +28,11 @@ class AppBrandingTest {
         // App bar title uses large/bold type; WCAG AA large text ≥ 3:1
         assertTrue(contrastRatio(OnPantone, PantoneRed) >= 3.0)
     }
+
+    @Test
+    fun placeholderMeetsContrastOnSearchFieldGray() {
+        assertTrue(contrastRatio(TextMuted, SearchFieldGray) >= 4.5)
+    }
 }
 
 internal fun contrastRatio(a: Color, b: Color): Double {

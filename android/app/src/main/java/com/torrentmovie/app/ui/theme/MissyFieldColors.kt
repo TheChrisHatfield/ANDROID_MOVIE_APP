@@ -16,6 +16,8 @@ fun missyOutlinedTextFieldColors(): TextFieldColors {
         unfocusedTextColor = TextCharcoal,
         focusedLabelColor = TextMuted,
         unfocusedLabelColor = TextMuted,
+        focusedPlaceholderColor = TextMuted,
+        unfocusedPlaceholderColor = TextMuted,
         cursorColor = PantoneRed,
         focusedBorderColor = Color.Transparent,
         unfocusedBorderColor = Color.Transparent,
