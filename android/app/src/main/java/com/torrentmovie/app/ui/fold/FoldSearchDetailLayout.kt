@@ -24,6 +24,7 @@ import com.torrentmovie.app.ui.adaptive.AdaptiveLayout
 import com.torrentmovie.app.ui.detail.TorrentDetailScreen
 import com.torrentmovie.app.ui.search.SearchScreen
 import com.torrentmovie.app.ui.search.SearchViewModel
+import com.torrentmovie.app.ui.util.snapshotGenreAtDetailOpen
 import com.torrentmovie.app.ui.util.SearchReleaseRematch
 import com.torrentmovie.app.ui.util.magnetFallbackDetailUrl
 import com.torrentmovie.core.data.AppContainer
@@ -66,11 +67,15 @@ fun FoldSearchDetailLayout(
             detailUrl ?: id?.let { findRelease(it)?.detail_url },
             container.foldActiveSelection?.takeIf { it.resultId == id }?.detailUrl,
         )
+        val genreId = snapshotGenreAtDetailOpen(
+            genreAtDetailOpen,
+            container.foldActiveSelection?.takeIf { it.resultId == id }?.genreId,
+        )
         container.foldActiveSelection = foldActivePayload(
             id,
             name,
             site,
-            genreAtDetailOpen,
+            genreId,
             resolvedUrl,
         )
     }
@@ -107,6 +112,7 @@ fun FoldSearchDetailLayout(
                 selectedId = active.resultId
                 restoredName = active.name.takeIf { it.isNotBlank() }
                 restoredSite = active.site.takeIf { it.isNotBlank() }
+                genreAtDetailOpen = active.genreId ?: genreAtDetailOpen
             }
         }
     }
@@ -128,6 +134,7 @@ fun FoldSearchDetailLayout(
             selectedId = active.resultId
             restoredName = active.name.takeIf { it.isNotBlank() }
             restoredSite = active.site.takeIf { it.isNotBlank() }
+            genreAtDetailOpen = active.genreId ?: genreAtDetailOpen
         }
     }
 
