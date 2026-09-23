@@ -77,3 +77,13 @@ class TransientGenreRefreshTest {
         assertFalse(isTransientGenreRefresh(null, null))
     }
 }
+
+class SearchSuggestTimeoutTest {
+    @Test
+    fun autocompleteTimeoutsStayWellUnderSearchReadTimeout() {
+        assertTrue(SUGGEST_CONNECT_TIMEOUT_SEC in 1L..8L)
+        assertTrue(SUGGEST_READ_TIMEOUT_SEC in 1L..15L)
+        assertTrue(SUGGEST_CALL_TIMEOUT_SEC in SUGGEST_READ_TIMEOUT_SEC..15L)
+        assertTrue(SUGGEST_CALL_TIMEOUT_SEC < 120L)
+    }
+}

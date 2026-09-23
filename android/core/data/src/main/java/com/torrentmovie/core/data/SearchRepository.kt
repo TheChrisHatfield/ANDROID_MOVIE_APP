@@ -23,9 +23,17 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         // Genre browse may wait on an in-flight refresh (45s) then fan out indexers.
         .readTimeout(120, TimeUnit.SECONDS)
         .build()
+    private val suggestHttpClient = httpClient.newBuilder()
+        .connectTimeout(SUGGEST_CONNECT_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .readTimeout(SUGGEST_READ_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .callTimeout(SUGGEST_CALL_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .build()
     private var cachedBaseUrl: String? = null
     private var cachedApi: SearchApi? = null
     private var cachedRevision = -1
+    private var cachedSuggestBaseUrl: String? = null
+    private var cachedSuggestApi: SearchApi? = null
+    private var cachedSuggestRevision = -1
 
     @Synchronized
     private fun api(): SearchApi {
@@ -47,6 +55,28 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             .build()
             .create(SearchApi::class.java)
         return cachedApi!!
+    }
+
+    @Synchronized
+    private fun suggestApi(): SearchApi {
+        val settings = settingsRepository.load()
+        if (settings.searchApiBaseUrl.isBlank()) {
+            throw SearchException(settingsRepository.searchApiBlockedMessage())
+        }
+        val revision = settingsRepository.revision.value
+        val base = settings.searchApiBaseUrl.trimEnd('/') + "/"
+        if (cachedSuggestApi != null && cachedSuggestBaseUrl == base && cachedSuggestRevision == revision) {
+            return cachedSuggestApi!!
+        }
+        cachedSuggestRevision = revision
+        cachedSuggestBaseUrl = base
+        cachedSuggestApi = Retrofit.Builder()
+            .baseUrl(base)
+            .client(suggestHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(SearchApi::class.java)
+        return cachedSuggestApi!!
     }
 
     suspend fun search(
@@ -88,7 +118,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         val settings = settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) return emptyList()
         return try {
-            val response = api().suggest(
+            val response = suggestApi().suggest(
                 query = query,
                 limit = limit,
                 tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
@@ -348,3 +378,8 @@ internal fun formatErrorDetail(detail: JsonElement?): String? {
         else -> null
     }
 }
+
+/** Autocomplete must fail fast so a down Search API cannot freeze the search field. */
+internal const val SUGGEST_CONNECT_TIMEOUT_SEC = 5L
+internal const val SUGGEST_READ_TIMEOUT_SEC = 8L
+internal const val SUGGEST_CALL_TIMEOUT_SEC = 10L
