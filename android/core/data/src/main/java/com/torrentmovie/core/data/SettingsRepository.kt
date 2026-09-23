@@ -83,7 +83,8 @@ class SettingsRepository(
         if (hasUserConfiguredSearchApi()) return false
         val normalized = normalizeSearchApiUrl(url)
         if (normalized.isBlank()) return false
-        prefs.edit().putString(KEY_SEARCH_API, normalized).apply()
+        val committed = prefs.edit().putString(KEY_SEARCH_API, normalized).commit()
+        if (!committed) return false
         _revision.value += 1
         return true
     }
