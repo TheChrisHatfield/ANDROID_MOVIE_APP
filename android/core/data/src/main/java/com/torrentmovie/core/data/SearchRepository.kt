@@ -102,6 +102,8 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                     posterUrl = row.posterUrl,
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: HttpException) {
             emptyList()
         } catch (e: IllegalArgumentException) {

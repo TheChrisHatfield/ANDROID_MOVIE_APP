@@ -101,6 +101,12 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 val retryAfterBootstrapPersist = bootstrapJustPersisted &&
                     shouldRefreshAfterBootstrapPersist(modeActive, _state.value.error)
                 observedSettingsKey = key
+                if (
+                    settings.searchApiBaseUrl.isNotBlank() &&
+                    (bootstrapJustPersisted || settingsChanged)
+                ) {
+                    refreshSearchSuggestions(_state.value.query)
+                }
                 if ((settingsChanged || apiReadyAfterBootstrap || retryAfterBootstrapPersist) &&
                     modeActive
                 ) {
@@ -227,7 +233,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         val generation = ++suggestGeneration
         suggestJob = viewModelScope.launch {
             delay(SEARCH_SUGGEST_DEBOUNCE_MS)
-            _state.value = _state.value.copy(suggestionsLoading = true)
+            if (generation != suggestGeneration) return@launch
+            _state.value = _state.value.copy(
+                suggestions = emptyList(),
+                suggestionsLoading = true,
+            )
             try {
                 val items = container.searchRepository.suggest(trimmed)
                 if (generation == suggestGeneration) {
@@ -319,7 +329,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun expandGenrePanel() {
         searchJob?.cancel()
+        suggestJob?.cancel()
         searchGeneration += 1
+        suggestGeneration += 1
         lastSearchedQuery = null
         _state.value = _state.value.copy(
             genrePanelExpanded = true,
@@ -335,6 +347,8 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             showTmdbSetupHint = false,
             lastExecutedQuery = "",
             loading = false,
+            suggestions = emptyList(),
+            suggestionsLoading = false,
         )
         searchJob = viewModelScope.launch {
             try {
@@ -349,7 +363,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun collapseGenrePanel() {
         searchJob?.cancel()
+        suggestJob?.cancel()
         searchGeneration += 1
+        suggestGeneration += 1
         lastSearchedQuery = null
         _state.value = _state.value.copy(
             genrePanelExpanded = false,

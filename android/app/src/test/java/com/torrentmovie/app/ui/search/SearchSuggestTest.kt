@@ -38,5 +38,13 @@ class SearchSuggestTest {
                 genrePanelExpanded = false,
             ),
         )
+        assertFalse(
+            shouldLoadSearchSuggestions(
+                query = "inc",
+                activeBrowseFeed = null,
+                activeGenre = null,
+                genrePanelExpanded = true,
+            ),
+        )
     }
 }
