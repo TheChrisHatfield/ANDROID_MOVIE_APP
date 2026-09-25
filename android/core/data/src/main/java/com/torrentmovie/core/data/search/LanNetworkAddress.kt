@@ -42,7 +42,7 @@ object LanNetworkAddress {
         for (addr in props.linkAddresses) {
             val host = addr.address.hostAddress ?: continue
             if (host.contains(':')) continue
-            if (addr.prefixLength in 8..30) return host
+            if (isUsableLanPrefixLength(addr.prefixLength)) return host
         }
         return null
     }
@@ -59,4 +59,7 @@ object LanNetworkAddress {
         order += (1..254).filter { it !in order }
         return order.distinct().map { "$prefix.$it" }
     }
+
+    /** Some OEM Wi-Fi stacks report /32 for a DHCP IPv4; still use it to guess the /24. */
+    internal fun isUsableLanPrefixLength(prefixLength: Int): Boolean = prefixLength in 8..32
 }

@@ -19,4 +19,12 @@ class LanNetworkAddressTest {
         assertTrue(LanNetworkAddress.candidateHosts("not-an-ip").isEmpty())
         assertTrue(LanNetworkAddress.candidateHosts("").isEmpty())
     }
+
+    @Test
+    fun dhcpSlash32PrefixIsStillUsableForLanGuess() {
+        assertTrue(LanNetworkAddress.isUsableLanPrefixLength(24))
+        assertTrue(LanNetworkAddress.isUsableLanPrefixLength(32))
+        assertTrue(!LanNetworkAddress.isUsableLanPrefixLength(7))
+        assertTrue(!LanNetworkAddress.isUsableLanPrefixLength(33))
+    }
 }

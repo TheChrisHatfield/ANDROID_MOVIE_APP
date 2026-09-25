@@ -93,7 +93,13 @@ class AppContainer(
                     if (!settingsRepository.shouldAdaptSearchApiToNetwork()) break
                     val current = settingsRepository.load().searchApiBaseUrl
                     val wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext)
-                    val currentHealthy = current.isNotBlank() &&
+                    val canKeepIfHealthy = SearchApiAutoConfig.shouldKeepCurrentUrl(
+                        current,
+                        wifiIpv4,
+                        currentHealthy = true,
+                    )
+                    val currentHealthy = canKeepIfHealthy &&
+                        current.isNotBlank() &&
                         SearchApiLanDiscovery.probeSearchApiBaseUrl(current)
                     if (SearchApiAutoConfig.shouldKeepCurrentUrl(current, wifiIpv4, currentHealthy)) {
                         if (SearchApiAutoConfig.shouldNotifyRebound(lastAdaptUnreachable)) {

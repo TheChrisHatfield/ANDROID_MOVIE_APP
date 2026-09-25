@@ -159,6 +159,38 @@ class SearchApiAutoConfigTest {
                 currentHealthy = true,
             ),
         )
+        assertTrue(
+            SearchApiAutoConfig.shouldKeepCurrentUrl(
+                currentUrl = "http://search.example.com:8765",
+                wifiIpv4 = "192.168.4.10",
+                currentHealthy = true,
+            ),
+        )
+    }
+
+    @Test
+    fun shouldNotAttemptSearchToOffSubnetLanOnCellular() {
+        assertFalse(
+            SearchApiAutoConfig.shouldAttemptSearch(
+                url = "http://192.168.4.27:8765",
+                wifiIpv4 = null,
+                isEmulator = false,
+            ),
+        )
+        assertFalse(
+            SearchApiAutoConfig.shouldAttemptSearch(
+                url = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.8.10",
+                isEmulator = false,
+            ),
+        )
+        assertTrue(
+            SearchApiAutoConfig.shouldAttemptSearch(
+                url = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.4.10",
+                isEmulator = false,
+            ),
+        )
     }
 
     @Test

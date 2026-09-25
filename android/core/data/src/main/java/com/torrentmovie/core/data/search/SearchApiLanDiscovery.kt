@@ -14,6 +14,7 @@ object SearchApiLanDiscovery {
     private const val HEALTH_PATH = "/v1/health"
     /** Keep low: 24-wide fan-out OOM/kills low-RAM and OEM-security phones at first launch. */
     internal const val PARALLEL_PROBES = 8
+    internal const val DISCOVERY_DEADLINE_SEC = 8L
 
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(750, TimeUnit.MILLISECONDS)
@@ -50,7 +51,7 @@ object SearchApiLanDiscovery {
                 }
             }
             pool.shutdown()
-            pool.awaitTermination(30, TimeUnit.SECONDS)
+            pool.awaitTermination(DISCOVERY_DEADLINE_SEC, TimeUnit.SECONDS)
         } catch (_: Throwable) {
             // Thread-pool / OEM network policy — discovery is best-effort.
         } finally {

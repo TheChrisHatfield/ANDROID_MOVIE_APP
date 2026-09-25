@@ -30,5 +30,6 @@ class SearchApiLanDiscoveryTest {
     @Test
     fun lanDiscoveryUsesAPhoneSafeProbeFanOut() {
         assertTrue(SearchApiLanDiscovery.PARALLEL_PROBES in 1..8)
+        assertTrue(SearchApiLanDiscovery.DISCOVERY_DEADLINE_SEC in 3L..12L)
     }
 }

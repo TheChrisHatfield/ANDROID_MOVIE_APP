@@ -137,7 +137,7 @@ fun TorrentDetailScreen(
             resultExpired = false
         }
         val apiUrl = container.settingsRepository.load().searchApiBaseUrl
-        if (apiUrl.isBlank()) {
+        if (apiUrl.isBlank() || !container.settingsRepository.isSearchApiUsableOnThisNetwork()) {
             magnetLoading = false
             magnetError = container.settingsRepository.searchApiBlockedMessage()
             return@LaunchedEffect

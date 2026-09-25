@@ -92,4 +92,18 @@ class SearchApiBootstrapTest {
         )
         assertEquals("http://10.0.2.2:8765", url)
     }
+
+    @Test
+    fun doesNotKeepOffSubnetLanEvenWhenHealthProbeWouldSucceed() {
+        assertNull(
+            SearchApiBootstrap.resolveAutoSearchApiUrl(
+                bundledSearchApiUrl = "http://192.168.4.27:8765",
+                isEmulator = false,
+                wifiIpv4 = "192.168.8.10",
+                probeHealthy = { true },
+                discoverOnLan = { null },
+                currentUrl = "http://192.168.4.27:8765",
+            ),
+        )
+    }
 }

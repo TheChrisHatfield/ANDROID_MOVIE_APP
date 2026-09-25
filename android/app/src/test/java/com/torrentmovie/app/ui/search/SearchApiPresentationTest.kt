@@ -17,6 +17,14 @@ class SearchApiPresentationTest {
             shouldShowSearchApiSetupBanner(
                 searchApiBaseUrl = "http://192.168.1.5:8765",
                 autoConfigurationPending = false,
+                searchApiUsableOnThisNetwork = true,
+            ),
+        )
+        assertTrue(
+            shouldShowSearchApiSetupBanner(
+                searchApiBaseUrl = "http://192.168.4.27:8765",
+                autoConfigurationPending = false,
+                searchApiUsableOnThisNetwork = false,
             ),
         )
         assertTrue(

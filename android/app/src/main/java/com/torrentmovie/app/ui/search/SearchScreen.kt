@@ -86,6 +86,9 @@ fun SearchScreen(
     val searchApiAutoConfigPending = remember(settingsRevision) {
         container.settingsRepository.needsSearchApiAutoConfiguration()
     }
+    val searchApiUsableOnThisNetwork = remember(settingsRevision) {
+        container.settingsRepository.isSearchApiUsableOnThisNetwork()
+    }
     val snackbar = remember { SnackbarHostState() }
     var showFilters by remember { mutableStateOf(false) }
     var expandedGroupKey by remember { mutableStateOf<String?>(null) }
@@ -401,7 +404,12 @@ fun SearchScreen(
         }
 
         val showSetupBanners = !phoneLandscape || !landscapeChromeCollapsed
-        if (showSetupBanners && shouldShowSearchApiSetupBanner(searchApiBaseUrl, searchApiAutoConfigPending)) {
+        if (showSetupBanners && shouldShowSearchApiSetupBanner(
+                searchApiBaseUrl,
+                searchApiAutoConfigPending,
+                searchApiUsableOnThisNetwork,
+            )
+        ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -412,7 +420,7 @@ fun SearchScreen(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = if (searchApiAutoConfigPending) {
+                        text = if (searchApiAutoConfigPending || !searchApiUsableOnThisNetwork) {
                             "Finding search service"
                         } else {
                             "Search API not configured"
@@ -420,7 +428,7 @@ fun SearchScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = if (searchApiAutoConfigPending) {
+                        text = if (searchApiAutoConfigPending || !searchApiUsableOnThisNetwork) {
                             "On the same Wi-Fi, run the search service on your PC (port 8765). The app is scanning your network; you can also set Search API manually in Settings."
                         } else {
                             "Set Search API in Settings (e.g. http://<PC-IP>:8765)."

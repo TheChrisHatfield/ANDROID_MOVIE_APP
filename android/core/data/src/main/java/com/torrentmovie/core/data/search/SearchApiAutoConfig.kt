@@ -79,6 +79,21 @@ object SearchApiAutoConfig {
 
     fun shouldNotifyRebound(recoveredFromUnreachable: Boolean): Boolean = recoveredFromUnreachable
 
+    /** Do not hang 15s on a private LAN URL that cannot be this phone's Wi-Fi. */
+    fun shouldAttemptSearch(
+        url: String,
+        wifiIpv4: String?,
+        isEmulator: Boolean,
+    ): Boolean {
+        val normalized = normalizeSearchApiUrl(url)
+        if (normalized.isBlank()) return false
+        if (isEmulatorLoopback(normalized)) return isEmulator
+        val host = ipv4Host(normalized)
+        if (host == null) return true
+        if (wifiIpv4.isNullOrBlank()) return false
+        return isOnWifiSubnet(normalized, wifiIpv4)
+    }
+
     /**
      * Unpersisted default: hosted bundled URLs always; RFC1918 only on that Wi-Fi /24.
      */
@@ -97,7 +112,7 @@ object SearchApiAutoConfig {
         return if (isEmulator) emulatorUrl else ""
     }
 
-    /** Keep a LAN URL only while the phone is still on that Wi-Fi subnet. */
+    /** Keep a LAN URL only while the phone is still on that Wi-Fi subnet. Hostnames stay if healthy. */
     fun shouldKeepCurrentUrl(
         currentUrl: String,
         wifiIpv4: String?,
@@ -105,9 +120,8 @@ object SearchApiAutoConfig {
     ): Boolean {
         if (!currentHealthy || currentUrl.isBlank()) return false
         val host = ipv4Host(currentUrl)
-        if (wifiIpv4.isNullOrBlank()) {
-            return host == null
-        }
+        if (host == null) return true
+        if (wifiIpv4.isNullOrBlank()) return false
         return isOnWifiSubnet(currentUrl, wifiIpv4)
     }
 }

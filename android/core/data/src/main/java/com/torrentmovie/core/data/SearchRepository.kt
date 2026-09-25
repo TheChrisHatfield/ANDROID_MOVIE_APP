@@ -19,9 +19,10 @@ import kotlinx.coroutines.delay
 class SearchRepository(private val settingsRepository: SettingsRepository) {
     private val gson = Gson()
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
         // Genre browse may wait on an in-flight refresh (45s) then fan out indexers.
         .readTimeout(120, TimeUnit.SECONDS)
+        .callTimeout(120, TimeUnit.SECONDS)
         .build()
     private val suggestHttpClient = httpClient.newBuilder()
         .connectTimeout(SUGGEST_CONNECT_TIMEOUT_SEC, TimeUnit.SECONDS)
@@ -38,7 +39,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     @Synchronized
     private fun api(): SearchApi {
         val settings = settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) {
+        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) {
             throw SearchException(settingsRepository.searchApiBlockedMessage())
         }
         val revision = settingsRepository.revision.value
@@ -60,7 +61,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     @Synchronized
     private fun suggestApi(): SearchApi {
         val settings = settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) {
+        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) {
             throw SearchException(settingsRepository.searchApiBlockedMessage())
         }
         val revision = settingsRepository.revision.value
@@ -117,6 +118,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     suspend fun suggest(query: String, limit: Int = 8): List<MovieSearchSuggestion> {
         val settings = settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) return emptyList()
+        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return emptyList()
         return try {
             val response = suggestApi().suggest(
                 query = query,
@@ -181,6 +183,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     suspend fun warmGenrePools(genreIds: List<String>? = null) {
         val settings = settingsRepository.load()
         if (settings.searchApiBaseUrl.isBlank()) return
+        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return
         try {
             val genres = genreIds?.joinToString(",")
             api().warmGenrePools(
@@ -251,6 +254,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     ) {
         val base = settingsRepository.load().searchApiBaseUrl.trim().removeSuffix("/")
         if (base.isBlank()) return
+        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return
         try {
             api().postGenreBranchFeedback(
                 url = "$base/v1/browse/genre/${genreId.trim().lowercase()}/feedback",
@@ -265,6 +269,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
 
     suspend fun isTmdbConfigured(): Boolean {
         return try {
+            if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return false
             api().health().tmdbConfigured
         } catch (e: Exception) {
             e.rethrowIfCancelled()
@@ -309,8 +314,18 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             throw CancellationException(e.message).apply { initCause(e) }
         }
         val message = when (e) {
-            is SocketTimeoutException -> "Search API timed out. Check the URL in Settings."
-            is UnknownHostException -> "Cannot reach search API. Check the URL in Settings."
+            is SocketTimeoutException ->
+                if (settingsRepository.shouldAdaptSearchApiToNetwork()) {
+                    SearchApiMessages.blocked(autoConfigurationPending = true)
+                } else {
+                    "Search API timed out. Check the URL in Settings."
+                }
+            is UnknownHostException ->
+                if (settingsRepository.shouldAdaptSearchApiToNetwork()) {
+                    SearchApiMessages.blocked(autoConfigurationPending = true)
+                } else {
+                    "Cannot reach search API. Check the URL in Settings."
+                }
             else -> "Cannot connect to search API. Is it running on the configured host and port?"
         }
         return SearchException(message, cause = e)

@@ -24,8 +24,20 @@ object SearchApiBootstrap {
         if (!wifiIpv4.isNullOrBlank()) {
             discoverOnLan(wifiIpv4)?.let { return it }
         }
-        if (current.isNotBlank() && probeHealthy(current)) return current
-        if (bundled.isNotBlank() && probeHealthy(bundled)) return bundled
+        if (
+            current.isNotBlank() &&
+            SearchApiAutoConfig.shouldAttemptSearch(current, wifiIpv4, isEmulator) &&
+            probeHealthy(current)
+        ) {
+            return current
+        }
+        if (
+            bundled.isNotBlank() &&
+            SearchApiAutoConfig.shouldAttemptSearch(bundled, wifiIpv4, isEmulator) &&
+            probeHealthy(bundled)
+        ) {
+            return bundled
+        }
         if (isEmulator) {
             val emulator = normalizeSearchApiUrl(AppSettings.EMULATOR_SEARCH_API)
             if (emulator.isNotBlank() && probeHealthy(emulator)) return emulator

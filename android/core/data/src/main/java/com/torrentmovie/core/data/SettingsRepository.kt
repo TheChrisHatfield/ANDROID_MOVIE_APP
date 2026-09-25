@@ -171,8 +171,22 @@ class SettingsRepository(
         )
     }
 
+    fun isSearchApiUsableOnThisNetwork(): Boolean {
+        val url = load().searchApiBaseUrl
+        if (url.isBlank()) return false
+        if (hasManualSearchApiOverride()) return true
+        return SearchApiAutoConfig.shouldAttemptSearch(
+            url = url,
+            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
+            isEmulator = DeviceProfile.isEmulator(),
+        )
+    }
+
     fun searchApiBlockedMessage(): String =
-        SearchApiMessages.blocked(needsSearchApiAutoConfiguration())
+        SearchApiMessages.blocked(
+            needsSearchApiAutoConfiguration() ||
+                (shouldAdaptSearchApiToNetwork() && !isSearchApiUsableOnThisNetwork()),
+        )
 
     fun acceptDisclaimer(): Boolean {
         val ok = prefs.edit().putBoolean(KEY_DISCLAIMER, true).commit()
