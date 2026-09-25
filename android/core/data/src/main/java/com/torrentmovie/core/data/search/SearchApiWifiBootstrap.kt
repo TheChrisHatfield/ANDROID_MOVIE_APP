@@ -4,14 +4,16 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 
-/** Re-run Search API bootstrap when Wi‑Fi becomes available after cold start (FR-040). */
+/**
+ * Re-run Search API bind on Wi-Fi up/down, SSID/IPv4 change, or cellular (5G) (FR-040).
+ */
 class SearchApiWifiBootstrap(
     context: Context,
-    private val onWifiReady: () -> Unit,
+    private val onNetworkChanged: () -> Unit,
     private val shouldKeepListening: () -> Boolean,
 ) {
     private val appContext = context.applicationContext
@@ -19,25 +21,29 @@ class SearchApiWifiBootstrap(
         appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
     private val mainHandler = Handler(Looper.getMainLooper())
     private var registered = false
+    private val notifyRunnable = Runnable {
+        if (!shouldKeepListening()) {
+            unregister()
+            return@Runnable
+        }
+        onNetworkChanged()
+    }
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            val cm = connectivityManager ?: return
-            val onWifi = try {
-                cm.getNetworkCapabilities(network)
-                    ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-            } catch (_: Throwable) {
-                false
-            }
-            if (!onWifi) return
-            if (!shouldKeepListening()) {
-                unregister()
-                return
-            }
-            onWifiReady()
-            if (!shouldKeepListening()) {
-                unregister()
-            }
+            scheduleAdapt()
+        }
+
+        override fun onLost(network: Network) {
+            scheduleAdapt()
+        }
+
+        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+            scheduleAdapt()
+        }
+
+        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+            scheduleAdapt()
         }
     }
 
@@ -45,45 +51,38 @@ class SearchApiWifiBootstrap(
         if (registered) return
         val cm = connectivityManager ?: return
         try {
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-            // Handler form is API 26+ (our minSdk) and avoids binder-thread OEM crashes.
-            cm.registerNetworkCallback(request, callback, mainHandler)
+            // Default network covers Wi-Fi, Ethernet, and cellular/5G.
+            cm.registerDefaultNetworkCallback(callback, mainHandler)
             registered = true
-            if (shouldKeepListening() && isOnWifi(cm)) {
-                onWifiReady()
+            if (shouldKeepListening()) {
+                scheduleAdapt()
             }
         } catch (_: Throwable) {
             registered = false
         }
     }
 
-    private fun isOnWifi(cm: ConnectivityManager): Boolean {
-        return try {
-            val active = cm.activeNetwork
-            if (active != null &&
-                cm.getNetworkCapabilities(active)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-            ) {
-                return true
-            }
-            cm.allNetworks.any { network ->
-                cm.getNetworkCapabilities(network)
-                    ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-            }
-        } catch (_: Throwable) {
-            false
+    private fun scheduleAdapt() {
+        if (!shouldKeepListening()) {
+            unregister()
+            return
         }
+        mainHandler.removeCallbacks(notifyRunnable)
+        mainHandler.postDelayed(notifyRunnable, NETWORK_ADAPT_DEBOUNCE_MS)
     }
 
     fun unregister() {
         if (!registered) return
+        mainHandler.removeCallbacks(notifyRunnable)
         try {
             connectivityManager?.unregisterNetworkCallback(callback)
         } catch (_: Throwable) {
             // Already unregistered by the system or OEM ConnectivityManager stub.
         }
         registered = false
+    }
+
+    companion object {
+        internal const val NETWORK_ADAPT_DEBOUNCE_MS = 800L
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.torrentmovie.core.data.search.SearchApiAutoConfig
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
 import com.torrentmovie.core.data.seedbox.normalizeSeedboxUrl
 import java.net.URI
@@ -100,21 +101,53 @@ class SettingsRepository(
         return committed
     }
 
+    fun hasManualSearchApiOverride(): Boolean =
+        prefs.getBoolean(KEY_SEARCH_API_MANUAL, false)
+
     fun hasUserConfiguredSearchApi(): Boolean = prefs.contains(KEY_SEARCH_API)
 
-    /** Persist LAN/bundled bootstrap without overriding an explicit user save (FR-040). */
+    /** Persist operator-bundled Search API URL on first launch (FR-040), same as TMDB. */
+    fun applyBundledSearchApiIfNeeded(): Boolean {
+        if (!shouldAdaptSearchApiToNetwork()) return false
+        val url = bundledSearchApiUrlForBootstrap()
+        if (url.isBlank()) return false
+        if (load().searchApiBaseUrl.isNotBlank() && !needsSearchApiAutoConfiguration()) return false
+        return applyAutoConfiguredSearchApi(url)
+    }
+
+    /** Persist LAN/bundled bootstrap without overriding an explicit Settings URL (FR-040). */
     fun applyAutoConfiguredSearchApi(url: String): Boolean {
-        if (hasUserConfiguredSearchApi()) return false
+        if (!shouldAdaptSearchApiToNetwork()) return false
         val normalized = normalizeSearchApiUrl(url)
         if (normalized.isBlank()) return false
-        val committed = prefs.edit().putString(KEY_SEARCH_API, normalized).commit()
+        val previous = normalizeSearchApiUrl(prefs.getString(KEY_SEARCH_API, "") ?: "")
+        val committed = prefs.edit()
+            .putString(KEY_SEARCH_API, normalized)
+            .putBoolean(KEY_SEARCH_API_MANUAL, false)
+            .commit()
         if (!committed) return false
-        _searchApiBootstrapGeneration.value += 1
-        _revision.value += 1
+        if (previous != normalized) {
+            _searchApiBootstrapGeneration.value += 1
+            _revision.value += 1
+        }
         return true
     }
 
-    fun needsSearchApiAutoConfiguration(): Boolean = !hasUserConfiguredSearchApi()
+    fun needsSearchApiAutoConfiguration(): Boolean {
+        return SearchApiAutoConfig.needsInitialAutoConfiguration(
+            hasManualOverride = hasManualSearchApiOverride(),
+            storedSearchApiUrl = prefs.getString(KEY_SEARCH_API, null),
+            isEmulator = DeviceProfile.isEmulator(),
+        )
+    }
+
+    fun shouldAdaptSearchApiToNetwork(): Boolean {
+        return SearchApiAutoConfig.shouldAdaptToNetworkChanges(
+            hasManualOverride = hasManualSearchApiOverride(),
+            storedSearchApiUrl = prefs.getString(KEY_SEARCH_API, null),
+            isEmulator = DeviceProfile.isEmulator(),
+        )
+    }
 
     fun searchApiBlockedMessage(): String =
         SearchApiMessages.blocked(needsSearchApiAutoConfiguration())
@@ -147,11 +180,21 @@ class SettingsRepository(
         val downloadDir = settings.downloadDirectory.trim()
         val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
         val authScheme = normalizeAuthScheme(settings.authScheme)
+        val previousSearch = prefs.getString(KEY_SEARCH_API, null)
+        val wasManual = hasManualSearchApiOverride()
         val editor = prefs.edit()
         if (searchApiUrl.isBlank()) {
             editor.remove(KEY_SEARCH_API)
+            editor.putBoolean(KEY_SEARCH_API_MANUAL, false)
         } else {
+            val manual = SearchApiAutoConfig.manualFlagAfterSettingsSave(
+                previousStoredUrl = previousSearch,
+                newUrl = searchApiUrl,
+                wasManual = wasManual,
+                bundledUrl = bundledSearchApiUrlForBootstrap(),
+            )
             editor.putString(KEY_SEARCH_API, searchApiUrl)
+            editor.putBoolean(KEY_SEARCH_API_MANUAL, manual)
         }
         val tmdb = settings.tmdbApiKey.trim()
         if (tmdb.isBlank()) {
@@ -190,6 +233,7 @@ class SettingsRepository(
         }
 
         private const val KEY_SEARCH_API = "search_api_base_url"
+        private const val KEY_SEARCH_API_MANUAL = "search_api_manual"
         const val KEY_RUTORRENT_URL = "rutorrent_base_url"
         const val KEY_USERNAME = "username"
         const val KEY_PASSWORD = "password"

@@ -3,6 +3,7 @@ package com.torrentmovie.core.data
 import android.content.Context
 import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.search.LanNetworkAddress
+import com.torrentmovie.core.data.search.SearchApiAdaptQueue
 import com.torrentmovie.core.data.search.SearchApiBootstrap
 import com.torrentmovie.core.data.search.SearchApiLanDiscovery
 import com.torrentmovie.core.data.search.SearchApiWifiBootstrap
@@ -46,18 +47,18 @@ class AppContainer(
     )
 
     @Volatile
-    private var bootstrapThreadActive = false
-    @Volatile
     private var resolveInFlight = false
+    private val adaptQueue = SearchApiAdaptQueue()
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
-        onWifiReady = { bootstrapSearchApiIfNeeded() },
-        shouldKeepListening = { settingsRepository.needsSearchApiAutoConfiguration() },
+        onNetworkChanged = { adaptSearchApiToNetwork() },
+        shouldKeepListening = { settingsRepository.shouldAdaptSearchApiToNetwork() },
     )
 
     init {
         try {
             settingsRepository.applyBundledTmdbIfNeeded()
+            settingsRepository.applyBundledSearchApiIfNeeded()
         } catch (_: Throwable) {
             // Keystore / prefs OEM failures must not kill process create.
         }
@@ -67,9 +68,9 @@ class AppContainer(
 
     fun restartSearchApiBootstrapIfNeeded() {
         try {
-            if (settingsRepository.needsSearchApiAutoConfiguration()) {
+            if (settingsRepository.shouldAdaptSearchApiToNetwork()) {
                 wifiBootstrap.register()
-                bootstrapSearchApiIfNeeded()
+                adaptSearchApiToNetwork()
             } else {
                 wifiBootstrap.unregister()
             }
@@ -78,46 +79,51 @@ class AppContainer(
         }
     }
 
-    private fun bootstrapSearchApiIfNeeded() {
-        if (!settingsRepository.needsSearchApiAutoConfiguration()) return
-        if (bootstrapThreadActive) return
-        bootstrapThreadActive = true
+    private fun adaptSearchApiToNetwork() {
+        if (!settingsRepository.shouldAdaptSearchApiToNetwork()) return
+        if (!adaptQueue.tryStart()) return
         thread(name = "search-api-bootstrap") {
             try {
-                repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
-                    if (!settingsRepository.needsSearchApiAutoConfiguration()) {
-                        wifiBootstrap.unregister()
-                        return@thread
+                do {
+                    if (!settingsRepository.shouldAdaptSearchApiToNetwork()) break
+                    val current = settingsRepository.load().searchApiBaseUrl
+                    val currentHealthy = current.isNotBlank() &&
+                        SearchApiLanDiscovery.probeSearchApiBaseUrl(current)
+                    if (!currentHealthy) {
+                        repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
+                            if (!settingsRepository.shouldAdaptSearchApiToNetwork()) return@repeat
+                            if (resolveAndPersistSearchApi()) return@repeat
+                            if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
+                                Thread.sleep(BOOTSTRAP_RETRY_MS)
+                            }
+                        }
                     }
-                    if (resolveAndPersistSearchApi()) {
-                        wifiBootstrap.unregister()
-                        return@thread
-                    }
-                    if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
-                        Thread.sleep(BOOTSTRAP_RETRY_MS)
-                    }
-                }
+                } while (adaptQueue.consumeQueued())
             } catch (_: Throwable) {
                 // Never take down the process from bootstrap; search UI still loads.
             } finally {
-                bootstrapThreadActive = false
+                if (adaptQueue.finish()) {
+                    adaptSearchApiToNetwork()
+                }
             }
         }
     }
 
     private fun resolveAndPersistSearchApi(): Boolean {
-        if (!settingsRepository.needsSearchApiAutoConfiguration()) return false
+        if (!settingsRepository.shouldAdaptSearchApiToNetwork()) return false
         synchronized(this) {
             if (resolveInFlight) return false
             resolveInFlight = true
         }
         return try {
             val bundled = settingsRepository.bundledSearchApiUrlForBootstrap()
+            val current = settingsRepository.load().searchApiBaseUrl
             val resolved = SearchApiBootstrap.resolveAutoSearchApiUrl(
                 bundledSearchApiUrl = bundled,
                 isEmulator = DeviceProfile.isEmulator(),
                 wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext),
                 probeHealthy = SearchApiLanDiscovery::probeSearchApiBaseUrl,
+                currentUrl = current,
             )
             resolved != null && settingsRepository.applyAutoConfiguredSearchApi(resolved)
         } catch (_: Throwable) {

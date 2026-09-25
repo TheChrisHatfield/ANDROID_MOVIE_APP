@@ -192,6 +192,7 @@ fun SettingsScreen(container: AppContainer) {
                     return@Button
                 }
                 container.settingsRepository.applyBundledTmdbIfNeeded()
+                container.settingsRepository.applyBundledSearchApiIfNeeded()
                 container.restartSearchApiBootstrapIfNeeded()
                 saving = true
                 scope.launch {

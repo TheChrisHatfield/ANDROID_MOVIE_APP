@@ -35,7 +35,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 TMDB is pre-set in `gradle.properties` (`missysBundledTmdbApiKey`) and `services/search/operator_defaults.py` — keep those in sync. Optional overrides: `android/local.properties`, `services/search/.env`, or Settings.
 
-Optional hosted Search API: `missysBundledSearchApiUrl` in `gradle.properties`.
+Search API auto-install (FR-040): set `missysBundledSearchApiUrl` in `gradle.properties` or `local.properties`. If unset, **debug** APKs bake this PC’s LAN IPv4 as `http://<ip>:8765` so a phone on the same Wi-Fi does not need a manual Settings URL. TMDB is still `missysBundledTmdbApiKey`.
 
 ## Device E2E
 

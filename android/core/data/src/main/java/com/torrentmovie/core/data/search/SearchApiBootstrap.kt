@@ -11,7 +11,10 @@ object SearchApiBootstrap {
         wifiIpv4: String?,
         probeHealthy: (String) -> Boolean,
         discoverOnLan: (String) -> String? = SearchApiLanDiscovery::discoverOnLan,
+        currentUrl: String = "",
     ): String? {
+        val current = normalizeSearchApiUrl(currentUrl)
+        if (current.isNotBlank() && probeHealthy(current)) return current
         val bundled = normalizeSearchApiUrl(bundledSearchApiUrl)
         if (bundled.isNotBlank() && probeHealthy(bundled)) return bundled
         if (!wifiIpv4.isNullOrBlank()) {

@@ -43,6 +43,32 @@ class SearchApiBootstrapTest {
     }
 
     @Test
+    fun keepsHealthyCurrentUrlAcrossNetworkFlaps() {
+        val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
+            bundledSearchApiUrl = "http://bundled:8765",
+            isEmulator = false,
+            wifiIpv4 = "192.168.8.10",
+            probeHealthy = { it.contains("192.168.4.27") },
+            discoverOnLan = { "http://lan:8765" },
+            currentUrl = "http://192.168.4.27:8765",
+        )
+        assertEquals("http://192.168.4.27:8765", url)
+    }
+
+    @Test
+    fun skipsLanScanOnCellularWhenCurrentUnreachable() {
+        val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
+            bundledSearchApiUrl = "http://bundled:8765",
+            isEmulator = false,
+            wifiIpv4 = null,
+            probeHealthy = { it.contains("bundled") },
+            discoverOnLan = { error("LAN scan must not run on cellular") },
+            currentUrl = "http://192.168.4.27:8765",
+        )
+        assertEquals("http://bundled:8765", url)
+    }
+
+    @Test
     fun emulatorFallsBackToLoopbackWhenLanMissing() {
         val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
             bundledSearchApiUrl = "",

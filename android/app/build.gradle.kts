@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 plugins {
     alias(libs.plugins.android.application)
@@ -23,6 +24,29 @@ fun readMissysBuildProperty(name: String): String {
     return System.getenv(envName)?.trim().orEmpty()
 }
 
+fun detectLanSearchApiUrl(): String {
+    val ps = """
+        Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+          Where-Object {
+            ${'$'}_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)' -and
+            ${'$'}_.InterfaceAlias -notmatch 'vEthernet|Tailscale|WSL|VMware|VirtualBox|Bluetooth|Loopback|Hyper-V|Default Switch|Docker'
+          } |
+          Sort-Object @{Expression = { if (${'$'}_.PrefixOrigin -eq 'Dhcp') { 0 } else { 1 } }}, InterfaceMetric |
+          Select-Object -First 1 -ExpandProperty IPAddress
+    """.trimIndent()
+    val proc = ProcessBuilder("powershell", "-NoProfile", "-Command", ps)
+        .redirectErrorStream(true)
+        .start()
+    val finished = proc.waitFor(8, TimeUnit.SECONDS)
+    if (!finished) {
+        proc.destroyForcibly()
+        return ""
+    }
+    val ip = proc.inputStream.bufferedReader().readText().trim()
+    if (!ip.matches(Regex("""\d{1,3}(\.\d{1,3}){3}"""))) return ""
+    return "http://$ip:8765"
+}
+
 android {
     namespace = "com.torrentmovie.app"
     compileSdk = 34
@@ -34,8 +58,10 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         val bundledSearchApi = readMissysBuildProperty("missysBundledSearchApiUrl")
+            .ifBlank { detectLanSearchApiUrl() }
         val bundledTmdbApiKey = readMissysBuildProperty("missysBundledTmdbApiKey")
         buildConfigField("String", "BUNDLED_SEARCH_API_URL", "\"$bundledSearchApi\"")
+        logger.lifecycle("BUNDLED_SEARCH_API_URL=$bundledSearchApi")
         buildConfigField("String", "BUNDLED_TMDB_API_KEY", "\"$bundledTmdbApiKey\"")
     }
 
