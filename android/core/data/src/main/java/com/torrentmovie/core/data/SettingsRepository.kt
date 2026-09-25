@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.torrentmovie.core.data.search.LanNetworkAddress
 import com.torrentmovie.core.data.search.SearchApiAutoConfig
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
 import com.torrentmovie.core.data.seedbox.normalizeSeedboxUrl
@@ -107,12 +108,31 @@ class SettingsRepository(
     fun hasUserConfiguredSearchApi(): Boolean = prefs.contains(KEY_SEARCH_API)
 
     /** Persist operator-bundled Search API URL on first launch (FR-040), same as TMDB. */
-    fun applyBundledSearchApiIfNeeded(): Boolean {
+    fun applyBundledSearchApiIfNeeded(wifiIpv4: String? = null): Boolean {
         if (!shouldAdaptSearchApiToNetwork()) return false
         val url = bundledSearchApiUrlForBootstrap()
         if (url.isBlank()) return false
+        val host = SearchApiAutoConfig.ipv4Host(url)
+        if (host != null && !SearchApiAutoConfig.isOnWifiSubnet(url, wifiIpv4)) {
+            return false
+        }
         if (load().searchApiBaseUrl.isNotBlank() && !needsSearchApiAutoConfiguration()) return false
         return applyAutoConfiguredSearchApi(url)
+    }
+
+    fun clearAutoConfiguredSearchApi(): Boolean {
+        if (hasManualSearchApiOverride()) return false
+        val previous = normalizeSearchApiUrl(prefs.getString(KEY_SEARCH_API, "") ?: "")
+        val committed = prefs.edit()
+            .putString(KEY_SEARCH_API, "")
+            .putBoolean(KEY_SEARCH_API_MANUAL, false)
+            .commit()
+        if (!committed) return false
+        if (previous.isNotBlank()) {
+            _searchApiBootstrapGeneration.value += 1
+            _revision.value += 1
+        }
+        return true
     }
 
     /** Persist LAN/bundled bootstrap without overriding an explicit Settings URL (FR-040). */
@@ -165,13 +185,12 @@ class SettingsRepository(
     fun bundledSearchApiUrlForBootstrap(): String = normalizeSearchApiUrl(bundledSearchApiUrl)
 
     private fun defaultSearchApiUrl(): String {
-        val bundled = normalizeSearchApiUrl(bundledSearchApiUrl)
-        if (bundled.isNotBlank()) return bundled
-        return if (DeviceProfile.isEmulator()) {
-            AppSettings.EMULATOR_SEARCH_API
-        } else {
-            ""
-        }
+        return SearchApiAutoConfig.unpersistedDefaultUrl(
+            bundledUrl = bundledSearchApiUrl,
+            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
+            isEmulator = DeviceProfile.isEmulator(),
+            emulatorUrl = AppSettings.EMULATOR_SEARCH_API,
+        )
     }
 
     fun saveError(settings: AppSettings): String? = validateAppSettings(settings)

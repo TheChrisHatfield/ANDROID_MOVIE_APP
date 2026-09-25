@@ -14,12 +14,18 @@ object SearchApiBootstrap {
         currentUrl: String = "",
     ): String? {
         val current = normalizeSearchApiUrl(currentUrl)
-        if (current.isNotBlank() && probeHealthy(current)) return current
         val bundled = normalizeSearchApiUrl(bundledSearchApiUrl)
-        if (bundled.isNotBlank() && probeHealthy(bundled)) return bundled
+        if (SearchApiAutoConfig.isOnWifiSubnet(current, wifiIpv4) && probeHealthy(current)) {
+            return current
+        }
+        if (SearchApiAutoConfig.isOnWifiSubnet(bundled, wifiIpv4) && probeHealthy(bundled)) {
+            return bundled
+        }
         if (!wifiIpv4.isNullOrBlank()) {
             discoverOnLan(wifiIpv4)?.let { return it }
         }
+        if (current.isNotBlank() && probeHealthy(current)) return current
+        if (bundled.isNotBlank() && probeHealthy(bundled)) return bundled
         if (isEmulator) {
             val emulator = normalizeSearchApiUrl(AppSettings.EMULATOR_SEARCH_API)
             if (emulator.isNotBlank() && probeHealthy(emulator)) return emulator

@@ -1,11 +1,37 @@
 package com.torrentmovie.core.data.search
 
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
+import java.net.URI
 
 /** FR-040: first-install plus re-bind when Wi-Fi/SSID/cellular changes. */
 object SearchApiAutoConfig {
+    private val IPV4 = Regex("""^\d{1,3}(\.\d{1,3}){3}$""")
+
     fun isEmulatorLoopback(url: String): Boolean {
         return normalizeSearchApiUrl(url).contains("10.0.2.2")
+    }
+
+    fun ipv4Host(url: String): String? {
+        val normalized = normalizeSearchApiUrl(url)
+        if (normalized.isBlank()) return null
+        return try {
+            val host = URI(normalized).host?.trim().orEmpty()
+            host.takeIf { IPV4.matches(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun slash24(ipv4: String): String? {
+        val parts = ipv4.split('.')
+        if (parts.size != 4) return null
+        return "${parts[0]}.${parts[1]}.${parts[2]}"
+    }
+
+    fun isOnWifiSubnet(url: String, wifiIpv4: String?): Boolean {
+        if (wifiIpv4.isNullOrBlank()) return false
+        val host = ipv4Host(url) ?: return false
+        return slash24(host) != null && slash24(host) == slash24(wifiIpv4)
     }
 
     fun needsInitialAutoConfiguration(
@@ -52,4 +78,36 @@ object SearchApiAutoConfig {
     }
 
     fun shouldNotifyRebound(recoveredFromUnreachable: Boolean): Boolean = recoveredFromUnreachable
+
+    /**
+     * Unpersisted default: hosted bundled URLs always; RFC1918 only on that Wi-Fi /24.
+     */
+    fun unpersistedDefaultUrl(
+        bundledUrl: String,
+        wifiIpv4: String?,
+        isEmulator: Boolean,
+        emulatorUrl: String,
+    ): String {
+        val bundled = normalizeSearchApiUrl(bundledUrl)
+        if (bundled.isNotBlank()) {
+            val host = ipv4Host(bundled)
+            if (host == null) return bundled
+            if (isOnWifiSubnet(bundled, wifiIpv4)) return bundled
+        }
+        return if (isEmulator) emulatorUrl else ""
+    }
+
+    /** Keep a LAN URL only while the phone is still on that Wi-Fi subnet. */
+    fun shouldKeepCurrentUrl(
+        currentUrl: String,
+        wifiIpv4: String?,
+        currentHealthy: Boolean,
+    ): Boolean {
+        if (!currentHealthy || currentUrl.isBlank()) return false
+        val host = ipv4Host(currentUrl)
+        if (wifiIpv4.isNullOrBlank()) {
+            return host == null
+        }
+        return isOnWifiSubnet(currentUrl, wifiIpv4)
+    }
 }

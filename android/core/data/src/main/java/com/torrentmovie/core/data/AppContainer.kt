@@ -61,7 +61,9 @@ class AppContainer(
     init {
         try {
             settingsRepository.applyBundledTmdbIfNeeded()
-            settingsRepository.applyBundledSearchApiIfNeeded()
+            settingsRepository.applyBundledSearchApiIfNeeded(
+                wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext),
+            )
         } catch (_: Throwable) {
             // Keystore / prefs OEM failures must not kill process create.
         }
@@ -90,24 +92,30 @@ class AppContainer(
                 do {
                     if (!settingsRepository.shouldAdaptSearchApiToNetwork()) break
                     val current = settingsRepository.load().searchApiBaseUrl
+                    val wifiIpv4 = LanNetworkAddress.wifiIpv4(appContext)
                     val currentHealthy = current.isNotBlank() &&
                         SearchApiLanDiscovery.probeSearchApiBaseUrl(current)
-                    if (currentHealthy) {
+                    if (SearchApiAutoConfig.shouldKeepCurrentUrl(current, wifiIpv4, currentHealthy)) {
                         if (SearchApiAutoConfig.shouldNotifyRebound(lastAdaptUnreachable)) {
                             settingsRepository.markSearchApiRebound()
                         }
                         lastAdaptUnreachable = false
                     } else {
                         lastAdaptUnreachable = true
+                        var rebound = false
                         repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
                             if (!settingsRepository.shouldAdaptSearchApiToNetwork()) return@repeat
                             if (resolveAndPersistSearchApi()) {
                                 lastAdaptUnreachable = false
+                                rebound = true
                                 return@repeat
                             }
                             if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
                                 Thread.sleep(BOOTSTRAP_RETRY_MS)
                             }
+                        }
+                        if (!rebound) {
+                            clearStaleAutoLanUrl(current, wifiIpv4)
                         }
                     }
                 } while (adaptQueue.consumeQueued())
@@ -145,8 +153,17 @@ class AppContainer(
         }
     }
 
+    private fun clearStaleAutoLanUrl(current: String, wifiIpv4: String?) {
+        val host = SearchApiAutoConfig.ipv4Host(current) ?: return
+        if (SearchApiAutoConfig.slash24(host) == null) return
+        if (!wifiIpv4.isNullOrBlank() && SearchApiAutoConfig.isOnWifiSubnet(current, wifiIpv4)) {
+            return
+        }
+        settingsRepository.clearAutoConfiguredSearchApi()
+    }
+
     private companion object {
-        const val BOOTSTRAP_ATTEMPTS = 5
+        const val BOOTSTRAP_ATTEMPTS = 2
         const val BOOTSTRAP_RETRY_MS = 2_000L
     }
     val searchResultStore = SearchResultStore()

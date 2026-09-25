@@ -1,5 +1,6 @@
 package com.torrentmovie.core.data.search
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,8 +137,58 @@ class SearchApiAutoConfigTest {
     }
 
     @Test
-    fun shouldNotifyReboundAfterUnreachableNetwork() {
-        assertTrue(SearchApiAutoConfig.shouldNotifyRebound(recoveredFromUnreachable = true))
-        assertFalse(SearchApiAutoConfig.shouldNotifyRebound(recoveredFromUnreachable = false))
+    fun shouldKeepCurrentUrlOnlyOnSameWifiSubnet() {
+        assertTrue(
+            SearchApiAutoConfig.shouldKeepCurrentUrl(
+                currentUrl = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.4.10",
+                currentHealthy = true,
+            ),
+        )
+        assertFalse(
+            SearchApiAutoConfig.shouldKeepCurrentUrl(
+                currentUrl = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.8.10",
+                currentHealthy = true,
+            ),
+        )
+        assertFalse(
+            SearchApiAutoConfig.shouldKeepCurrentUrl(
+                currentUrl = "http://192.168.4.27:8765",
+                wifiIpv4 = null,
+                currentHealthy = true,
+            ),
+        )
+    }
+
+    @Test
+    fun unpersistedDefaultHidesOffSubnetLanBake() {
+        assertEquals(
+            "",
+            SearchApiAutoConfig.unpersistedDefaultUrl(
+                bundledUrl = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.8.10",
+                isEmulator = false,
+                emulatorUrl = "http://10.0.2.2:8765",
+            ),
+        )
+        assertEquals(
+            "http://192.168.4.27:8765",
+            SearchApiAutoConfig.unpersistedDefaultUrl(
+                bundledUrl = "http://192.168.4.27:8765",
+                wifiIpv4 = "192.168.4.10",
+                isEmulator = false,
+                emulatorUrl = "http://10.0.2.2:8765",
+            ),
+        )
+        assertEquals(
+            "http://search.example.com:8765",
+            SearchApiAutoConfig.unpersistedDefaultUrl(
+                bundledUrl = "http://search.example.com:8765",
+                wifiIpv4 = null,
+                isEmulator = false,
+                emulatorUrl = "http://10.0.2.2:8765",
+            ),
+        )
     }
 }

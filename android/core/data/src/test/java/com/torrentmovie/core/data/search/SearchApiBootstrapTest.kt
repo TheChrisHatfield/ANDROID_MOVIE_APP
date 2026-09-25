@@ -8,13 +8,13 @@ class SearchApiBootstrapTest {
     @Test
     fun prefersHealthyBundledUrl() {
         val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
-            bundledSearchApiUrl = "http://bundled:8765",
+            bundledSearchApiUrl = "http://search.example.com:8765",
             isEmulator = false,
             wifiIpv4 = "192.168.1.10",
-            probeHealthy = { it.contains("bundled") },
-            discoverOnLan = { "http://lan:8765" },
+            probeHealthy = { it.contains("search.example.com") },
+            discoverOnLan = { null },
         )
-        assertEquals("http://bundled:8765", url)
+        assertEquals("http://search.example.com:8765", url)
     }
 
     @Test
@@ -43,11 +43,24 @@ class SearchApiBootstrapTest {
     }
 
     @Test
-    fun keepsHealthyCurrentUrlAcrossNetworkFlaps() {
+    fun rediscoversLanWhenWifiSubnetChanges() {
         val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
-            bundledSearchApiUrl = "http://bundled:8765",
+            bundledSearchApiUrl = "http://192.168.4.27:8765",
             isEmulator = false,
             wifiIpv4 = "192.168.8.10",
+            probeHealthy = { it.contains("192.168.4.27") },
+            discoverOnLan = { "http://192.168.8.5:8765" },
+            currentUrl = "http://192.168.4.27:8765",
+        )
+        assertEquals("http://192.168.8.5:8765", url)
+    }
+
+    @Test
+    fun keepsHealthyCurrentUrlOnSameWifiSubnet() {
+        val url = SearchApiBootstrap.resolveAutoSearchApiUrl(
+            bundledSearchApiUrl = "http://192.168.4.1:8765",
+            isEmulator = false,
+            wifiIpv4 = "192.168.4.10",
             probeHealthy = { it.contains("192.168.4.27") },
             discoverOnLan = { "http://lan:8765" },
             currentUrl = "http://192.168.4.27:8765",
