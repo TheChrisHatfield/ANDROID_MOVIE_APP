@@ -120,17 +120,19 @@ class SettingsRepository(
         if (!shouldAdaptSearchApiToNetwork()) return false
         val normalized = normalizeSearchApiUrl(url)
         if (normalized.isBlank()) return false
-        val previous = normalizeSearchApiUrl(prefs.getString(KEY_SEARCH_API, "") ?: "")
         val committed = prefs.edit()
             .putString(KEY_SEARCH_API, normalized)
             .putBoolean(KEY_SEARCH_API_MANUAL, false)
             .commit()
         if (!committed) return false
-        if (previous != normalized) {
-            _searchApiBootstrapGeneration.value += 1
-            _revision.value += 1
-        }
+        _searchApiBootstrapGeneration.value += 1
+        _revision.value += 1
         return true
+    }
+
+    fun markSearchApiRebound() {
+        _searchApiBootstrapGeneration.value += 1
+        _revision.value += 1
     }
 
     fun needsSearchApiAutoConfiguration(): Boolean {

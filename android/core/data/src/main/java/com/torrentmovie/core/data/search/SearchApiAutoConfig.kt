@@ -50,4 +50,6 @@ object SearchApiAutoConfig {
         if (isEmulatorLoopback(newNorm)) return false
         return true
     }
+
+    fun shouldNotifyRebound(recoveredFromUnreachable: Boolean): Boolean = recoveredFromUnreachable
 }

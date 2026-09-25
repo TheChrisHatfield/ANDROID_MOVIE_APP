@@ -4,6 +4,7 @@ import android.content.Context
 import com.torrentmovie.core.data.db.AppDatabase
 import com.torrentmovie.core.data.search.LanNetworkAddress
 import com.torrentmovie.core.data.search.SearchApiAdaptQueue
+import com.torrentmovie.core.data.search.SearchApiAutoConfig
 import com.torrentmovie.core.data.search.SearchApiBootstrap
 import com.torrentmovie.core.data.search.SearchApiLanDiscovery
 import com.torrentmovie.core.data.search.SearchApiWifiBootstrap
@@ -48,6 +49,8 @@ class AppContainer(
 
     @Volatile
     private var resolveInFlight = false
+    @Volatile
+    private var lastAdaptUnreachable = false
     private val adaptQueue = SearchApiAdaptQueue()
     private val wifiBootstrap = SearchApiWifiBootstrap(
         context = context,
@@ -89,10 +92,19 @@ class AppContainer(
                     val current = settingsRepository.load().searchApiBaseUrl
                     val currentHealthy = current.isNotBlank() &&
                         SearchApiLanDiscovery.probeSearchApiBaseUrl(current)
-                    if (!currentHealthy) {
+                    if (currentHealthy) {
+                        if (SearchApiAutoConfig.shouldNotifyRebound(lastAdaptUnreachable)) {
+                            settingsRepository.markSearchApiRebound()
+                        }
+                        lastAdaptUnreachable = false
+                    } else {
+                        lastAdaptUnreachable = true
                         repeat(BOOTSTRAP_ATTEMPTS) { attempt ->
                             if (!settingsRepository.shouldAdaptSearchApiToNetwork()) return@repeat
-                            if (resolveAndPersistSearchApi()) return@repeat
+                            if (resolveAndPersistSearchApi()) {
+                                lastAdaptUnreachable = false
+                                return@repeat
+                            }
                             if (attempt < BOOTSTRAP_ATTEMPTS - 1) {
                                 Thread.sleep(BOOTSTRAP_RETRY_MS)
                             }

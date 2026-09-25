@@ -134,4 +134,10 @@ class SearchApiAutoConfigTest {
             ),
         )
     }
+
+    @Test
+    fun shouldNotifyReboundAfterUnreachableNetwork() {
+        assertTrue(SearchApiAutoConfig.shouldNotifyRebound(recoveredFromUnreachable = true))
+        assertFalse(SearchApiAutoConfig.shouldNotifyRebound(recoveredFromUnreachable = false))
+    }
 }
