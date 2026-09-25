@@ -41,11 +41,14 @@ fun SettingsScreen(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var settings by remember { mutableStateOf(container.settingsRepository.load()) }
+    var lastLoaded by remember { mutableStateOf(settings) }
     var saving by remember { mutableStateOf(false) }
     val settingsRevision by container.settingsRepository.revision.collectAsState()
 
     LaunchedEffect(settingsRevision) {
-        settings = container.settingsRepository.load()
+        val incoming = container.settingsRepository.load()
+        settings = mergeSettingsKeepingEdits(settings, lastLoaded, incoming)
+        lastLoaded = incoming
     }
 
     ResponsiveContent(scroll = true) {

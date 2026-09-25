@@ -1,5 +1,6 @@
 package com.torrentmovie.app.ui.settings
 
+import com.torrentmovie.core.data.AppSettings
 import com.torrentmovie.core.data.seedbox.SeedboxProbeResult
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -37,5 +38,22 @@ class SettingsSaveTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun bootstrapRevisionDoesNotWipeTypedSearchApi() {
+        val last = AppSettings(searchApiBaseUrl = "http://192.168.4.27:8765")
+        val draft = last.copy(searchApiBaseUrl = "http://192.168.8.")
+        val incoming = last.copy(searchApiBaseUrl = "http://192.168.8.5:8765")
+        val merged = mergeSettingsKeepingEdits(draft, last, incoming)
+        assertEquals("http://192.168.8.", merged.searchApiBaseUrl)
+    }
+
+    @Test
+    fun uneditedSearchApiTakesAutoDiscoveredUrl() {
+        val last = AppSettings(searchApiBaseUrl = "")
+        val incoming = last.copy(searchApiBaseUrl = "http://192.168.8.5:8765")
+        val merged = mergeSettingsKeepingEdits(last, last, incoming)
+        assertEquals("http://192.168.8.5:8765", merged.searchApiBaseUrl)
     }
 }
