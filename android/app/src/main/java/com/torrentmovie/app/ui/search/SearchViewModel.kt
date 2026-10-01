@@ -57,7 +57,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private fun searchSettingsKey(): String {
         val settings = container.settingsRepository.load()
         return listOf(
-            settings.searchApiBaseUrl,
             settings.tmdbApiKey,
             settings.searchPages.toString(),
             settings.movieSitesOnly.toString(),
@@ -72,7 +71,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         lastSearchSettingsKey = searchSettingsKey()
         viewModelScope.launch {
             var observedSettingsKey: String? = null
-            var observedBootstrapGen = 0
             container.settingsRepository.revision.collect {
                 val settings = container.settingsRepository.load()
                 val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
@@ -85,28 +83,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     _state.value.activeBrowseFeed != null ||
                     _state.value.activeGenre != null
                 val settingsChanged = observedSettingsKey != null && key != observedSettingsKey
-                val apiReadyAfterBootstrap = observedSettingsKey == null &&
-                    shouldRefreshAfterSearchApiBootstrap(
-                        modeActive = modeActive,
-                        searchApiBaseUrl = settings.searchApiBaseUrl,
-                        errorMessage = _state.value.error,
-                    )
-                val bootstrapGen = container.settingsRepository.searchApiBootstrapGeneration.value
-                val bootstrapJustPersisted = bootstrapGen > observedBootstrapGen
-                if (bootstrapJustPersisted) {
-                    observedBootstrapGen = bootstrapGen
-                }
-                val retryAfterBootstrapPersist = bootstrapJustPersisted &&
-                    shouldRefreshAfterBootstrapPersist(modeActive, _state.value.error)
                 observedSettingsKey = key
-                if (
-                    bootstrapJustPersisted || settingsChanged
-                ) {
+                if (settingsChanged) {
                     refreshSearchSuggestions(_state.value.query)
                 }
-                if ((settingsChanged || apiReadyAfterBootstrap || retryAfterBootstrapPersist) &&
-                    modeActive
-                ) {
+                if (settingsChanged && modeActive) {
                     _state.value = _state.value.copy(
                         loading = true,
                         error = null,
@@ -722,25 +703,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 group.releases.any { !it.posterUrl.isNullOrBlank() }
         }
         val hasBundledTmdb = container.settingsRepository.hasBundledTmdbApiKey()
-        val serverTmdbConfigured = if (
-            shouldProbeServerTmdb(
-                fetchMovieMetadata = settings.fetchMovieMetadata,
-                groupsPresent = display.groups.isNotEmpty(),
-                anyPosterInGroups = anyPoster,
-                clientTmdbKeyBlank = settings.tmdbApiKey.isBlank(),
-                hasBundledTmdbApiKey = hasBundledTmdb,
-            )
-        ) {
-            try {
-                container.searchRepository.isTmdbConfigured()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                false
-            }
-        } else {
-            true
-        }
+        val serverTmdbConfigured = settings.tmdbApiKey.isNotBlank()
         val needsTmdbSetup = shouldShowTmdbSetupHint(
             fetchMovieMetadata = settings.fetchMovieMetadata,
             groupsPresent = display.groups.isNotEmpty(),

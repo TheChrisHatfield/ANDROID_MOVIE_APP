@@ -14,7 +14,9 @@ internal class IndexerHttp(
         .followRedirects(true)
         .build()
 
-    fun get(url: String): ByteArray? {
+    fun get(url: String): ByteArray? = getText(url)?.toByteArray(Charsets.UTF_8)
+
+    fun getText(url: String): String? {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -23,14 +25,12 @@ internal class IndexerHttp(
         return try {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
-                response.body?.bytes()
+                response.body?.string()
             }
         } catch (_: Exception) {
             null
         }
     }
-
-    fun getText(url: String): String? = get(url)?.toString(Charsets.UTF_8)
 
     companion object {
         const val USER_AGENT =
