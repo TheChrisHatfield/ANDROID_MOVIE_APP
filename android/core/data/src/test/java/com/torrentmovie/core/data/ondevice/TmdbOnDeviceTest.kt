@@ -72,4 +72,25 @@ class TmdbOnDeviceTest {
             server.shutdown()
         }
     }
+
+    @Test
+    fun lookupPreferTvUsesTvSearchEvenWhenCatalogIsMovies() {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"results":[]}"""))
+        server.start()
+        try {
+            val tmdb = TmdbOnDevice(
+                http = IndexerHttp(OkHttpClient()),
+                apiKey = "k",
+                apiBase = server.url("/").toString().trimEnd('/'),
+                searchTv = false,
+            )
+            tmdb.lookup("The Office", 2005, preferTv = true)
+            val path = server.takeRequest().path.orEmpty()
+            assertTrue(path.contains("/search/tv"))
+            assertTrue(path.contains("first_air_date_year=2005"))
+        } finally {
+            server.shutdown()
+        }
+    }
 }

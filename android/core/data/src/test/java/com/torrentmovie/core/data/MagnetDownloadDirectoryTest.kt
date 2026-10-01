@@ -34,6 +34,15 @@ class MagnetDownloadDirectoryTest {
     }
 
     @Test
+    fun hdtvMovieRipStaysInMoviesFolder() {
+        val settings = AppSettings()
+        assertEquals(
+            AppSettings.DEFAULT_DOWNLOAD_DIR,
+            settings.magnetDownloadDirectory("Some Movie 2012 720p HDTV x264"),
+        )
+    }
+
+    @Test
     fun rejectsRelativeTvFolder() {
         assertEquals(
             "TV download folder must be an absolute path (start with /)",

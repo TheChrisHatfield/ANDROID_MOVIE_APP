@@ -24,6 +24,17 @@ internal class IndexerHttp(
     }
 
     fun fetch(url: String): HttpTextResult {
+        val first = fetchOnce(url)
+        if (first.code in 200..299 || first.code == 401 || first.code == 403) {
+            return first
+        }
+        if (first.code == -1 || first.code == 429 || first.code == 503) {
+            return fetchOnce(url)
+        }
+        return first
+    }
+
+    private fun fetchOnce(url: String): HttpTextResult {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)

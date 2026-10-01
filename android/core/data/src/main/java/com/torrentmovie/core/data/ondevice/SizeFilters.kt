@@ -6,7 +6,7 @@ import java.util.Locale
 internal object SizeFilters {
     private val thousands = Regex("(?<=\\d),(?=\\d{3})")
     private val tvShow = Regex(
-        """\b(?:s\d{1,2}e\d{1,2}|s\d{1,2}(?!\d)|season\s+\d+|complete\s+series|complete\s+season|tv\s+series|episodes?\s+\d+|mini\s*series|\d{1,2}x\d{2}|hdtv)\b""",
+        """\b(?:s\d{1,2}e\d{1,2}|s\d{1,2}(?!\d)|season\s+\d+|complete\s+series|complete\s+season|tv\s+series|episodes?\s+\d+|mini\s*series|\d{1,2}x\d{2})\b""",
         RegexOption.IGNORE_CASE,
     )
     private val software = Regex(

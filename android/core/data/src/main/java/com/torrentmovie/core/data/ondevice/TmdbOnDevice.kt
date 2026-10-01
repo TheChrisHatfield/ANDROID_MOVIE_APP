@@ -36,12 +36,17 @@ internal class TmdbOnDevice(
         }
     }
 
-    fun searchMovies(query: String, limit: Int, year: Int? = null): List<TmdbMovie> {
+    fun searchMovies(
+        query: String,
+        limit: Int,
+        year: Int? = null,
+        useTv: Boolean = searchTv,
+    ): List<TmdbMovie> {
         if (!configured) return emptyList()
         val q = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
-        val media = if (searchTv) "tv" else "movie"
+        val media = if (useTv) "tv" else "movie"
         val yearQs = year?.takeIf { it in 1900..2100 }?.let {
-            if (searchTv) "&first_air_date_year=$it" else "&year=$it&primary_release_year=$it"
+            if (useTv) "&first_air_date_year=$it" else "&year=$it&primary_release_year=$it"
         }.orEmpty()
         val url = "$apiBase/search/$media?api_key=$apiKey&query=$q$yearQs"
         val fetched = http.fetch(url)
@@ -67,8 +72,13 @@ internal class TmdbOnDevice(
         return parseMovieList(body, limit)
     }
 
-    fun lookup(title: String, year: Int?, fetchTrailer: Boolean = false): TmdbMovie? {
-        val hits = searchMovies(title, 5, year = year)
+    fun lookup(
+        title: String,
+        year: Int?,
+        fetchTrailer: Boolean = false,
+        preferTv: Boolean = searchTv,
+    ): TmdbMovie? {
+        val hits = searchMovies(title, 5, year = year, useTv = preferTv)
         if (hits.isEmpty()) return null
         val match = if (year != null) {
             hits.firstOrNull { it.year == year } ?: hits.first()
@@ -76,11 +86,11 @@ internal class TmdbOnDevice(
             hits.first()
         }
         if (!fetchTrailer) return match
-        return match.copy(trailerKey = trailer(match.tmdbId) ?: match.trailerKey)
+        return match.copy(trailerKey = trailer(match.tmdbId, preferTv) ?: match.trailerKey)
     }
 
-    private fun trailer(tmdbId: Int): String? {
-        val media = if (searchTv) "tv" else "movie"
+    private fun trailer(tmdbId: Int, useTv: Boolean = searchTv): String? {
+        val media = if (useTv) "tv" else "movie"
         val url = "$apiBase/$media/$tmdbId/videos?api_key=$apiKey"
         val fetched = http.fetch(url)
         if (fetched.code == 401 || fetched.code == 403) {

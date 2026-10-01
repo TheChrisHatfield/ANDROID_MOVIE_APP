@@ -255,6 +255,10 @@ class SettingsRepository(
         return ok
     }
 
+    fun saveContentFilter(filter: SearchContentFilter): Boolean {
+        return save(load().copy(contentFilter = filter))
+    }
+
     fun isSeedboxConfigured(): Boolean {
         val s = load()
         return s.rutorrentBaseUrl.isNotBlank() && s.username.isNotBlank() && s.password.isNotBlank()

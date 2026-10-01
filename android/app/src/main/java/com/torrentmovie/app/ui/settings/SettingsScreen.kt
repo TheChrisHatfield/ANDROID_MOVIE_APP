@@ -83,7 +83,11 @@ fun SettingsScreen(container: AppContainer) {
                 val selected = settings.contentFilter == value
                 FilterChip(
                     selected = selected,
-                    onClick = { settings = settings.copy(contentFilter = value) },
+                    onClick = {
+                        settings = settings.copy(contentFilter = value)
+                        lastLoaded = lastLoaded.copy(contentFilter = value)
+                        container.settingsRepository.saveContentFilter(value)
+                    },
                     label = { Text(label) },
                     colors = missyFilterChipColors(),
                     border = missyFilterChipBorder(selected = selected, enabled = true),

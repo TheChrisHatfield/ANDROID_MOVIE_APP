@@ -177,6 +177,16 @@ class SizeFilterTest {
     }
 
     @Test
+    fun hdtvAloneIsNotATvShow() {
+        org.junit.Assert.assertFalse(
+            SizeFilters.isLikelyTvShow("Some Movie 2012 720p HDTV x264"),
+        )
+        org.junit.Assert.assertTrue(
+            SizeFilters.isLikelyTvShow("The Office S05E03 720p HDTV"),
+        )
+    }
+
+    @Test
     fun seedCountReadsKiloAndTrailingLabel() {
         org.junit.Assert.assertEquals(1200, SizeFilters.seedCount("1.2K"))
         org.junit.Assert.assertEquals(12, SizeFilters.seedCount("12 seeds"))

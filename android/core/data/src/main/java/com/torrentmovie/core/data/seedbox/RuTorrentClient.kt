@@ -116,7 +116,9 @@ class RuTorrentClient(
             return when {
                 text.contains("FailedDirectory", ignoreCase = true) ||
                     location.contains("FailedDirectory", ignoreCase = true) ->
-                    SeedboxResult.Failure("Invalid download directory")
+                    SeedboxResult.Failure(
+                        "Invalid download directory — check Magnet download folder (movies) and (TV shows) in Settings",
+                    )
                 else -> SeedboxResult.Failure("ruTorrent rejected magnet")
             }
         }

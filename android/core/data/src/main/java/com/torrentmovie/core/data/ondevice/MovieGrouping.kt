@@ -41,6 +41,7 @@ internal object MovieGrouping {
                             fetchTrailer = buckets[key].orEmpty().none {
                                 !it.second.trailerYoutubeKey.isNullOrBlank()
                             },
+                            preferTv = SizeFilters.isLikelyTvShow(firstRow.name),
                         )?.let { lookups[key] = it }
                     }
                 }.forEach { it.get() }

@@ -1,6 +1,7 @@
 package com.torrentmovie.app.ui.settings
 
 import com.torrentmovie.core.data.AppSettings
+import com.torrentmovie.core.data.SearchContentFilter
 import com.torrentmovie.core.data.seedbox.SeedboxProbeResult
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -47,6 +48,15 @@ class SettingsSaveTest {
         val incoming = last.copy(searchApiBaseUrl = "http://192.168.8.5:8765")
         val merged = mergeSettingsKeepingEdits(draft, last, incoming)
         assertEquals("http://192.168.8.", merged.searchApiBaseUrl)
+    }
+
+    @Test
+    fun contentFilterChipChangeIsKeptWhenBootstrapMerges() {
+        val last = AppSettings(contentFilter = SearchContentFilter.MOVIES)
+        val draft = last.copy(contentFilter = SearchContentFilter.TV)
+        val incoming = last.copy(searchApiBaseUrl = "http://192.168.8.5:8765")
+        val merged = mergeSettingsKeepingEdits(draft, last, incoming)
+        assertEquals(SearchContentFilter.TV, merged.contentFilter)
     }
 
     @Test
