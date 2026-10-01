@@ -29,4 +29,32 @@ class OnDeviceMagnetResolveTest {
             server.shutdown()
         }
     }
+
+    @Test
+    fun cachedRowWithoutDetailUrlStillUsesCallerDetailPage() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setBody(
+                """<html><a href="magnet:?xt=urn:btih:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb">dl</a></html>""",
+            ),
+        )
+        server.start()
+        try {
+            val cache = ResultCache()
+            cache.rememberRow(
+                "cached-id",
+                IndexerRow(name = "Inception", site = "1337x", magnet = null, detailUrl = null),
+            )
+            val engine = OnDeviceSearchEngine(IndexerHttp(OkHttpClient()), cache)
+            val resolved = engine.resolveMagnet(
+                resultId = "cached-id",
+                detailUrl = server.url("/torrent/2").toString(),
+                site = "1337x",
+                name = "Inception",
+            )
+            assertTrue(resolved.magnet.startsWith("magnet:?xt=urn:btih:bbbb"))
+        } finally {
+            server.shutdown()
+        }
+    }
 }

@@ -7,9 +7,9 @@ import com.torrentmovie.core.network.MagnetResponseDto
 
 internal class OnDeviceSearchEngine(
     private val http: IndexerHttp = IndexerHttp(),
+    private val cache: ResultCache = ResultCache(),
 ) {
     private val indexers = MovieIndexers(http)
-    private val cache = ResultCache()
 
     fun suggest(query: String, tmdbKey: String, limit: Int): List<MovieSearchSuggestion> {
         if (!TmdbOnDevice(http, tmdbKey).configured) return emptyList()
@@ -87,7 +87,7 @@ internal class OnDeviceSearchEngine(
                 extra.shutdownNow()
             }
         }
-        return finish(raw, emptyList(), limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey)
+        return finish(raw, emptyList(), limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey, tmdb = tmdb)
     }
 
     fun resolveMagnet(
@@ -98,17 +98,26 @@ internal class OnDeviceSearchEngine(
     ): MagnetResponseDto {
         cache.magnet(resultId)?.let { return it }
         val cachedRow = cache.row(resultId)
-        val row = cachedRow ?: run {
-            val url = detailUrl?.trim().orEmpty()
-            if (url.isBlank()) {
-                throw SearchException("Result not found or expired", 404)
-            }
-            IndexerRow(
-                name = name?.takeIf { it.isNotBlank() } ?: "-",
-                site = site?.trim().orEmpty(),
-                magnet = null,
-                detailUrl = url,
-            )
+        val url = cachedRow?.detailUrl?.takeIf { it.isNotBlank() }
+            ?: detailUrl?.trim()?.takeIf { it.isNotBlank() }
+        val row = IndexerRow(
+            name = cachedRow?.name?.takeIf { it.isNotBlank() }
+                ?: name?.takeIf { it.isNotBlank() }
+                ?: "-",
+            site = cachedRow?.site?.takeIf { it.isNotBlank() }
+                ?: site?.trim().orEmpty(),
+            size = cachedRow?.size ?: "-",
+            seeds = cachedRow?.seeds ?: "-",
+            leeches = cachedRow?.leeches ?: "-",
+            date = cachedRow?.date ?: "-",
+            magnet = cachedRow?.magnet,
+            detailUrl = url,
+            posterUrl = cachedRow?.posterUrl,
+            overview = cachedRow?.overview,
+            trailerYoutubeKey = cachedRow?.trailerYoutubeKey,
+        )
+        if (row.magnet.isNullOrBlank() && url.isNullOrBlank()) {
+            throw SearchException("Result not found or expired", 404)
         }
         val magnet = indexers.resolveMagnet(row)
             ?: throw SearchException("Magnet unavailable", 404)
@@ -128,6 +137,7 @@ internal class OnDeviceSearchEngine(
         enrich: Boolean,
         tmdbKey: String,
         interleave: Boolean = true,
+        tmdb: TmdbOnDevice? = null,
     ): SearchResult {
         val filtered = try {
             SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, movieProfile)
@@ -145,16 +155,21 @@ internal class OnDeviceSearchEngine(
             throw SearchException("No sources available", 503)
         }
         if (ordered.isEmpty()) {
-            return SearchResult(emptyList(), failed, emptyList())
+            return SearchResult(
+                results = emptyList(),
+                failedSites = failed,
+                groups = emptyList(),
+                tmdbKeyRejected = tmdb?.keyRejected == true,
+            )
         }
         val dtos = cache.remember(ordered)
-        val tmdb = TmdbOnDevice(http, tmdbKey)
-        val grouping = MovieGrouping.group(dtos, ordered, tmdb, enrich)
+        val tmdbClient = tmdb ?: TmdbOnDevice(http, tmdbKey)
+        val grouping = MovieGrouping.group(dtos, ordered, tmdbClient, enrich)
         return SearchResult(
             results = dtos,
             failedSites = failed,
             groups = grouping.groups,
-            tmdbKeyRejected = tmdb.keyRejected,
+            tmdbKeyRejected = tmdbClient.keyRejected,
             tmdbEnrichmentCapped = grouping.enrichmentCapped,
         )
     }

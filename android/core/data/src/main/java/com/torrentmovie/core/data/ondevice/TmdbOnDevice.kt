@@ -25,7 +25,7 @@ internal class TmdbOnDevice(
 
     fun suggest(query: String, limit: Int): List<MovieSearchSuggestion> {
         if (!configured || query.trim().length < 2) return emptyList()
-        return searchMovies(query, limit).map {
+        return searchMovies(query, limit, year = null).map {
             MovieSearchSuggestion(
                 tmdbId = it.tmdbId,
                 title = it.title,
@@ -35,10 +35,11 @@ internal class TmdbOnDevice(
         }
     }
 
-    fun searchMovies(query: String, limit: Int): List<TmdbMovie> {
+    fun searchMovies(query: String, limit: Int, year: Int? = null): List<TmdbMovie> {
         if (!configured) return emptyList()
         val q = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
-        val url = "$apiBase/search/movie?api_key=$apiKey&query=$q"
+        val yearQs = year?.takeIf { it in 1900..2100 }?.let { "&year=$it&primary_release_year=$it" }.orEmpty()
+        val url = "$apiBase/search/movie?api_key=$apiKey&query=$q$yearQs"
         val fetched = http.fetch(url)
         if (fetched.code == 401 || fetched.code == 403) {
             keyRejected = true
@@ -62,7 +63,7 @@ internal class TmdbOnDevice(
     }
 
     fun lookup(title: String, year: Int?, fetchTrailer: Boolean = false): TmdbMovie? {
-        val hits = searchMovies(title, 5)
+        val hits = searchMovies(title, 5, year = year)
         if (hits.isEmpty()) return null
         val match = if (year != null) {
             hits.firstOrNull { it.year == year } ?: hits.first()
@@ -82,13 +83,16 @@ internal class TmdbOnDevice(
         }
         val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return null
         return try {
-            val results = JsonParser.parseString(body).asJsonObject.getAsJsonArray("results") ?: return null
-            results.map { it.asJsonObject }
+            val resultsEl = JsonParser.parseString(body).asJsonObject.get("results")
+            if (resultsEl == null || !resultsEl.isJsonArray) return null
+            resultsEl.asJsonArray.mapNotNull { el ->
+                runCatching { el.asJsonObject }.getOrNull()
+            }
                 .firstOrNull { obj ->
-                    obj.get("site")?.asString.equals("YouTube", true) &&
-                        obj.get("type")?.asString.equals("Trailer", true)
+                    MovieIndexers.jsonPrimitiveString(obj, "site").equals("YouTube", true) &&
+                        MovieIndexers.jsonPrimitiveString(obj, "type").equals("Trailer", true)
                 }
-                ?.get("key")?.asString
+                ?.let { MovieIndexers.jsonPrimitiveString(it, "key") }
                 ?.takeIf { it.length == 11 }
         } catch (_: Exception) {
             null
