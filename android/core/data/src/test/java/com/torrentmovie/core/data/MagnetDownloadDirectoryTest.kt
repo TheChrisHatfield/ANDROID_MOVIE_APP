@@ -34,6 +34,22 @@ class MagnetDownloadDirectoryTest {
     }
 
     @Test
+    fun groupedShowTitleUsesTvFolderWhenReleaseLooksLikeAnEpisode() {
+        val settings = AppSettings()
+        assertEquals(
+            AppSettings.DEFAULT_DOWNLOAD_DIR,
+            settings.magnetDownloadDirectory("The Office"),
+        )
+        assertEquals(
+            AppSettings.DEFAULT_TV_DOWNLOAD_DIR,
+            settings.magnetDownloadDirectory(
+                "The Office",
+                "The.Office.S05E03.720p.HDTV.x264",
+            ),
+        )
+    }
+
+    @Test
     fun hdtvMovieRipStaysInMoviesFolder() {
         val settings = AppSettings()
         assertEquals(

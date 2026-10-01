@@ -70,7 +70,10 @@ fun TorrentDetailScreen(
     val seedboxConfigured = settings.rutorrentBaseUrl.isNotBlank() &&
         settings.username.isNotBlank() &&
         settings.password.isNotBlank()
-    val downloadDirConfigured = settings.magnetDownloadDirectory(name).isNotBlank()
+    val storedReleaseName = remember(resultId, settingsRevision) {
+        container.searchResultStore.get(resultId)?.name
+    }
+    val downloadDirConfigured = settings.magnetDownloadDirectory(name, storedReleaseName).isNotBlank()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     val metadataRevision by container.movieMetadataStore.revision.collectAsState()
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
@@ -305,7 +308,8 @@ fun TorrentDetailScreen(
                         scope.launch {
                             try {
                                 val result = withContext(Dispatchers.IO) {
-                                    container.seedboxRepository.addMagnet(m, name, site)
+                                    val releaseName = container.searchResultStore.get(resultId)?.name
+                                    container.seedboxRepository.addMagnet(m, name, site, releaseName)
                                 }
                                 when (result) {
                                     is SeedboxResult.Success -> {

@@ -20,6 +20,17 @@ class TitleParseTest {
         org.junit.Assert.assertNull(year)
         assertEquals("the-office", TitleParse.groupKey(title, year))
     }
+
+    @Test
+    fun stripsCompleteSeasonPacksAndHdtvTag() {
+        val (pack, _) = TitleParse.parse("Breaking Bad Season 1 Complete 1080p")
+        assertEquals("Breaking Bad", pack)
+        val (series, _) = TitleParse.parse("Breaking Bad Complete Series")
+        assertEquals("Breaking Bad", series)
+        val (hdtvMovie, year) = TitleParse.parse("Some Movie 2012 720p HDTV x264")
+        assertEquals("Some Movie", hdtvMovie)
+        assertEquals(2012, year)
+    }
 }
 
 class MovieIndexerParseTest {

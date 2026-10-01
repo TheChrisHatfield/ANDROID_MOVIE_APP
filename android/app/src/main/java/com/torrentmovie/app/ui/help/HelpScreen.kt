@@ -19,6 +19,6 @@ fun HelpScreen() {
         Text("1. Search runs on this phone — needs internet (Wi-Fi or cellular), not a PC Search API")
         Text("2. Optional TMDB API key in Settings for posters, trailers, and title suggestions (stock builds already include a key)")
         Text("3. Configure ruTorrent URL, credentials, movie folder, and TV-show magnet folder in Settings")
-        Text("4. Settings → Show: Movies (default), TV shows, or All — then search or open Top TV")
+        Text("4. Settings → Show: Movies (default), TV shows, or All — chips save immediately; then search or open Top TV")
     }
 }
