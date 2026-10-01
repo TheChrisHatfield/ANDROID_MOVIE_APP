@@ -38,6 +38,7 @@ def parse_torrent_movie_title(raw_name: str) -> tuple[str, int | None]:
     title_part = _NOISE_RE.sub(" ", title_part)
     title_part = re.sub(r"[._]+", " ", title_part)
     title_part = re.sub(r"\s+", " ", title_part).strip(" -")
+    title_part = title_part.rstrip("([{ ").strip(" -._")
 
     if not title_part:
         title_part = name

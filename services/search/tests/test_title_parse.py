@@ -9,8 +9,14 @@ def test_parse_inception_release():
 
 def test_parse_parenthetical_year():
     title, year = parse_torrent_movie_title("The Matrix (1999) 1080p WEB-DL")
-    assert "Matrix" in title
+    assert title == "The Matrix"
     assert year == 1999
+
+
+def test_parse_inception_parenthetical_year_does_not_leave_open_paren():
+    title, year = parse_torrent_movie_title("Inception (2010) 1080p BluRay")
+    assert title == "Inception"
+    assert year == 2010
 
 
 def test_group_key_includes_year():
