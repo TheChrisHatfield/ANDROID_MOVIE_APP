@@ -12,6 +12,14 @@ class TitleParseTest {
         assertEquals(2010, year)
         assertEquals("inception-2010", TitleParse.groupKey(title, year))
     }
+
+    @Test
+    fun stripsEpisodeCodesForShowGrouping() {
+        val (title, year) = TitleParse.parse("The.Office.S05E03.720p.HDTV.x264")
+        assertEquals("The Office", title)
+        org.junit.Assert.assertNull(year)
+        assertEquals("the-office", TitleParse.groupKey(title, year))
+    }
 }
 
 class MovieIndexerParseTest {

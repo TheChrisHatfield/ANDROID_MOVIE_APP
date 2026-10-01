@@ -9,15 +9,19 @@ internal class MovieIndexers(private val http: IndexerHttp) {
     @Volatile private var ytsWorking: String? = null
     @Volatile private var x1337Working: String? = null
 
-    fun searchAll(query: String, pages: Int): Pair<List<IndexerRow>, List<String>> {
-        val jobs = listOf(
-            "YTS" to { ytsSearch(query, pages) },
-            "1337x" to { x1337Search(query, pages) },
-            "The Pirate Bay" to { tpbSearch(query) },
-            "TorrentGalaxy" to { tableSearch(TGX_MIRRORS, query, pages, ::parseTgx) },
-            "MagnetDL" to { magnetDlSearch(query, pages) },
-            "LimeTorrents" to { limeSearch(query, pages) },
-        )
+    fun searchAll(
+        query: String,
+        pages: Int,
+        includeYts: Boolean = true,
+    ): Pair<List<IndexerRow>, List<String>> {
+        val jobs = buildList {
+            if (includeYts) add("YTS" to { ytsSearch(query, pages) })
+            add("1337x" to { x1337Search(query, pages) })
+            add("The Pirate Bay" to { tpbSearch(query) })
+            add("TorrentGalaxy" to { tableSearch(TGX_MIRRORS, query, pages, ::parseTgx) })
+            add("MagnetDL" to { magnetDlSearch(query, pages) })
+            add("LimeTorrents" to { limeSearch(query, pages) })
+        }
         val pool = java.util.concurrent.Executors.newFixedThreadPool(jobs.size.coerceAtMost(6))
         return try {
             val futures = jobs.map { (name, job) ->
@@ -71,16 +75,20 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         return emptyList<IndexerRow>() to lastError
     }
 
-    fun browseGenre(genreId: String, pages: Int): List<IndexerRow> {
+    fun browseGenre(genreId: String, pages: Int, includeYts: Boolean = true): List<IndexerRow> {
         val query = TmdbOnDevice.GENRE_QUERIES[genreId] ?: genreId
         val rows = mutableListOf<IndexerRow>()
         rows += x1337Search(query, pages)
-        rows += ytsList(queryTerm = null, genre = ytsGenre(genreId), sort = "download_count", pages = pages)
+        if (includeYts) {
+            rows += ytsList(queryTerm = null, genre = ytsGenre(genreId), sort = "download_count", pages = pages)
+        }
         return rows
     }
 
     fun ytsSearch(query: String, pages: Int): List<IndexerRow> =
         ytsList(queryTerm = query, genre = null, sort = null, pages = pages)
+
+    fun keywordSearch(query: String, pages: Int): List<IndexerRow> = x1337Search(query, pages)
 
     fun resolveMagnet(row: IndexerRow): String? {
         row.magnet?.takeIf { it.startsWith("magnet:") }?.let { return it }

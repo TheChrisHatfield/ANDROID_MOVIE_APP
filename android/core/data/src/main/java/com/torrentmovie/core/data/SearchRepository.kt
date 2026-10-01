@@ -31,7 +31,12 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
     suspend fun suggest(query: String, limit: Int = 8): List<MovieSearchSuggestion> =
         withContext(Dispatchers.IO) {
             val settings = settingsRepository.load()
-            engine.suggest(query, settings.tmdbApiKey, limit)
+            engine.suggest(
+                query,
+                settings.tmdbApiKey,
+                limit,
+                searchTv = settings.contentFilter == SearchContentFilter.TV,
+            )
         }
 
     suspend fun browse1337x(

@@ -6,6 +6,10 @@ internal object TitleParse {
         """\b(?:\d{3,4}p|4k|2160p|1080p|720p|480p|bluray|blu-ray|web[- ]?dl|webrip|hdrip|dvdrip|x264|x265|hevc|h\.?264|h\.?265|aac|dts|remux|proper|repack|extended|imax)\b""",
         RegexOption.IGNORE_CASE,
     )
+    private val episodeRe = Regex(
+        """\b(?:s\d{1,2}e\d{1,2}|s\d{1,2}(?!\d)|\d{1,2}x\d{2}|season\s+\d+)\b""",
+        RegexOption.IGNORE_CASE,
+    )
     private val noiseRe = Regex(
         """\[.*?\]|\(.*?\)|\{.*?\}|\+.*$|\b(?:yify|rarbg|ettv|eztv|galaxy|torrent|sample)\b""",
         RegexOption.IGNORE_CASE,
@@ -22,6 +26,9 @@ internal object TitleParse {
         var titleCut = prefixEnd
         if (yearMatches.isNotEmpty()) {
             titleCut = yearMatches.last().range.first
+        }
+        episodeRe.find(prefix)?.let { ep ->
+            titleCut = minOf(titleCut, ep.range.first)
         }
         var titlePart = if (titleCut > 0) name.substring(0, titleCut) else name
         titlePart = noiseRe.replace(titlePart, " ")

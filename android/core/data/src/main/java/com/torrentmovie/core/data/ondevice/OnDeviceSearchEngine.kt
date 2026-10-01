@@ -12,9 +12,9 @@ internal class OnDeviceSearchEngine(
 ) {
     private val indexers = MovieIndexers(http)
 
-    fun suggest(query: String, tmdbKey: String, limit: Int): List<MovieSearchSuggestion> {
-        if (!TmdbOnDevice(http, tmdbKey).configured) return emptyList()
-        return TmdbOnDevice(http, tmdbKey).suggest(query, limit)
+    fun suggest(query: String, tmdbKey: String, limit: Int, searchTv: Boolean = false): List<MovieSearchSuggestion> {
+        if (!TmdbOnDevice(http, tmdbKey, searchTv = searchTv).configured) return emptyList()
+        return TmdbOnDevice(http, tmdbKey, searchTv = searchTv).suggest(query, limit)
     }
 
     fun isTmdbConfigured(tmdbKey: String): Boolean = tmdbKey.isNotBlank()
@@ -30,8 +30,20 @@ internal class OnDeviceSearchEngine(
         enrich: Boolean,
         tmdbKey: String,
     ): SearchResult {
-        val (raw, failed) = indexers.searchAll(query, pages.coerceIn(1, 10))
-        return finish(raw, failed, limit, minSeeds, maxSeeds, maxSize, contentFilter, enrich, tmdbKey)
+        val includeYts = contentFilter != SearchContentFilter.TV
+        val (raw, failed) = indexers.searchAll(query, pages.coerceIn(1, 10), includeYts = includeYts)
+        return finish(
+            raw,
+            failed,
+            limit,
+            minSeeds,
+            maxSeeds,
+            maxSize,
+            contentFilter,
+            enrich,
+            tmdbKey,
+            expectedSites = if (includeYts) 6 else 5,
+        )
     }
 
     fun browse1337x(
@@ -68,9 +80,10 @@ internal class OnDeviceSearchEngine(
         tmdbKey: String,
     ): SearchResult {
         val genreId = genre.trim().lowercase()
-        val raw = indexers.browseGenre(genreId, pages.coerceIn(1, 10)).toMutableList()
-        val tmdb = TmdbOnDevice(http, tmdbKey)
-        val tmdbGenre = TmdbOnDevice.GENRE_TMDB_IDS[genreId]
+        val searchTv = contentFilter == SearchContentFilter.TV
+        val raw = indexers.browseGenre(genreId, pages.coerceIn(1, 10), includeYts = !searchTv).toMutableList()
+        val tmdb = TmdbOnDevice(http, tmdbKey, searchTv = searchTv)
+        val tmdbGenre = TmdbOnDevice.genreDiscoverId(genreId, searchTv)
         if (tmdb.configured && tmdbGenre != null) {
             val discover = tmdb.discover(tmdbGenre, page = 1, limit = 12) +
                 tmdb.discover(tmdbGenre, page = 2, limit = 12)
@@ -80,7 +93,11 @@ internal class OnDeviceSearchEngine(
                     extra.submit(
                         java.util.concurrent.Callable {
                             val q = if (movie.year != null) "${movie.title} ${movie.year}" else movie.title
-                            indexers.ytsSearch(q, 1)
+                            if (searchTv) {
+                                indexers.keywordSearch(q, 1)
+                            } else {
+                                indexers.ytsSearch(q, 1)
+                            }
                         },
                     )
                 }.forEach { raw += it.get() }
@@ -139,6 +156,7 @@ internal class OnDeviceSearchEngine(
         tmdbKey: String,
         interleave: Boolean = true,
         tmdb: TmdbOnDevice? = null,
+        expectedSites: Int = MovieIndexers.MOVIE_SITE_NAMES.size,
     ): SearchResult {
         val filtered = try {
             SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, contentFilter)
@@ -151,7 +169,7 @@ internal class OnDeviceSearchEngine(
             SizeFilters.sortBySeedsDesc(filtered).take(limit)
         }
         if (ordered.isEmpty() && raw.isEmpty() &&
-            failed.size >= MovieIndexers.MOVIE_SITE_NAMES.size
+            failed.size >= expectedSites && expectedSites > 0
         ) {
             throw SearchException("No sources available", 503)
         }
@@ -164,7 +182,11 @@ internal class OnDeviceSearchEngine(
             )
         }
         val dtos = cache.remember(ordered)
-        val tmdbClient = tmdb ?: TmdbOnDevice(http, tmdbKey)
+        val tmdbClient = tmdb ?: TmdbOnDevice(
+            http,
+            tmdbKey,
+            searchTv = contentFilter == SearchContentFilter.TV,
+        )
         val grouping = MovieGrouping.group(dtos, ordered, tmdbClient, enrich)
         return SearchResult(
             results = dtos,

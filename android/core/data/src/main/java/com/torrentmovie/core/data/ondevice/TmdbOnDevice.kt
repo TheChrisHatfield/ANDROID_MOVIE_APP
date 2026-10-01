@@ -18,6 +18,7 @@ internal class TmdbOnDevice(
     private val http: IndexerHttp,
     private val apiKey: String,
     private val apiBase: String = BASE,
+    private val searchTv: Boolean = false,
 ) {
     val configured: Boolean get() = apiKey.isNotBlank()
     @Volatile var keyRejected: Boolean = false
@@ -38,8 +39,11 @@ internal class TmdbOnDevice(
     fun searchMovies(query: String, limit: Int, year: Int? = null): List<TmdbMovie> {
         if (!configured) return emptyList()
         val q = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
-        val yearQs = year?.takeIf { it in 1900..2100 }?.let { "&year=$it&primary_release_year=$it" }.orEmpty()
-        val url = "$apiBase/search/movie?api_key=$apiKey&query=$q$yearQs"
+        val media = if (searchTv) "tv" else "movie"
+        val yearQs = year?.takeIf { it in 1900..2100 }?.let {
+            if (searchTv) "&first_air_date_year=$it" else "&year=$it&primary_release_year=$it"
+        }.orEmpty()
+        val url = "$apiBase/search/$media?api_key=$apiKey&query=$q$yearQs"
         val fetched = http.fetch(url)
         if (fetched.code == 401 || fetched.code == 403) {
             keyRejected = true
@@ -51,7 +55,8 @@ internal class TmdbOnDevice(
 
     fun discover(genreTmdbId: Int, page: Int, limit: Int): List<TmdbMovie> {
         if (!configured) return emptyList()
-        val url = "$apiBase/discover/movie?api_key=$apiKey&with_genres=$genreTmdbId" +
+        val media = if (searchTv) "tv" else "movie"
+        val url = "$apiBase/discover/$media?api_key=$apiKey&with_genres=$genreTmdbId" +
             "&sort_by=popularity.desc&page=$page"
         val fetched = http.fetch(url)
         if (fetched.code == 401 || fetched.code == 403) {
@@ -75,7 +80,8 @@ internal class TmdbOnDevice(
     }
 
     private fun trailer(tmdbId: Int): String? {
-        val url = "$apiBase/movie/$tmdbId/videos?api_key=$apiKey"
+        val media = if (searchTv) "tv" else "movie"
+        val url = "$apiBase/$media/$tmdbId/videos?api_key=$apiKey"
         val fetched = http.fetch(url)
         if (fetched.code == 401 || fetched.code == 403) {
             keyRejected = true
@@ -108,8 +114,9 @@ internal class TmdbOnDevice(
                 try {
                     val obj = el.asJsonObject
                     val title = obj.get("title")?.takeIf { it.isJsonPrimitive }?.asString
+                        ?: obj.get("name")?.takeIf { it.isJsonPrimitive }?.asString
                         ?: return@mapNotNull null
-                    val dateEl = obj.get("release_date")
+                    val dateEl = obj.get("release_date") ?: obj.get("first_air_date")
                     val date = if (dateEl != null && dateEl.isJsonPrimitive) dateEl.asString else ""
                     val year = date.take(4).toIntOrNull()?.takeIf { it in 1900..2100 }
                     val posterEl = obj.get("poster_path")
@@ -159,6 +166,23 @@ internal class TmdbOnDevice(
             "sci-fi" to 878,
             "thriller" to 53,
         )
+        val GENRE_TV_IDS = mapOf(
+            "action" to 10759,
+            "adventure" to 10759,
+            "animation" to 16,
+            "comedy" to 35,
+            "crime" to 80,
+            "drama" to 18,
+            "fantasy" to 10765,
+            "horror" to 9648,
+            "mystery" to 9648,
+            "romance" to 18,
+            "sci-fi" to 10765,
+            "thriller" to 80,
+        )
+
+        fun genreDiscoverId(genreKey: String, searchTv: Boolean): Int? =
+            if (searchTv) GENRE_TV_IDS[genreKey] else GENRE_TMDB_IDS[genreKey]
         val GENRE_QUERIES = mapOf(
             "action" to "action",
             "adventure" to "adventure",
