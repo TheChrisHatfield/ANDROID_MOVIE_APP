@@ -514,6 +514,8 @@ def _fetch_magnet_for_row(row: dict) -> str | None:
     site = _searcher.site_for_name(site_name) or _searcher.site_for_detail_url(detail_url)
     if not site or not detail_url:
         return None
+    if not getattr(site, "working_url", None) and hasattr(site, "ensure_working_url"):
+        site.ensure_working_url(timeout=4)
     quality = _quality_from_result_name(row.get("name"))
     try:
         if hasattr(site, "get_magnet_link"):
