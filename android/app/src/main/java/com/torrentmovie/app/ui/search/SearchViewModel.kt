@@ -823,28 +823,4 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             searchSettingsKey() == settingsKeyAtStart &&
             (previousGroups.isNotEmpty() || previousResults.isNotEmpty())
     }
-
-    private data class DisplaySearchOutcome(
-        val groups: List<MovieGroupDto>,
-        val results: List<TorrentResultDto>,
-    )
-
-    private fun normalizeKodiGroups(
-        groups: List<MovieGroupDto>,
-        flat: List<TorrentResultDto>,
-    ): DisplaySearchOutcome {
-        val synthetic = flat.map { result ->
-            MovieGroupDto(
-                group_key = "flat-${result.id}",
-                title = result.name,
-                year = null,
-                overview = null,
-                poster_url = result.posterUrl,
-                trailer_youtube_key = null,
-                release_count = 1,
-                releases = listOf(result),
-            )
-        }
-        return DisplaySearchOutcome(groups = groups + synthetic, results = emptyList())
-    }
 }

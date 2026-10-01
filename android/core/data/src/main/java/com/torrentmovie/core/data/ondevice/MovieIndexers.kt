@@ -294,20 +294,24 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 if (moviesEl == null || moviesEl.isJsonNull || !moviesEl.isJsonArray) return emptyList()
                 val movies = moviesEl.asJsonArray
                 movies.flatMap { el ->
-                    val movie = el.asJsonObject
-                    val title = movie.get("title_long")?.asString
-                        ?: movie.get("title")?.asString
-                        ?: return@flatMap emptyList()
-                    val year = movie.get("year")?.asInt
-                    val poster = movie.get("medium_cover_image")?.asString
-                        ?: movie.get("large_cover_image")?.asString
-                    val overview = movie.get("description_full")?.asString
-                        ?: movie.get("description_intro")?.asString
-                    val trailer = movie.get("yt_trailer_code")?.asString?.takeIf { it.length == 11 }
-                    val slug = movie.get("slug")?.asString
-                    val url = movie.get("url")?.asString ?: slug?.let { "$base/movies/$it" }
-                    val torrents = movie.getAsJsonArray("torrents") ?: return@flatMap emptyList()
-                    torrents.mapNotNull { tEl ->
+                    try {
+                        val movie = el.asJsonObject
+                        val title = jsonPrimitiveString(movie, "title_long")
+                            ?: jsonPrimitiveString(movie, "title")
+                            ?: return@flatMap emptyList()
+                        val year = jsonPrimitiveString(movie, "year")?.toIntOrNull()
+                        val poster = jsonPrimitiveString(movie, "medium_cover_image")
+                            ?: jsonPrimitiveString(movie, "large_cover_image")
+                        val overview = jsonPrimitiveString(movie, "description_full")
+                            ?: jsonPrimitiveString(movie, "description_intro")
+                        val trailer = jsonPrimitiveString(movie, "yt_trailer_code")?.takeIf { it.length == 11 }
+                        val slug = jsonPrimitiveString(movie, "slug")
+                        val url = jsonPrimitiveString(movie, "url") ?: slug?.let { "$base/movies/$it" }
+                        val torrentsEl = movie.get("torrents")
+                        if (torrentsEl == null || torrentsEl.isJsonNull || !torrentsEl.isJsonArray) {
+                            return@flatMap emptyList()
+                        }
+                        torrentsEl.asJsonArray.mapNotNull { tEl ->
                         val t = tEl.asJsonObject
                         val hash = jsonPrimitiveString(t, "hash") ?: return@mapNotNull null
                         val quality = jsonPrimitiveString(t, "quality")
@@ -325,6 +329,9 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                             overview = overview?.take(400),
                             trailerYoutubeKey = trailer,
                         )
+                        }
+                    } catch (_: Exception) {
+                        emptyList()
                     }
                 }
             } catch (_: Exception) {
@@ -391,8 +398,14 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         }
 
         private fun abs(base: String, href: String): String {
-            if (href.startsWith("http")) return href
-            return URI(base.trimEnd('/') + "/").resolve(href).toString()
+            val trimmed = href.trim()
+            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed
+            return try {
+                URI(base.trimEnd('/') + "/").resolve(trimmed.replace(" ", "%20")).toString()
+            } catch (_: Exception) {
+                val path = trimmed.trimStart('/')
+                base.trimEnd('/') + "/" + path
+            }
         }
 
         private fun enc(value: String): String =
