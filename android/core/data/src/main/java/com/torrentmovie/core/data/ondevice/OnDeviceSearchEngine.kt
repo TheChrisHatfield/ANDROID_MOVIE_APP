@@ -154,7 +154,7 @@ internal class OnDeviceSearchEngine(
             results = dtos,
             failedSites = failed,
             groups = grouping.groups,
-            tmdbKeyRejected = false,
+            tmdbKeyRejected = tmdb.keyRejected,
             tmdbEnrichmentCapped = grouping.enrichmentCapped,
         )
     }

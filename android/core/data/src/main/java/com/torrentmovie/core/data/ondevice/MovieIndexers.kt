@@ -83,9 +83,7 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         row.magnet?.takeIf { it.startsWith("magnet:") }?.let { return it }
         val detail = row.detailUrl ?: return null
         val html = http.getText(detail) ?: return null
-        val soup = Jsoup.parse(html, detail)
-        soup.select("a[href^=magnet:]").firstOrNull()?.attr("href")?.let { return it }
-        return soup.select("a[href]").firstOrNull { it.attr("href").contains("magnet:") }?.attr("href")
+        return extractMagnet(html, detail)
     }
 
     private fun ytsList(
@@ -237,6 +235,19 @@ internal class MovieIndexers(private val http: IndexerHttp) {
             "https://www.limetorrents.zone",
         )
         val MAGNETDL_MIRRORS = listOf("https://www.magnetdl.com", "https://magnetdl.unblockit.boo")
+
+        fun extractMagnet(html: String, base: String): String? {
+            val soup = Jsoup.parse(html, base)
+            val href = soup.select("a[href^=magnet:]").firstOrNull()?.attr("href")
+                ?: soup.select("[data-clipboard-text^=magnet:]").firstOrNull()
+                    ?.attr("data-clipboard-text")
+                ?: soup.select("a[href]").firstOrNull { it.attr("href").contains("magnet:") }
+                    ?.attr("href")
+            val raw = href?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            val decoded = org.jsoup.parser.Parser.unescapeEntities(raw, true).trim()
+            return decoded.takeIf { it.startsWith("magnet:") }
+        }
+
         val BROWSE_FEEDS = mapOf(
             "trending" to "trending",
             "top-100" to "top-100",

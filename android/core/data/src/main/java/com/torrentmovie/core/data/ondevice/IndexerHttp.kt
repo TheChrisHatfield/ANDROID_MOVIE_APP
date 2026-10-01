@@ -4,6 +4,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
+internal data class HttpTextResult(val code: Int, val body: String?)
+
 internal class IndexerHttp(
     client: OkHttpClient? = null,
 ) {
@@ -17,6 +19,11 @@ internal class IndexerHttp(
     fun get(url: String): ByteArray? = getText(url)?.toByteArray(Charsets.UTF_8)
 
     fun getText(url: String): String? {
+        val result = fetch(url)
+        return result.body.takeIf { result.code in 200..299 }
+    }
+
+    fun fetch(url: String): HttpTextResult {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -24,11 +31,10 @@ internal class IndexerHttp(
             .build()
         return try {
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                response.body?.string()
+                HttpTextResult(response.code, response.body?.string())
             }
         } catch (_: Exception) {
-            null
+            HttpTextResult(-1, null)
         }
     }
 

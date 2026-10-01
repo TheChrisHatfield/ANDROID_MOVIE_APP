@@ -80,6 +80,17 @@ class MovieIndexerParseTest {
         assertEquals("42", MovieIndexers.jsonPrimitiveString(obj, "id"))
         assertEquals("9", MovieIndexers.jsonPrimitiveString(obj, "seeders"))
     }
+
+    @Test
+    fun extractMagnetFromClipboardAndHtmlEntities() {
+        val html = """
+            <div data-clipboard-text="magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&amp;dn=Inception"></div>
+        """.trimIndent()
+        val magnet = MovieIndexers.extractMagnet(html, "https://1337xx.to")
+        assertTrue(magnet!!.startsWith("magnet:?xt=urn:btih:"))
+        assertTrue(magnet.contains("&dn="))
+        assertTrue(!magnet.contains("&amp;"))
+    }
 }
 
 class SizeFilterTest {

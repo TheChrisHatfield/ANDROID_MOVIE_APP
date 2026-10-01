@@ -17,8 +17,11 @@ internal data class TmdbMovie(
 internal class TmdbOnDevice(
     private val http: IndexerHttp,
     private val apiKey: String,
+    private val apiBase: String = BASE,
 ) {
     val configured: Boolean get() = apiKey.isNotBlank()
+    @Volatile var keyRejected: Boolean = false
+        private set
 
     fun suggest(query: String, limit: Int): List<MovieSearchSuggestion> {
         if (!configured || query.trim().length < 2) return emptyList()
@@ -35,16 +38,26 @@ internal class TmdbOnDevice(
     fun searchMovies(query: String, limit: Int): List<TmdbMovie> {
         if (!configured) return emptyList()
         val q = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
-        val url = "$BASE/search/movie?api_key=$apiKey&query=$q"
-        val body = http.getText(url) ?: return emptyList()
+        val url = "$apiBase/search/movie?api_key=$apiKey&query=$q"
+        val fetched = http.fetch(url)
+        if (fetched.code == 401 || fetched.code == 403) {
+            keyRejected = true
+            return emptyList()
+        }
+        val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return emptyList()
         return parseMovieList(body, limit)
     }
 
     fun discover(genreTmdbId: Int, page: Int, limit: Int): List<TmdbMovie> {
         if (!configured) return emptyList()
-        val url = "$BASE/discover/movie?api_key=$apiKey&with_genres=$genreTmdbId" +
+        val url = "$apiBase/discover/movie?api_key=$apiKey&with_genres=$genreTmdbId" +
             "&sort_by=popularity.desc&page=$page"
-        val body = http.getText(url) ?: return emptyList()
+        val fetched = http.fetch(url)
+        if (fetched.code == 401 || fetched.code == 403) {
+            keyRejected = true
+            return emptyList()
+        }
+        val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return emptyList()
         return parseMovieList(body, limit)
     }
 
@@ -61,8 +74,13 @@ internal class TmdbOnDevice(
     }
 
     private fun trailer(tmdbId: Int): String? {
-        val url = "$BASE/movie/$tmdbId/videos?api_key=$apiKey"
-        val body = http.getText(url) ?: return null
+        val url = "$apiBase/movie/$tmdbId/videos?api_key=$apiKey"
+        val fetched = http.fetch(url)
+        if (fetched.code == 401 || fetched.code == 403) {
+            keyRejected = true
+            return null
+        }
+        val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return null
         return try {
             val results = JsonParser.parseString(body).asJsonObject.getAsJsonArray("results") ?: return null
             results.map { it.asJsonObject }
@@ -79,7 +97,9 @@ internal class TmdbOnDevice(
 
     private fun parseMovieList(body: String, limit: Int): List<TmdbMovie> {
         return try {
-            val results = JsonParser.parseString(body).asJsonObject.getAsJsonArray("results") ?: return emptyList()
+            val resultsEl = JsonParser.parseString(body).asJsonObject.get("results")
+            if (resultsEl == null || resultsEl.isJsonNull || !resultsEl.isJsonArray) return emptyList()
+            val results = resultsEl.asJsonArray
             results.take(limit).mapNotNull { el ->
                 try {
                     val obj = el.asJsonObject
