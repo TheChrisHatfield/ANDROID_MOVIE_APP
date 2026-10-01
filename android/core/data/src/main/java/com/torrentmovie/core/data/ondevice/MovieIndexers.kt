@@ -292,7 +292,8 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                     ?: nameTd.select("a[href]").lastOrNull()
                     ?: return@mapNotNull null
                 val sizeRaw = row.selectFirst("td.size")?.text()?.trim().orEmpty()
-                val size = if (sizeRaw.contains("B")) sizeRaw.substringBefore("B") + "B" else sizeRaw.ifBlank { "-" }
+                val size = SizeFilters.extractSizeLabel(sizeRaw)
+                    ?: if (sizeRaw.contains("B")) sizeRaw.substringBefore("B") + "B" else sizeRaw.ifBlank { "-" }
                 IndexerRow(
                     name = link.text().trim(),
                     site = "1337x",

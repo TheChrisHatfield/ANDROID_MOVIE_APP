@@ -33,6 +33,7 @@ class MovieIndexerParseTest {
         assertEquals(1, rows.size)
         assertEquals("Inception 2010 1080p", rows[0].name)
         assertEquals("12", rows[0].seeds)
+        assertEquals("1.8 GB", rows[0].size)
         assertTrue(rows[0].detailUrl!!.contains("/torrent/1/"))
     }
 
@@ -114,5 +115,21 @@ class SizeFilterTest {
         } catch (e: IllegalArgumentException) {
             assertEquals("Invalid max_size", e.message)
         }
+    }
+
+    @Test
+    fun glued1337xSizeParsesAsGigabytes() {
+        val bytes = SizeFilters.parseSize("1.8 GB12")
+        assertTrue(bytes > 1_000_000_000)
+        assertEquals("1.8 GB", SizeFilters.extractSizeLabel("1.8 GB12"))
+    }
+
+    @Test
+    fun maxSizeKeepsGlued1337xSize() {
+        val rows = listOf(
+            IndexerRow(name = "Inception", site = "1337x", size = "1.8 GB12", seeds = "12"),
+        )
+        val kept = SizeFilters.apply(rows, null, null, "4 GB", false)
+        assertEquals(1, kept.size)
     }
 }

@@ -13,9 +13,21 @@ internal object SizeFilters {
         RegexOption.IGNORE_CASE,
     )
 
+    private val sizeToken = Regex(
+        """(\d+(?:[.,]\d+)?)\s*(TIB|TB|GIB|GB|MIB|MB|KIB|KB|B)(?![A-Z])""",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** Pulls "1.8 GB" out of 1337x cells that glue size and seed count ("1.8 GB12"). */
+    fun extractSizeLabel(sizeStr: String): String? {
+        val match = sizeToken.find(sizeStr.trim()) ?: return null
+        return "${match.groupValues[1]} ${match.groupValues[2].uppercase(Locale.US)}"
+    }
+
     fun parseSize(sizeStr: String): Double {
         return try {
-            val normalized = thousands.replace(sizeStr.trim().uppercase(Locale.US), "")
+            val labeled = extractSizeLabel(sizeStr) ?: sizeStr
+            val normalized = thousands.replace(labeled.trim().uppercase(Locale.US), "")
             val suffixes = listOf(
                 "TIB" to 1024.0 * 1024 * 1024 * 1024,
                 "TB" to 1024.0 * 1024 * 1024 * 1024,
