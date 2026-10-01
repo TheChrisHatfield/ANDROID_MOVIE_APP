@@ -90,12 +90,30 @@ internal class OnDeviceSearchEngine(
         return finish(raw, emptyList(), limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey)
     }
 
-    fun resolveMagnet(resultId: String): MagnetResponseDto {
+    fun resolveMagnet(
+        resultId: String,
+        detailUrl: String? = null,
+        site: String? = null,
+        name: String? = null,
+    ): MagnetResponseDto {
         cache.magnet(resultId)?.let { return it }
-        val row = cache.row(resultId) ?: throw SearchException("Result not found or expired", 404)
+        val cachedRow = cache.row(resultId)
+        val row = cachedRow ?: run {
+            val url = detailUrl?.trim().orEmpty()
+            if (url.isBlank()) {
+                throw SearchException("Result not found or expired", 404)
+            }
+            IndexerRow(
+                name = name?.takeIf { it.isNotBlank() } ?: "-",
+                site = site?.trim().orEmpty(),
+                magnet = null,
+                detailUrl = url,
+            )
+        }
         val magnet = indexers.resolveMagnet(row)
             ?: throw SearchException("Magnet unavailable", 404)
         cache.putMagnet(resultId, magnet)
+        cache.rememberRow(resultId, row.copy(magnet = magnet))
         return MagnetResponseDto(resultId, magnet)
     }
 

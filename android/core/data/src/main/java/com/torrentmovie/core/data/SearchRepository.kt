@@ -93,10 +93,10 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
 
     suspend fun resolveMagnet(
         resultId: String,
-        @Suppress("UNUSED_PARAMETER") detailUrl: String? = null,
-        @Suppress("UNUSED_PARAMETER") site: String? = null,
-        @Suppress("UNUSED_PARAMETER") name: String? = null,
+        detailUrl: String? = null,
+        site: String? = null,
+        name: String? = null,
     ): MagnetResponseDto = withContext(Dispatchers.IO) {
-        engine.resolveMagnet(resultId)
+        engine.resolveMagnet(resultId, detailUrl, site, name)
     }
 }
