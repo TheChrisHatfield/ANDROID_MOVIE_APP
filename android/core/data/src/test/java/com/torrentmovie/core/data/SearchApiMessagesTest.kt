@@ -7,6 +7,6 @@ class SearchApiMessagesTest {
     @Test
     fun discoveryMessageMentionsWifiScan() {
         val message = SearchApiMessages.blocked(autoConfigurationPending = true)
-        assertTrue(message.contains("Looking for the search service", ignoreCase = true))
+        assertTrue(message.contains("Looking for movie sources", ignoreCase = true))
     }
 }

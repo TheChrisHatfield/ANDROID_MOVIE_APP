@@ -1,12 +1,12 @@
 package com.torrentmovie.core.data
 
-/** User-facing copy when Search API URL is not yet usable (FR-040). */
+/** User-facing copy when on-device search cannot reach the network. */
 object SearchApiMessages {
     fun blocked(autoConfigurationPending: Boolean): String {
         return if (autoConfigurationPending) {
-            "Looking for the search service on your Wi-Fi (port 8765)…"
+            "Looking for movie sources on your connection…"
         } else {
-            "Configure Search API URL in Settings (e.g. http://<PC-IP>:8765)"
+            "Search needs internet. Check Wi-Fi or cellular and try again."
         }
     }
 }

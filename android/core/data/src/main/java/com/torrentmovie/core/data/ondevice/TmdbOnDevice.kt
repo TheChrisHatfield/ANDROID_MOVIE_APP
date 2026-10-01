@@ -48,7 +48,7 @@ internal class TmdbOnDevice(
         return parseMovieList(body, limit)
     }
 
-    fun lookup(title: String, year: Int?): TmdbMovie? {
+    fun lookup(title: String, year: Int?, fetchTrailer: Boolean = false): TmdbMovie? {
         val hits = searchMovies(title, 5)
         if (hits.isEmpty()) return null
         val match = if (year != null) {
@@ -56,6 +56,7 @@ internal class TmdbOnDevice(
         } else {
             hits.first()
         }
+        if (!fetchTrailer) return match
         return match.copy(trailerKey = trailer(match.tmdbId) ?: match.trailerKey)
     }
 
@@ -80,19 +81,38 @@ internal class TmdbOnDevice(
         return try {
             val results = JsonParser.parseString(body).asJsonObject.getAsJsonArray("results") ?: return emptyList()
             results.take(limit).mapNotNull { el ->
-                val obj = el.asJsonObject
-                val title = obj.get("title")?.asString ?: return@mapNotNull null
-                val date = obj.get("release_date")?.asString.orEmpty()
-                val year = date.take(4).toIntOrNull()?.takeIf { it in 1900..2100 }
-                val posterPath = obj.get("poster_path")?.asString
-                TmdbMovie(
-                    tmdbId = obj.get("id")?.asInt ?: return@mapNotNull null,
-                    title = title,
-                    year = year,
-                    overview = obj.get("overview")?.asString?.takeIf { it.isNotBlank() },
-                    posterUrl = posterPath?.let { "https://image.tmdb.org/t/p/w342$it" },
-                    popularity = obj.get("popularity")?.asDouble ?: 0.0,
-                )
+                try {
+                    val obj = el.asJsonObject
+                    val title = obj.get("title")?.takeIf { it.isJsonPrimitive }?.asString
+                        ?: return@mapNotNull null
+                    val dateEl = obj.get("release_date")
+                    val date = if (dateEl != null && dateEl.isJsonPrimitive) dateEl.asString else ""
+                    val year = date.take(4).toIntOrNull()?.takeIf { it in 1900..2100 }
+                    val posterEl = obj.get("poster_path")
+                    val posterPath = if (posterEl != null && posterEl.isJsonPrimitive && !posterEl.isJsonNull) {
+                        posterEl.asString.takeIf { it.isNotBlank() && it != "null" }
+                    } else {
+                        null
+                    }
+                    val id = MovieIndexers.jsonPrimitiveString(obj, "id")?.toIntOrNull()
+                        ?: return@mapNotNull null
+                    val overviewEl = obj.get("overview")
+                    val overview = if (overviewEl != null && overviewEl.isJsonPrimitive) {
+                        overviewEl.asString.takeIf { it.isNotBlank() }
+                    } else {
+                        null
+                    }
+                    TmdbMovie(
+                        tmdbId = id,
+                        title = title,
+                        year = year,
+                        overview = overview,
+                        posterUrl = posterPath?.let { "https://image.tmdb.org/t/p/w342$it" },
+                        popularity = obj.get("popularity")?.takeIf { it.isJsonPrimitive }?.asDouble ?: 0.0,
+                    )
+                } catch (_: Exception) {
+                    null
+                }
             }
         } catch (_: Exception) {
             emptyList()

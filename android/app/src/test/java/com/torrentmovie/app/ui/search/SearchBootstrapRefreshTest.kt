@@ -11,7 +11,7 @@ class SearchBootstrapRefreshTest {
             shouldRefreshAfterSearchApiBootstrap(
                 modeActive = true,
                 searchApiBaseUrl = "http://10.0.2.2:8765",
-                errorMessage = "Configure Search API URL in Settings",
+                errorMessage = "Search needs internet. Check Wi-Fi or cellular and try again.",
             ),
         )
     }

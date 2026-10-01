@@ -30,7 +30,13 @@ internal object MovieGrouping {
                         val (parsedTitle, parsedYear) = TitleParse.parse(firstRow.name)
                         val title = parsedTitle.ifBlank { firstRow.name }
                         val year = parsedYear ?: firstRow.date.trim().toIntOrNull()
-                        tmdb.lookup(title, year)?.let { lookups[key] = it }
+                        tmdb.lookup(
+                            title,
+                            year,
+                            fetchTrailer = buckets[key].orEmpty().none {
+                                !it.second.trailerYoutubeKey.isNullOrBlank()
+                            },
+                        )?.let { lookups[key] = it }
                     }
                 }.forEach { it.get() }
             } finally {

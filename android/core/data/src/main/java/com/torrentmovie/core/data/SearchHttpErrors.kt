@@ -29,7 +29,7 @@ internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
         404 -> SearchException(
             when {
                 detail.equals("Not Found", ignoreCase = true) ->
-                    "Search API endpoint missing — restart search service (uvicorn on :8765)"
+                    "Magnet not found — search again and pick the release"
                 else -> detail ?: "Not found"
             },
             404,

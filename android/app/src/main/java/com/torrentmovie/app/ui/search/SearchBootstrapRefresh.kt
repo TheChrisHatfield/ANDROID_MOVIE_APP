@@ -7,8 +7,8 @@ internal fun shouldRefreshAfterSearchApiBootstrap(
     errorMessage: String?,
 ): Boolean {
     if (!modeActive || searchApiBaseUrl.isBlank()) return false
-    if (errorMessage?.contains("Configure Search API", ignoreCase = true) == true) return true
-    if (errorMessage?.contains("Looking for the search service", ignoreCase = true) == true) return true
+    if (errorMessage?.contains("Search needs internet", ignoreCase = true) == true) return true
+    if (errorMessage?.contains("Looking for movie sources", ignoreCase = true) == true) return true
     return isSearchConnectivityError(errorMessage)
 }
 
