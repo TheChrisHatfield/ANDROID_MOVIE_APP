@@ -39,4 +39,19 @@ class IndexerHttpCharsetTest {
             server.shutdown()
         }
     }
+
+    @Test
+    fun retriesOnceOn502() {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(502).setBody("bad gateway"))
+        server.enqueue(MockResponse().setBody("ok"))
+        server.start()
+        try {
+            val text = IndexerHttp(OkHttpClient()).getText(server.url("/page").toString())
+            assertEquals("ok", text)
+            assertEquals(2, server.requestCount)
+        } finally {
+            server.shutdown()
+        }
+    }
 }

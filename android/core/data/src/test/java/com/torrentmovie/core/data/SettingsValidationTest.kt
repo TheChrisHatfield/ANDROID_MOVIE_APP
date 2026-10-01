@@ -70,4 +70,14 @@ class SettingsValidationTest {
             SearchContentFilter.fromStored(null, movieSitesOnlyLegacy = true),
         )
     }
+
+    @Test
+    fun catalogFlagsMatchFilter() {
+        assertEquals(true, SearchContentFilter.ALL.usesMovieCatalog)
+        assertEquals(true, SearchContentFilter.ALL.usesTvCatalog)
+        assertEquals(false, SearchContentFilter.TV.usesMovieCatalog)
+        assertEquals(true, SearchContentFilter.TV.usesTvCatalog)
+        assertEquals(true, SearchContentFilter.MOVIES.usesMovieCatalog)
+        assertEquals(false, SearchContentFilter.MOVIES.usesTvCatalog)
+    }
 }

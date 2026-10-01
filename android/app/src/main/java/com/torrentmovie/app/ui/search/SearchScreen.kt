@@ -240,10 +240,10 @@ fun SearchScreen(
                     label = if (phoneLandscape) {
                         null
                     } else {
-                        { Text("Search movies") }
+                        { Text(searchFieldPrompt(contentFilter)) }
                     },
                     placeholder = if (phoneLandscape) {
-                        { Text("Search movies") }
+                        { Text(searchFieldPrompt(contentFilter)) }
                     } else {
                         null
                     },

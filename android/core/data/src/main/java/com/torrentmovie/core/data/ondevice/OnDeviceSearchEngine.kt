@@ -30,7 +30,7 @@ internal class OnDeviceSearchEngine(
         enrich: Boolean,
         tmdbKey: String,
     ): SearchResult {
-        val includeYts = contentFilter != SearchContentFilter.TV
+        val includeYts = contentFilter.usesMovieCatalog
         val (raw, failed) = indexers.searchAll(query, pages.coerceIn(1, 10), includeYts = includeYts)
         return finish(
             raw,
@@ -81,26 +81,43 @@ internal class OnDeviceSearchEngine(
     ): SearchResult {
         val genreId = genre.trim().lowercase()
         val searchTv = contentFilter == SearchContentFilter.TV
-        val raw = indexers.browseGenre(genreId, pages.coerceIn(1, 10), includeYts = !searchTv).toMutableList()
+        val raw = indexers.browseGenre(
+            genreId,
+            pages.coerceIn(1, 10),
+            includeYts = contentFilter.usesMovieCatalog,
+        ).toMutableList()
         val tmdb = TmdbOnDevice(http, tmdbKey, searchTv = searchTv)
-        val tmdbGenre = TmdbOnDevice.genreDiscoverId(genreId, searchTv)
-        if (tmdb.configured && tmdbGenre != null) {
-            val discover = tmdb.discover(tmdbGenre, page = 1, limit = 12) +
-                tmdb.discover(tmdbGenre, page = 2, limit = 12)
+        if (tmdb.configured) {
             val extra = java.util.concurrent.Executors.newFixedThreadPool(4)
             try {
-                discover.take(12).map { movie ->
-                    extra.submit(
-                        java.util.concurrent.Callable {
-                            val q = if (movie.year != null) "${movie.title} ${movie.year}" else movie.title
-                            if (searchTv) {
-                                indexers.keywordSearch(q, 1)
-                            } else {
+                val jobs = mutableListOf<java.util.concurrent.Callable<List<IndexerRow>>>()
+                if (contentFilter.usesMovieCatalog) {
+                    val movieId = TmdbOnDevice.genreDiscoverId(genreId, searchTv = false)
+                    if (movieId != null) {
+                        val movies = TmdbOnDevice(http, tmdbKey, searchTv = false)
+                            .discover(movieId, page = 1, limit = 8)
+                        jobs += movies.take(6).map { movie ->
+                            java.util.concurrent.Callable {
+                                val q = if (movie.year != null) "${movie.title} ${movie.year}" else movie.title
                                 indexers.ytsSearch(q, 1)
                             }
-                        },
-                    )
-                }.forEach { raw += it.get() }
+                        }
+                    }
+                }
+                if (contentFilter.usesTvCatalog) {
+                    val tvId = TmdbOnDevice.genreDiscoverId(genreId, searchTv = true)
+                    if (tvId != null) {
+                        val shows = TmdbOnDevice(http, tmdbKey, searchTv = true)
+                            .discover(tvId, page = 1, limit = 8)
+                        jobs += shows.take(6).map { show ->
+                            java.util.concurrent.Callable {
+                                val q = if (show.year != null) "${show.title} ${show.year}" else show.title
+                                indexers.keywordSearch(q, 1)
+                            }
+                        }
+                    }
+                }
+                jobs.map { extra.submit(it) }.forEach { raw += it.get() }
             } finally {
                 extra.shutdownNow()
             }

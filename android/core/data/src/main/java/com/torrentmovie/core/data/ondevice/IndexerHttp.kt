@@ -28,7 +28,7 @@ internal class IndexerHttp(
         if (first.code in 200..299 || first.code == 401 || first.code == 403) {
             return first
         }
-        if (first.code == -1 || first.code == 429 || first.code == 503) {
+        if (first.code == -1 || first.code == 429 || first.code == 502 || first.code == 503) {
             return fetchOnce(url)
         }
         return first

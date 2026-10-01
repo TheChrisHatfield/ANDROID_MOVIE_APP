@@ -3,6 +3,12 @@ package com.torrentmovie.app.ui.search
 import com.torrentmovie.core.data.SearchContentFilter
 
 /** Collapse genre/list chips while scrolling so results keep more screen space. */
+internal fun searchFieldPrompt(contentFilter: SearchContentFilter): String = when (contentFilter) {
+    SearchContentFilter.MOVIES -> "Search movies"
+    SearchContentFilter.TV -> "Search TV shows"
+    SearchContentFilter.ALL -> "Search movies and TV"
+}
+
 internal fun shouldCollapseBrowseChipsOnScroll(
     firstVisibleItemIndex: Int,
     firstVisibleItemScrollOffset: Int,

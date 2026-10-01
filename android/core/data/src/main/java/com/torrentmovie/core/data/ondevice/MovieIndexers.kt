@@ -9,13 +9,15 @@ internal class MovieIndexers(private val http: IndexerHttp) {
     @Volatile private var ytsWorking: String? = null
     @Volatile private var x1337Working: String? = null
 
+    private data class SiteRows(val rows: List<IndexerRow>, val unreachable: Boolean)
+
     fun searchAll(
         query: String,
         pages: Int,
         includeYts: Boolean = true,
     ): Pair<List<IndexerRow>, List<String>> {
         val jobs = buildList {
-            if (includeYts) add("YTS" to { ytsSearch(query, pages) })
+            if (includeYts) add("YTS" to { ytsList(queryTerm = query, genre = null, sort = null, pages = pages) })
             add("1337x" to { x1337Search(query, pages) })
             add("The Pirate Bay" to { tpbSearch(query) })
             add("TorrentGalaxy" to { tableSearch(TGX_MIRRORS, query, pages, ::parseTgx) })
@@ -36,7 +38,10 @@ internal class MovieIndexers(private val http: IndexerHttp) {
             for (future in futures) {
                 val (name, result) = future.get()
                 result.fold(
-                    onSuccess = { found -> if (found.isNotEmpty()) rows += found },
+                    onSuccess = { found ->
+                        rows += found.rows
+                        if (found.unreachable) failed += name
+                    },
                     onFailure = { failed += name },
                 )
             }
@@ -78,17 +83,17 @@ internal class MovieIndexers(private val http: IndexerHttp) {
     fun browseGenre(genreId: String, pages: Int, includeYts: Boolean = true): List<IndexerRow> {
         val query = TmdbOnDevice.GENRE_QUERIES[genreId] ?: genreId
         val rows = mutableListOf<IndexerRow>()
-        rows += x1337Search(query, pages)
+        rows += x1337Search(query, pages).rows
         if (includeYts) {
-            rows += ytsList(queryTerm = null, genre = ytsGenre(genreId), sort = "download_count", pages = pages)
+            rows += ytsList(queryTerm = null, genre = ytsGenre(genreId), sort = "download_count", pages = pages).rows
         }
         return rows
     }
 
     fun ytsSearch(query: String, pages: Int): List<IndexerRow> =
-        ytsList(queryTerm = query, genre = null, sort = null, pages = pages)
+        ytsList(queryTerm = query, genre = null, sort = null, pages = pages).rows
 
-    fun keywordSearch(query: String, pages: Int): List<IndexerRow> = x1337Search(query, pages)
+    fun keywordSearch(query: String, pages: Int): List<IndexerRow> = x1337Search(query, pages).rows
 
     fun resolveMagnet(row: IndexerRow): String? {
         row.magnet?.takeIf { it.startsWith("magnet:") }?.let { return it }
@@ -102,8 +107,9 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         genre: String?,
         sort: String?,
         pages: Int,
-    ): List<IndexerRow> {
+    ): SiteRows {
         val ordered = ytsWorking?.let { listOf(it) + YTS_MIRRORS.filter { m -> m != it } } ?: YTS_MIRRORS
+        var sawOk = false
         for (base in ordered) {
             val collected = mutableListOf<IndexerRow>()
             var accepted = false
@@ -115,75 +121,72 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 if (!genre.isNullOrBlank()) params += "genre=${enc(genre)}"
                 if (!sort.isNullOrBlank()) params += "sort_by=$sort"
                 val url = "$base/api/v2/list_movies.json?${params.joinToString("&")}"
-                val body = http.getText(url) ?: break
-                if (!ytsPayloadAccepted(body)) break
+                val fetched = http.fetch(url)
+                if (fetched.code !in 200..299 || fetched.body.isNullOrBlank()) break
+                if (!ytsPayloadAccepted(fetched.body)) break
                 accepted = true
-                val pageRows = parseYtsJson(body, base)
+                sawOk = true
+                val pageRows = parseYtsJson(fetched.body, base)
                 collected += pageRows
                 if (pageRows.isEmpty()) break
             }
             if (accepted && collected.isNotEmpty()) {
                 ytsWorking = base
-                return collected
+                return SiteRows(collected, unreachable = false)
             }
         }
-        return emptyList()
+        return SiteRows(emptyList(), unreachable = !sawOk)
     }
 
-    private fun x1337Search(query: String, pages: Int): List<IndexerRow> {
+    private fun x1337Search(query: String, pages: Int): SiteRows {
         val ordered = x1337Working?.let { listOf(it) + X1337_MIRRORS.filter { m -> m != it } } ?: X1337_MIRRORS
+        var sawOk = false
         for (base in ordered) {
             val collected = mutableListOf<IndexerRow>()
             for (page in 0 until pages) {
                 val url = "$base/search/${enc(query)}/${page + 1}/"
-                val html = http.getText(url) ?: break
-                val pageRows = parse1337x(html, base)
+                val fetched = http.fetch(url)
+                if (fetched.code !in 200..299 || fetched.body.isNullOrBlank()) break
+                sawOk = true
+                val pageRows = parse1337x(fetched.body, base)
                 if (pageRows.isEmpty()) break
                 collected += pageRows
             }
             if (collected.isNotEmpty()) {
                 x1337Working = base
-                return collected
+                return SiteRows(collected, unreachable = false)
             }
         }
-        return emptyList()
+        return SiteRows(emptyList(), unreachable = !sawOk)
     }
 
-    private fun tpbSearch(query: String): List<IndexerRow> {
+    private fun tpbSearch(query: String): SiteRows {
         val url = "https://apibay.org/q.php?q=${enc(query)}&cat=0"
-        val body = http.getText(url) ?: return emptyList()
-        return parseTpbJson(body)
-    }
-
-    private fun limeSearch(query: String, pages: Int): List<IndexerRow> {
-        for (base in LIME_MIRRORS) {
-            val collected = mutableListOf<IndexerRow>()
-            for (page in 0 until pages) {
-                val url = "$base/search/all/${enc(query)}/seeds/${page + 1}/"
-                val html = http.getText(url) ?: break
-                val pageRows = parseLime(html, base)
-                if (pageRows.isEmpty()) break
-                collected += pageRows
-            }
-            if (collected.isNotEmpty()) return collected
+        val fetched = http.fetch(url)
+        val body = fetched.body
+        if (fetched.code !in 200..299 || body.isNullOrBlank()) {
+            return SiteRows(emptyList(), unreachable = true)
         }
-        return emptyList()
+        return SiteRows(parseTpbJson(body), unreachable = false)
     }
 
-    private fun magnetDlSearch(query: String, pages: Int): List<IndexerRow> {
+    private fun limeSearch(query: String, pages: Int): SiteRows {
+        return pagedMirrors(
+            LIME_MIRRORS,
+            pages,
+            urlAt = { base, page -> "$base/search/all/${enc(query)}/seeds/${page + 1}/" },
+            parse = ::parseLime,
+        )
+    }
+
+    private fun magnetDlSearch(query: String, pages: Int): SiteRows {
         val letter = query.lowercase().firstOrNull { it.isLetterOrDigit() } ?: 'a'
-        for (base in MAGNETDL_MIRRORS) {
-            val collected = mutableListOf<IndexerRow>()
-            for (page in 0 until pages) {
-                val url = "$base/$letter/${enc(query)}/?page=${page + 1}"
-                val html = http.getText(url) ?: break
-                val pageRows = parseMagnetDl(html, base)
-                if (pageRows.isEmpty()) break
-                collected += pageRows
-            }
-            if (collected.isNotEmpty()) return collected
-        }
-        return emptyList()
+        return pagedMirrors(
+            MAGNETDL_MIRRORS,
+            pages,
+            urlAt = { base, page -> "$base/$letter/${enc(query)}/?page=${page + 1}" },
+            parse = ::parseMagnetDl,
+        )
     }
 
     private fun tableSearch(
@@ -191,19 +194,35 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         query: String,
         pages: Int,
         parse: (String, String) -> List<IndexerRow>,
-    ): List<IndexerRow> {
+    ): SiteRows {
+        return pagedMirrors(
+            mirrors,
+            pages,
+            urlAt = { base, page -> "$base/torrents.php?search=${enc(query)}&page=${page + 1}" },
+            parse = parse,
+        )
+    }
+
+    private fun pagedMirrors(
+        mirrors: List<String>,
+        pages: Int,
+        urlAt: (String, Int) -> String,
+        parse: (String, String) -> List<IndexerRow>,
+    ): SiteRows {
+        var sawOk = false
         for (base in mirrors) {
             val collected = mutableListOf<IndexerRow>()
             for (page in 0 until pages) {
-                val url = "$base/torrents.php?search=${enc(query)}&page=${page + 1}"
-                val html = http.getText(url) ?: break
-                val pageRows = parse(html, base)
+                val fetched = http.fetch(urlAt(base, page))
+                if (fetched.code !in 200..299 || fetched.body.isNullOrBlank()) break
+                sawOk = true
+                val pageRows = parse(fetched.body, base)
                 if (pageRows.isEmpty()) break
                 collected += pageRows
             }
-            if (collected.isNotEmpty()) return collected
+            if (collected.isNotEmpty()) return SiteRows(collected, unreachable = false)
         }
-        return emptyList()
+        return SiteRows(emptyList(), unreachable = !sawOk)
     }
 
     companion object {
@@ -350,7 +369,8 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                         }
                         torrentsEl.asJsonArray.mapNotNull { tEl ->
                         val t = tEl.asJsonObject
-                        val hash = jsonPrimitiveString(t, "hash") ?: return@mapNotNull null
+                        val hash = jsonPrimitiveString(t, "hash")?.trim() ?: return@mapNotNull null
+                        if (hash.length != 32 && hash.length != 40) return@mapNotNull null
                         val quality = jsonPrimitiveString(t, "quality")
                         val label = if (quality.isNullOrBlank()) title else "$title [$quality]"
                         IndexerRow(
@@ -426,8 +446,10 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 val cols = row.select("td")
                 if (cols.size < 7) return@mapNotNull null
                 val link = cols[0].selectFirst("a") ?: return@mapNotNull null
+                val name = link.text().trim()
+                if (name.isBlank()) return@mapNotNull null
                 IndexerRow(
-                    name = link.text().trim(),
+                    name = name,
                     site = "MagnetDL",
                     size = cols[3].text().trim(),
                     seeds = cols[4].text().trim(),

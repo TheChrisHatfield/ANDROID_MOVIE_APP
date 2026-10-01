@@ -88,6 +88,17 @@ class MovieIndexerParseTest {
     }
 
     @Test
+    fun ytsSkipsTorrentsWithTruncatedHash() {
+        val json = """
+            {"data":{"movies":[{
+              "title":"Inception",
+              "torrents":[{"hash":"short","quality":"720p","size":"1 GB","seeds":1,"peers":0}]
+            }]}}
+        """.trimIndent()
+        assertTrue(MovieIndexers.parseYtsJson(json, "https://yts.mx").isEmpty())
+    }
+
+    @Test
     fun acceptsYtsOkPayloadWithNoMovies() {
         val body = """{"status":"ok","data":{"movie_count":0,"movies":null}}"""
         assertTrue(MovieIndexers.ytsPayloadAccepted(body))

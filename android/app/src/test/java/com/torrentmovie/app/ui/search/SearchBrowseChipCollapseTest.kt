@@ -50,4 +50,20 @@ class SearchBrowseChipCollapseTest {
         assertTrue(shouldCollapseLandscapeSearchChrome(true, 1, 0))
         assertTrue(shouldCollapseLandscapeSearchChrome(true, 0, 40))
     }
+
+    @Test
+    fun searchPromptFollowsContentFilter() {
+        assertEquals(
+            "Search movies",
+            searchFieldPrompt(com.torrentmovie.core.data.SearchContentFilter.MOVIES),
+        )
+        assertEquals(
+            "Search TV shows",
+            searchFieldPrompt(com.torrentmovie.core.data.SearchContentFilter.TV),
+        )
+        assertEquals(
+            "Search movies and TV",
+            searchFieldPrompt(com.torrentmovie.core.data.SearchContentFilter.ALL),
+        )
+    }
 }
