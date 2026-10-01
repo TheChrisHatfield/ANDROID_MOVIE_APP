@@ -5,13 +5,18 @@ import com.torrentmovie.core.network.TorrentResultDto
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
+internal data class GroupingOutcome(
+    val groups: List<MovieGroupDto>,
+    val enrichmentCapped: Boolean,
+)
+
 internal object MovieGrouping {
     fun group(
         dtos: List<TorrentResultDto>,
         rows: List<IndexerRow>,
         tmdb: TmdbOnDevice?,
         enrich: Boolean,
-    ): List<MovieGroupDto> {
+    ): GroupingOutcome {
         val buckets = linkedMapOf<String, MutableList<Pair<TorrentResultDto, IndexerRow>>>()
         dtos.zip(rows).forEach { (dto, row) ->
             val (title, parsedYear) = TitleParse.parse(row.name)
@@ -43,7 +48,7 @@ internal object MovieGrouping {
                 pool.shutdownNow()
             }
         }
-        return buckets.map { (key, items) ->
+        val groups = buckets.map { (key, items) ->
             val firstRow = items.first().second
             val (parsedTitle, parsedYear) = TitleParse.parse(firstRow.name)
             var title = parsedTitle.ifBlank { firstRow.name }
@@ -74,5 +79,9 @@ internal object MovieGrouping {
                 releases = releases,
             )
         }
+        return GroupingOutcome(
+            groups = groups,
+            enrichmentCapped = enrich && tmdb?.configured == true && buckets.size > 50,
+        )
     }
 }

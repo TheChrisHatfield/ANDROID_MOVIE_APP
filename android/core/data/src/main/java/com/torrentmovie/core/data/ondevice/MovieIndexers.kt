@@ -309,15 +309,15 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                     val torrents = movie.getAsJsonArray("torrents") ?: return@flatMap emptyList()
                     torrents.mapNotNull { tEl ->
                         val t = tEl.asJsonObject
-                        val hash = t.get("hash")?.asString ?: return@mapNotNull null
-                        val quality = t.get("quality")?.asString
+                        val hash = jsonPrimitiveString(t, "hash") ?: return@mapNotNull null
+                        val quality = jsonPrimitiveString(t, "quality")
                         val label = if (quality.isNullOrBlank()) title else "$title [$quality]"
                         IndexerRow(
                             name = label,
                             site = "YTS",
-                            size = t.get("size")?.asString ?: "-",
-                            seeds = t.get("seeds")?.asString ?: "0",
-                            leeches = t.get("peers")?.asString ?: "-",
+                            size = jsonPrimitiveString(t, "size") ?: "-",
+                            seeds = jsonPrimitiveString(t, "seeds") ?: "0",
+                            leeches = jsonPrimitiveString(t, "peers") ?: "-",
                             date = year?.toString() ?: "-",
                             magnet = MagnetUtils.fromHash(hash, label),
                             detailUrl = url,

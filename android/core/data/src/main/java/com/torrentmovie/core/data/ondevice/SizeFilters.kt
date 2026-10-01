@@ -40,6 +40,17 @@ internal object SizeFilters {
         }
     }
 
+    /** User-supplied max_size/min_size; null when the label is not a valid unit filter. */
+    fun parseFilterBytes(raw: String): Double? {
+        val normalized = thousands.replace(raw.trim().uppercase(Locale.US), "")
+        val hasUnit = listOf("TIB", "TB", "GIB", "GB", "MIB", "MB", "KIB", "KB", "B").any {
+            normalized.endsWith(it)
+        }
+        if (!hasUnit) return null
+        val value = parseSize(raw)
+        return value.takeIf { it >= 0 }
+    }
+
     fun seedCount(seeds: String?): Int? {
         if (seeds.isNullOrBlank() || seeds == "-") return null
         val normalized = seeds.replace(",", "").trim()
@@ -69,12 +80,11 @@ internal object SizeFilters {
             filtered = filtered.filter { seedCount(it.seeds)?.let { n -> n <= maxSeeds } == true }
         }
         if (!maxSize.isNullOrBlank()) {
-            val maxBytes = parseSize(maxSize)
-            if (maxBytes >= 0) {
-                filtered = filtered.filter { row ->
-                    (row.site == "YTS" && (row.size == "-" || row.size.isBlank())) ||
-                        (row.size != "-" && parseSize(row.size).let { it >= 0 && it <= maxBytes })
-                }
+            val maxBytes = parseFilterBytes(maxSize)
+                ?: throw IllegalArgumentException("Invalid max_size")
+            filtered = filtered.filter { row ->
+                (row.site == "YTS" && (row.size == "-" || row.size.isBlank())) ||
+                    (row.size != "-" && parseSize(row.size).let { it >= 0 && it <= maxBytes })
             }
         }
         return filtered

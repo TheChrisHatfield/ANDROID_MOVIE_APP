@@ -67,3 +67,22 @@ class MovieIndexerParseTest {
         assertEquals("9", MovieIndexers.jsonPrimitiveString(obj, "seeders"))
     }
 }
+
+class SizeFilterTest {
+    @Test
+    fun maxSizeFilterRequiresUnitSuffix() {
+        org.junit.Assert.assertNull(SizeFilters.parseFilterBytes("10G"))
+        org.junit.Assert.assertNull(SizeFilters.parseFilterBytes("abc"))
+        assertTrue(SizeFilters.parseFilterBytes("2 GB")!! > 1_000_000)
+    }
+
+    @Test
+    fun applyRejectsInvalidMaxSize() {
+        try {
+            SizeFilters.apply(emptyList(), null, null, "10G", false)
+            org.junit.Assert.fail("expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Invalid max_size", e.message)
+        }
+    }
+}

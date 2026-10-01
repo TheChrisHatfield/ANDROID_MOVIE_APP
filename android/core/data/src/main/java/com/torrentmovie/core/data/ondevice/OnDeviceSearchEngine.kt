@@ -129,7 +129,11 @@ internal class OnDeviceSearchEngine(
         tmdbKey: String,
         interleave: Boolean = true,
     ): SearchResult {
-        val filtered = SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, movieProfile)
+        val filtered = try {
+            SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, movieProfile)
+        } catch (_: IllegalArgumentException) {
+            throw SearchException("Invalid max_size", 400)
+        }
         val ordered = if (interleave) {
             SizeFilters.interleaveBySite(filtered, limit)
         } else {
@@ -145,13 +149,13 @@ internal class OnDeviceSearchEngine(
         }
         val dtos = cache.remember(ordered)
         val tmdb = TmdbOnDevice(http, tmdbKey)
-        val groups = MovieGrouping.group(dtos, ordered, tmdb, enrich)
+        val grouping = MovieGrouping.group(dtos, ordered, tmdb, enrich)
         return SearchResult(
             results = dtos,
             failedSites = failed,
-            groups = groups,
+            groups = grouping.groups,
             tmdbKeyRejected = false,
-            tmdbEnrichmentCapped = false,
+            tmdbEnrichmentCapped = grouping.enrichmentCapped,
         )
     }
 }

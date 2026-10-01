@@ -690,7 +690,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             infoMessages += ENRICHMENT_CAPPED_MESSAGE
         }
         if (outcome.tmdbKeyRejected) {
-            infoMessages += "TMDB key in Settings was rejected — using server key or no enrichment."
+            infoMessages += "TMDB key in Settings was rejected — posters and trailers may be missing."
         }
         if (outcome.failedSites.isNotEmpty()) {
             infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
