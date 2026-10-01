@@ -22,12 +22,21 @@ logger = logging.getLogger(__name__)
 
 INDEXER_HTTP_TIMEOUT = 15
 SEARCH_FANOUT_TIMEOUT_CAP_SEC = 110
+# Sequential health of ~25 indexers exceeds the Android search call timeout.
+SITES_HEALTH_DEADLINE_SEC = 8
 
 
 def search_fanout_timeout_sec(page_limit: int) -> int:
     """Give each indexer time for sequential pages without exceeding the Android read timeout."""
     pages = max(1, int(page_limit or 1))
     return min(SEARCH_FANOUT_TIMEOUT_CAP_SEC, INDEXER_HTTP_TIMEOUT * pages + 5)
+
+
+def _probe_site_health(site) -> bool:
+    try:
+        return bool(site.test_connection(timeout=4))
+    except TypeError:
+        return bool(site.test_connection())
 
 
 @dataclass
@@ -48,16 +57,49 @@ class TorrentSearcher:
         self._lock = threading.Lock()
 
     def test_sites(self, quiet: bool = True) -> bool:
+        sites = list(self.sites)
+        if not sites:
+            with self._lock:
+                self.working_sites = []
+            return False
+        workers = min(8, len(sites))
+        working: list = []
+        ordered = sorted(
+            sites,
+            key=lambda site: (0 if site.name in {"1337x", "YTS"} else 1, site.name),
+        )
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_probe_site_health, site): site for site in ordered}
+            try:
+                for future in as_completed(futures, timeout=SITES_HEALTH_DEADLINE_SEC):
+                    site = futures[future]
+                    try:
+                        ok = bool(future.result())
+                    except Exception as exc:
+                        logger.debug("indexer health error %s: %s", site.name, exc)
+                        ok = False
+                    if ok:
+                        working.append(site)
+                        if not quiet:
+                            logger.info("indexer ok: %s", site.name)
+                    elif not quiet:
+                        logger.warning("indexer down: %s", site.name)
+            except TimeoutError:
+                pending = [site.name for future, site in futures.items() if not future.done()]
+                for future in futures:
+                    future.cancel()
+                if pending:
+                    logger.warning(
+                        "indexer health timed out after %ss; skipping %s",
+                        SITES_HEALTH_DEADLINE_SEC,
+                        ", ".join(pending),
+                    )
         with self._lock:
-            self.working_sites = []
-            for site in self.sites:
-                if site.test_connection():
-                    self.working_sites.append(site)
-                    if not quiet:
-                        logger.info("indexer ok: %s", site.name)
-                elif not quiet:
-                    logger.warning("indexer down: %s", site.name)
-            return bool(self.working_sites)
+            merged = {site.name: site for site in self.working_sites}
+            for site in working:
+                merged[site.name] = site
+            self.working_sites = list(merged.values())
+        return bool(self.working_sites)
 
     def filter_working_by_names(self, names: list[str]) -> None:
         wanted = {n.strip().lower() for n in names}
@@ -256,6 +298,47 @@ class TorrentSearcher:
             results.extend(page_results)
         return results, errored
 
+    def _x1337_site(self):
+        """Resolve 1337x for browse even if the bulk health probe skipped it."""
+        from torrtux_core.sites.providers import X1337
+
+        with self._lock:
+            pool = list(self.working_sites)
+            all_sites = list(self.sites)
+        site = next((s for s in pool if s.name == "1337x"), None)
+        if site is None:
+            site = next((s for s in all_sites if s.name == "1337x"), None)
+        if site is None or not isinstance(site, X1337):
+            return None
+        if not getattr(site, "working_url", None):
+            ensure = getattr(site, "ensure_working_url", None)
+            if callable(ensure):
+                ensure(timeout=4)
+        if not getattr(site, "working_url", None):
+            bases = getattr(site, "base_urls", None) or []
+            if bases:
+                site.working_url = str(bases[0]).rstrip("/")
+        with self._lock:
+            if site not in self.working_sites:
+                self.working_sites.append(site)
+        return site
+
+    def _try_1337x_mirrors(self, site, attempt) -> tuple[list[dict], bool]:
+        current = getattr(site, "working_url", None)
+        urls = [str(url).rstrip("/") for url in (getattr(site, "base_urls", None) or [])]
+        last: tuple[list[dict], bool] = ([], True)
+        for url in urls:
+            if not url or url == current:
+                continue
+            site.working_url = url
+            raw, errored = attempt()
+            if raw:
+                return raw, False
+            last = (raw, errored)
+        if current:
+            site.working_url = current
+        return last
+
     def browse_1337x(
         self,
         feed: str,
@@ -269,16 +352,7 @@ class TorrentSearcher:
     ) -> SearchOutcome:
         from torrtux_core.sites.providers import X1337
 
-        with self._lock:
-            pool = list(self.working_sites)
-        site = next((s for s in pool if s.name == "1337x"), None)
-        if site is None:
-            candidate = next((s for s in self.sites if s.name == "1337x"), None)
-            if candidate and candidate.test_connection():
-                with self._lock:
-                    if candidate not in self.working_sites:
-                        self.working_sites.append(candidate)
-                site = candidate
+        site = self._x1337_site()
         if site is None or not isinstance(site, X1337):
             return SearchOutcome([], [], indexers_unavailable=True)
         if feed not in X1337.BROWSE_FEEDS:
@@ -287,6 +361,11 @@ class TorrentSearcher:
         from torrtux_core.filters import filter_movie_profile
 
         raw, errored = self._browse_site(site, feed, page_limit)
+        if not raw:
+            raw, errored = self._try_1337x_mirrors(
+                site,
+                lambda: self._browse_site(site, feed, page_limit),
+            )
         if feed == "top-100-television":
             profiled = raw if not movie_profile else []
         elif movie_profile:
@@ -416,22 +495,18 @@ class TorrentSearcher:
         from torrtux_core.filters import filter_movie_profile
         from torrtux_core.sites.providers import X1337
 
-        with self._lock:
-            pool = list(self.working_sites)
-        site = next((s for s in pool if s.name == "1337x"), None)
-        if site is None:
-            candidate = next((s for s in self.sites if s.name == "1337x"), None)
-            if candidate and candidate.test_connection():
-                with self._lock:
-                    if candidate not in self.working_sites:
-                        self.working_sites.append(candidate)
-                site = candidate
+        site = self._x1337_site()
         if site is None or not isinstance(site, X1337):
             return SearchOutcome([], [], indexers_unavailable=True)
         if genre not in X1337.MOVIE_GENRES:
             return SearchOutcome([], [], indexers_unavailable=True)
 
         raw, errored = self._browse_genre_pages(site, genre, page_limit)
+        if not raw:
+            raw, errored = self._try_1337x_mirrors(
+                site,
+                lambda: self._browse_genre_pages(site, genre, page_limit),
+            )
         scoped = filter_movie_profile(raw) if movie_profile else raw
         filtered = apply_filters(
             scoped,

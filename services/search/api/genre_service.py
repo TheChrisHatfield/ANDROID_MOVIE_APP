@@ -150,6 +150,50 @@ class GenreBrowseService:
                     )
             else:
                 need_wider_pool = _effective_pool_pages(page_limit) > BROAD_KEYWORD_PAGE_LIMIT
+                quick = self._searcher.browse_1337x_genre(
+                    normalized,
+                    movie_profile=movie_profile,
+                    page_limit=max(1, min(page_limit or 1, 2)),
+                    min_seeds=min_seeds,
+                    max_seeds=max_seeds,
+                    max_size=max_size,
+                    limit=limit,
+                )
+                if quick.results:
+                    pool_rows = pool_rows_from_ranked(quick.results) or list(quick.results)
+                    self._cache.put(
+                        normalized,
+                        pool_rows,
+                        quick.failed_sites,
+                        partial=True,
+                        movie_profile=movie_profile,
+                        page_limit=_effective_pool_pages(page_limit),
+                    )
+                    self._schedule_refresh(
+                        normalized,
+                        movie_profile=movie_profile,
+                        page_limit=page_limit,
+                        parallel=parallel,
+                        min_seeds=min_seeds,
+                        max_seeds=max_seeds,
+                        max_size=max_size,
+                        limit=limit,
+                        tmdb_api_key=tmdb_api_key,
+                        enrich=enrich,
+                        partial_ok=True,
+                    )
+                    cached_quick = self._cache.get(normalized, movie_profile=movie_profile)
+                    if cached_quick and cached_quick.rows:
+                        return self._outcome_from_cached_rows(
+                            cached_quick,
+                            normalized,
+                            movie_profile=movie_profile,
+                            min_seeds=min_seeds,
+                            max_seeds=max_seeds,
+                            max_size=max_size,
+                            limit=limit,
+                        )
+                    return SearchOutcome(results=list(quick.results), failed_sites=quick.failed_sites)
 
         owned_refresh = self._cache.mark_refreshing(normalized, movie_profile=movie_profile)
         if not owned_refresh:
@@ -206,7 +250,7 @@ class GenreBrowseService:
                 limit=limit,
                 tmdb_api_key=tmdb_api_key,
                 enrich=enrich,
-                partial_ok=False,
+                partial_ok=not force_refresh,
                 discover_page_offset=discover_page_offset(normalized, rotate=force_refresh),
             )
         finally:
@@ -310,10 +354,9 @@ class GenreBrowseService:
         page_limit: int | None = None,
         parallel: bool = True,
     ) -> None:
-        if not self._cache.mark_refreshing(genre_id, movie_profile=movie_profile):
-            return
-
         def run() -> None:
+            if not self._cache.mark_refreshing(genre_id, movie_profile=movie_profile):
+                return
             try:
                 self._refresh_sync(
                     genre_id,

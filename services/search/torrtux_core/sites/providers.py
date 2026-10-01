@@ -71,11 +71,11 @@ class PirateBay(TorrentSite):
         )
         self._apibay_mode = False
 
-    def test_connection(self) -> bool:
+    def test_connection(self, timeout: int = 10) -> bool:
         for url in self.base_urls:
             try:
                 probe_url = f"{url.rstrip('/')}/search/test/1/99/0"
-                response = http_get(probe_url, timeout=10)
+                response = http_get(probe_url, timeout=timeout)
                 if response.status_code == 200 and b'id="searchResult"' in response.content:
                     self.working_url = url.rstrip("/")
                     self._apibay_mode = False
@@ -83,7 +83,7 @@ class PirateBay(TorrentSite):
             except Exception:
                 continue
         try:
-            response = http_get(f"{APIBAY_SEARCH_URL}?q=test&cat=0", timeout=10)
+            response = http_get(f"{APIBAY_SEARCH_URL}?q=test&cat=0", timeout=timeout)
             if response.status_code == 200:
                 data = response.json()
                 if isinstance(data, list):
@@ -1180,7 +1180,7 @@ class RARBG(TorrentSite):
             ]
         )
 
-    def test_connection(self) -> bool:
+    def test_connection(self, timeout: int = 10) -> bool:
         return False
 
     def build_search_url(self, query, page=0):
@@ -1241,7 +1241,7 @@ class GoodTorrent(TorrentSite):
             ["https://good-torrent.com"]
         )
 
-    def test_connection(self) -> bool:
+    def test_connection(self, timeout: int = 10) -> bool:
         return False
 
     def build_search_url(self, query, page=0):

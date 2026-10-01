@@ -40,6 +40,7 @@ def test_browse_1337x_applies_movie_profile_except_tv_feed():
     searcher = TorrentSearcher(site_classes=[X1337])
     mock_site = MagicMock(spec=X1337)
     mock_site.name = "1337x"
+    mock_site.working_url = "https://1337xx.to"
     searcher.working_sites = [mock_site]
     raw = [
         {"name": "Movie Title 2024 1080p", "seeds": "50", "size": "2 GB", "site": "1337x"},
@@ -237,6 +238,63 @@ def test_parallel_search_fanout_timeout_returns_partial_results():
     assert "Slow" in failed
 
 
+def test_sites_health_probe_deadline_keeps_fast_indexers():
+    class FastSite:
+        name = "Fast"
+
+        def test_connection(self):
+            return True
+
+    class SlowSite:
+        name = "Slow"
+
+        def test_connection(self):
+            time.sleep(0.4)
+            return True
+
+    searcher = TorrentSearcher(site_classes=[])
+    searcher.sites = [FastSite(), SlowSite()]
+    with patch.object(searcher_mod, "SITES_HEALTH_DEADLINE_SEC", 0.15):
+        assert searcher.test_sites() is True
+    assert [site.name for site in searcher.working_sites] == ["Fast"]
+
+
+def test_browse_1337x_works_without_prior_health():
+    from torrtux_core.sites.providers import X1337
+
+    searcher = TorrentSearcher(site_classes=[X1337])
+    searcher.working_sites = []
+    searcher.sites[0].working_url = "https://1337xx.to"
+    raw = [
+        {"name": "Movie Title 2024 1080p", "seeds": "50", "size": "2 GB", "site": "1337x"},
+    ]
+    with patch.object(searcher, "_browse_site", return_value=(raw, False)):
+        out = searcher.browse_1337x("trending")
+    assert len(out.results) == 1
+    assert out.indexers_unavailable is False
+    assert any(site.name == "1337x" for site in searcher.working_sites)
+
+
+def test_try_1337x_mirrors_advances_past_dead_host():
+    class Site:
+        name = "1337x"
+        working_url = "https://bad.example"
+        base_urls = ["https://bad.example", "https://good.example"]
+
+    searcher = TorrentSearcher(site_classes=[])
+    site = Site()
+    calls: list[str] = []
+
+    def attempt():
+        calls.append(site.working_url)
+        if site.working_url == "https://good.example":
+            return [{"name": "ok", "seeds": "1", "size": "1 GB", "site": "1337x"}], False
+        return [], True
+
+    raw, errored = searcher._try_1337x_mirrors(site, attempt)
+    assert not errored
+    assert raw[0]["name"] == "ok"
+    assert "https://good.example" in calls
 def test_all_sources_failed_flag():
     searcher = TorrentSearcher(site_classes=[])
     mock_site = MagicMock()

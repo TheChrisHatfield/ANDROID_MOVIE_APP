@@ -7,6 +7,26 @@ from metadata.genre_browse import BROAD_KEYWORD_PAGE_LIMIT
 from torrtux_core.searcher import SearchOutcome, search_fanout_timeout_sec
 
 
+def _searcher_mock() -> MagicMock:
+    searcher = MagicMock()
+    searcher.browse_1337x_genre.return_value = SearchOutcome([], [])
+    return searcher
+
+
+def test_browse_serves_1337x_shelf_on_cache_miss():
+    searcher = MagicMock()
+    searcher.browse_1337x_genre.return_value = SearchOutcome(
+        results=[{"name": "Horror Film 2020 1080p", "seeds": "40", "site": "1337x"}],
+        failed_sites=[],
+    )
+    cache = GenrePoolCache()
+    service = GenreBrowseService(searcher, cache, lambda _: (MagicMock(configured=False), False))
+    with patch("api.genre_service.rank_genre_pool_rows", side_effect=lambda rows, *args, **kwargs: list(rows)):
+        outcome = service.browse("horror", movie_profile=True)
+    assert any("Horror Film" in row["name"] for row in outcome.results)
+    searcher.browse_1337x_genre.assert_called_once()
+
+
 def test_refresh_wait_outlives_default_genre_fanout():
     assert genre_service_mod._REFRESH_WAIT_SECONDS >= search_fanout_timeout_sec(BROAD_KEYWORD_PAGE_LIMIT)
     assert genre_service_mod._REFRESH_WAIT_SECONDS < 120
@@ -44,7 +64,7 @@ def test_browse_serves_partial_cache_entry(mock_fetch):
         partial=True,
         movie_profile=True,
     )
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", movie_profile=True)
     mock_fetch.assert_not_called()
     assert outcome.results
@@ -87,7 +107,7 @@ def test_browse_reranks_on_cache_hit(mock_rank):
         [],
         movie_profile=True,
     )
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     service.browse("horror", movie_profile=True)
     mock_rank.assert_called_once()
 
@@ -102,7 +122,7 @@ def test_force_refresh_empty_invalidates_cache(mock_fetch):
         [],
         movie_profile=True,
     )
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     service.browse("horror", movie_profile=True, force_refresh=True)
     assert cache.get("horror", movie_profile=True) is None
 
@@ -124,7 +144,7 @@ def test_pool_rows_from_ranked_dedupes_live_discoveries():
 def test_browse_does_not_steal_in_flight_refresh(mock_fetch):
     cache = GenrePoolCache()
     assert cache.mark_refreshing("horror", movie_profile=True)
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", movie_profile=True)
     mock_fetch.assert_not_called()
     assert outcome.results == []
@@ -160,7 +180,7 @@ def test_force_refresh_waits_for_in_flight_instead_of_serving_stale(mock_fetch):
 
     worker = threading.Thread(target=complete_in_flight)
     worker.start()
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", movie_profile=True, force_refresh=True)
     worker.join()
     mock_fetch.assert_not_called()
@@ -179,7 +199,7 @@ def test_browse_applies_filters_on_cache_hit():
         [],
         movie_profile=True,
     )
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", min_seeds=10, movie_profile=True)
     assert len(outcome.results) == 1
     assert "High" in outcome.results[0]["name"]
@@ -199,7 +219,7 @@ def test_browse_refetches_when_cached_pool_has_fewer_pages(mock_fetch):
         movie_profile=True,
         page_limit=2,
     )
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", movie_profile=True, page_limit=10)
     mock_fetch.assert_called_once()
     assert mock_fetch.call_args.kwargs["page_limit"] == 10
@@ -234,7 +254,7 @@ def test_browse_rebuilds_after_narrow_warm_refresh(mock_fetch):
 
     worker = threading.Thread(target=complete_warm)
     worker.start()
-    service = GenreBrowseService(MagicMock(), cache, lambda _: (MagicMock(configured=False), False))
+    service = GenreBrowseService(_searcher_mock(), cache, lambda _: (MagicMock(configured=False), False))
     outcome = service.browse("horror", movie_profile=True, page_limit=10)
     worker.join()
     mock_fetch.assert_called_once()

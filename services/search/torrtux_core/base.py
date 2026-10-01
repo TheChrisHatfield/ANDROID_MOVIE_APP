@@ -19,12 +19,17 @@ class TorrentSite:
         self.result_selector = result_selector
         self.working_url = None
 
-    def test_connection(self) -> bool:
+    def test_connection(self, timeout: int = 10) -> bool:
+        return self.ensure_working_url(timeout=timeout)
+
+    def ensure_working_url(self, timeout: int = 4) -> bool:
+        if self.working_url:
+            return True
         for url in self.base_urls:
             try:
-                response = http_get(url, timeout=10, allow_redirects=True)
+                response = http_get(url, timeout=timeout, allow_redirects=True)
                 if response.status_code == 200:
-                    self.working_url = url
+                    self.working_url = url.rstrip("/")
                     return True
             except Exception:
                 continue
