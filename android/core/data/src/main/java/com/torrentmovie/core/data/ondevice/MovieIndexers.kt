@@ -47,9 +47,11 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         var lastError = true
         for (base in X1337_MIRRORS) {
             val collected = mutableListOf<IndexerRow>()
+            var fetchedOk = false
             for (page in 0 until pages) {
                 val url = if (page <= 0) "$base/$path/" else "$base/$path/${page + 1}/"
                 val html = http.getText(url) ?: break
+                fetchedOk = true
                 val pageRows = parse1337x(html, base)
                 if (pageRows.isEmpty()) break
                 collected += pageRows
@@ -59,11 +61,12 @@ internal class MovieIndexers(private val http: IndexerHttp) {
             if (fallback != null) {
                 val html = http.getText("$base/$fallback/1/")
                 if (html != null) {
+                    fetchedOk = true
                     val pageRows = parse1337x(html, base)
                     if (pageRows.isNotEmpty()) return pageRows to false
                 }
             }
-            lastError = collected.isEmpty()
+            lastError = !fetchedOk
         }
         return emptyList<IndexerRow>() to lastError
     }
@@ -220,10 +223,17 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                     ?.attr("data-clipboard-text")
                 ?: soup.select("a[href]").firstOrNull { it.attr("href").contains("magnet:") }
                     ?.attr("href")
-            val raw = href?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            val raw = href?.trim()?.takeIf { it.isNotEmpty() }
+                ?: MAGNET_IN_PAGE.find(html)?.value
+            if (raw.isNullOrBlank()) return null
             val decoded = org.jsoup.parser.Parser.unescapeEntities(raw, true).trim()
             return decoded.takeIf { it.startsWith("magnet:") }
         }
+
+        private val MAGNET_IN_PAGE = Regex(
+            """magnet:\?xt=urn:btih:[a-zA-Z0-9]{32,40}[^\"'\s<>]*""",
+            RegexOption.IGNORE_CASE,
+        )
 
         val BROWSE_FEEDS = mapOf(
             "trending" to "trending",
@@ -365,8 +375,10 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 val cols = row.select("td")
                 if (cols.size < 10) return@mapNotNull null
                 val link = cols[1].selectFirst("a") ?: return@mapNotNull null
+                val name = link.text().trim()
+                if (name.isBlank()) return@mapNotNull null
                 IndexerRow(
-                    name = link.text().trim(),
+                    name = name,
                     site = "TorrentGalaxy",
                     size = cols[5].text().trim(),
                     seeds = cols[7].text().trim(),
@@ -385,8 +397,10 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 if (cols.size < 5) return@mapNotNull null
                 val link = cols[0].select("a[href]").firstOrNull { it.attr("href").startsWith("/") }
                     ?: cols[0].selectFirst("a[href]")
+                val name = link?.text()?.trim() ?: cols[0].text().trim()
+                if (name.isBlank() || name.equals("Name", ignoreCase = true)) return@mapNotNull null
                 IndexerRow(
-                    name = link?.text()?.trim() ?: cols[0].text().trim(),
+                    name = name,
                     site = "LimeTorrents",
                     size = cols[2].text().trim(),
                     seeds = cols[3].text().replace(",", "").trim(),

@@ -698,6 +698,14 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         if (outcome.failedSites.isNotEmpty()) {
             infoMessages += "Some sources failed: ${outcome.failedSites.joinToString()}"
         }
+        if (
+            outcome.groups.isEmpty() &&
+            outcome.results.isEmpty() &&
+            container.settingsRepository.load().contentFilter ==
+                com.torrentmovie.core.data.SearchContentFilter.TV
+        ) {
+            infoMessages += "TV shows filter hides titles without season/episode in the name. Use Settings → Show → All if this list is empty."
+        }
         val display = normalizeKodiGroups(outcome.groups, outcome.results)
         if (!shouldCommitSearchOutcome(generation, searchGeneration)) return
         val settings = container.settingsRepository.load()

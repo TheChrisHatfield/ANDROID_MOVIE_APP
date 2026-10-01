@@ -97,6 +97,26 @@ class MovieIndexerParseTest {
         assertTrue(magnet.contains("&dn="))
         assertTrue(!magnet.contains("&amp;"))
     }
+
+    @Test
+    fun extractMagnetFromInlineScriptHash() {
+        val html = """<script>var m="magnet:?xt=urn:btih:cccccccccccccccccccccccccccccccccccccccc";</script>"""
+        val magnet = MovieIndexers.extractMagnet(html, "https://1337xx.to")
+        assertTrue(magnet!!.startsWith("magnet:?xt=urn:btih:cccccccccccccccc"))
+    }
+
+    @Test
+    fun parseLimeSkipsHeaderNameRow() {
+        val html = """
+            <table id="table2">
+            <tr><td>Name</td><td>Date</td><td>Size</td><td>Seeds</td><td>Leeches</td></tr>
+            <tr><td><a href="/inception.html">Inception 2010</a></td><td>Jan</td><td>1 GB</td><td>9</td><td>1</td></tr>
+            </table>
+        """.trimIndent()
+        val rows = MovieIndexers.parseLime(html, "https://www.limetorrents.lol")
+        assertEquals(1, rows.size)
+        assertEquals("Inception 2010", rows[0].name)
+    }
 }
 
 class SizeFilterTest {
@@ -146,5 +166,11 @@ class SizeFilterTest {
         val movies = SizeFilters.apply(rows, null, null, null, com.torrentmovie.core.data.SearchContentFilter.MOVIES)
         assertEquals(1, movies.size)
         assertEquals("Inception 2010 1080p", movies[0].name)
+    }
+
+    @Test
+    fun seedCountReadsKiloAndTrailingLabel() {
+        org.junit.Assert.assertEquals(1200, SizeFilters.seedCount("1.2K"))
+        org.junit.Assert.assertEquals(12, SizeFilters.seedCount("12 seeds"))
     }
 }

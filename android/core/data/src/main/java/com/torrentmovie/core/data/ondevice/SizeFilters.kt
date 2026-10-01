@@ -67,7 +67,11 @@ internal object SizeFilters {
     fun seedCount(seeds: String?): Int? {
         if (seeds.isNullOrBlank() || seeds == "-") return null
         val normalized = seeds.replace(",", "").trim()
-        return normalized.toIntOrNull()
+        val kilo = Regex("""^(\d+(?:\.\d+)?)\s*[kK]\b""").find(normalized)
+        if (kilo != null) {
+            return (kilo.groupValues[1].toDouble() * 1000).toInt()
+        }
+        return Regex("""^\d+""").find(normalized)?.value?.toIntOrNull()
     }
 
     fun isLikelyTvShow(name: String): Boolean {
