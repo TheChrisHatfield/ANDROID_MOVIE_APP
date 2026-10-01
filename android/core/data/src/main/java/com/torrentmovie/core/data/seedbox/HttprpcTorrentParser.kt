@@ -53,6 +53,14 @@ internal object HttprpcTorrentParser {
     }
 
     private fun com.google.gson.JsonElement.asLongOrZero(): Long {
-        return if (isJsonNull) 0L else asString.toLongOrNull() ?: 0L
+        return try {
+            when {
+                isJsonNull -> 0L
+                isJsonPrimitive && asJsonPrimitive.isNumber -> asJsonPrimitive.asLong
+                else -> asString.toLongOrNull() ?: 0L
+            }
+        } catch (_: Exception) {
+            0L
+        }
     }
 }

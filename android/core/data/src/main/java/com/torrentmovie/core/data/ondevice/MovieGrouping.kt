@@ -76,6 +76,8 @@ internal object MovieGrouping {
                 overview = overview,
                 poster_url = poster,
                 trailer_youtube_key = trailer,
+                is_tv = lookups[key]?.fromTv == true ||
+                    items.any { SizeFilters.isLikelyTvShow(it.second.name) },
                 release_count = releases.size,
                 releases = releases,
             )

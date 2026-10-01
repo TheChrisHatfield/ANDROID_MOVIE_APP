@@ -10,6 +10,7 @@ data class MovieMetadata(
     val overview: String? = null,
     val posterUrl: String? = null,
     val trailerYoutubeKey: String? = null,
+    val isTv: Boolean = false,
 )
 
 class MovieMetadataStore {
@@ -35,6 +36,7 @@ class MovieMetadataStore {
                     posterUrl = metadata.posterUrl?.takeIf { it.isNotBlank() } ?: existing.posterUrl,
                     trailerYoutubeKey = metadata.trailerYoutubeKey?.takeIf { it.isNotBlank() }
                         ?: existing.trailerYoutubeKey,
+                    isTv = metadata.isTv || existing.isTv,
                 )
             }
             while (byResultId.size > maxEntries) {

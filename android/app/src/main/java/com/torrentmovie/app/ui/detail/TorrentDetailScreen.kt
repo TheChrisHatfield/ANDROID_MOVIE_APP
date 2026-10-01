@@ -309,7 +309,14 @@ fun TorrentDetailScreen(
                             try {
                                 val result = withContext(Dispatchers.IO) {
                                     val releaseName = container.searchResultStore.get(resultId)?.name
-                                    container.seedboxRepository.addMagnet(m, name, site, releaseName)
+                                    val catalogIsTv = container.movieMetadataStore.get(resultId)?.isTv == true
+                                    container.seedboxRepository.addMagnet(
+                                        m,
+                                        name,
+                                        site,
+                                        releaseName,
+                                        catalogIsTv,
+                                    )
                                 }
                                 when (result) {
                                     is SeedboxResult.Success -> {

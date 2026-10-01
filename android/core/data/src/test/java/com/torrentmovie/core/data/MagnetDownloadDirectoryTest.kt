@@ -59,6 +59,15 @@ class MagnetDownloadDirectoryTest {
     }
 
     @Test
+    fun tmdbTvCatalogRoutesShowWithoutEpisodeTokensToTvFolder() {
+        val settings = AppSettings()
+        assertEquals(
+            AppSettings.DEFAULT_TV_DOWNLOAD_DIR,
+            settings.magnetDownloadDirectory("The Bear", catalogIsTv = true),
+        )
+    }
+
+    @Test
     fun rejectsRelativeTvFolder() {
         assertEquals(
             "TV download folder must be an absolute path (start with /)",

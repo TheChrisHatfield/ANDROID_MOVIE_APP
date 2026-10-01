@@ -37,9 +37,14 @@ data class AppSettings(
     }
 }
 
-fun AppSettings.magnetDownloadDirectory(displayName: String, releaseName: String? = null): String {
+fun AppSettings.magnetDownloadDirectory(
+    displayName: String,
+    releaseName: String? = null,
+    catalogIsTv: Boolean = false,
+): String {
     val hint = releaseName?.takeIf { it.isNotBlank() } ?: displayName
     val useTv = contentFilter == SearchContentFilter.TV ||
+        catalogIsTv ||
         com.torrentmovie.core.data.ondevice.SizeFilters.isLikelyTvShow(hint) ||
         com.torrentmovie.core.data.ondevice.SizeFilters.isLikelyTvShow(displayName)
     return (if (useTv) tvDownloadDirectory else downloadDirectory).trim()

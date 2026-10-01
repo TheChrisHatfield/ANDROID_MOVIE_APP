@@ -665,10 +665,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         emptyResultsMessage: String,
     ) {
         val infoMessages = mutableListOf<String>()
-        if (minSeeds != null && activeBrowseFeed == null && activeGenre == null) {
+        if ((minSeeds ?: 0) > 0 && activeBrowseFeed == null && activeGenre == null) {
             infoMessages += "Min seeds filter may hide YTS and other indexers without seed counts."
         }
-        if (minSeeds != null && (activeBrowseFeed != null || activeGenre != null)) {
+        if ((minSeeds ?: 0) > 0 && (activeBrowseFeed != null || activeGenre != null)) {
             infoMessages += "Min seeds filter may hide torrents without seed counts."
         }
         if (maxSeeds != null) {
@@ -743,6 +743,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 overview = group.overview,
                 posterUrl = group.posterUrl ?: releasePoster,
                 trailerYoutubeKey = group.trailerYoutubeKey,
+                isTv = group.isTv,
             )
             group.releases.forEach { release ->
                 container.movieMetadataStore.put(

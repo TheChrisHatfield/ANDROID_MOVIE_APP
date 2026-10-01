@@ -12,6 +12,7 @@ internal data class TmdbMovie(
     val posterUrl: String?,
     val trailerKey: String? = null,
     val popularity: Double = 0.0,
+    val fromTv: Boolean = false,
 )
 
 internal class TmdbOnDevice(
@@ -55,7 +56,7 @@ internal class TmdbOnDevice(
             return emptyList()
         }
         val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return emptyList()
-        return parseMovieList(body, limit)
+        return parseMovieList(body, limit, fromTv = useTv)
     }
 
     fun discover(genreTmdbId: Int, page: Int, limit: Int): List<TmdbMovie> {
@@ -69,7 +70,7 @@ internal class TmdbOnDevice(
             return emptyList()
         }
         val body = fetched.body.takeIf { fetched.code in 200..299 } ?: return emptyList()
-        return parseMovieList(body, limit)
+        return parseMovieList(body, limit, fromTv = searchTv)
     }
 
     fun lookup(
@@ -78,15 +79,16 @@ internal class TmdbOnDevice(
         fetchTrailer: Boolean = false,
         preferTv: Boolean = searchTv,
     ): TmdbMovie? {
-        val hits = searchMovies(title, 5, year = year, useTv = preferTv)
-        if (hits.isEmpty()) return null
-        val match = if (year != null) {
-            hits.firstOrNull { it.year == year } ?: hits.first()
-        } else {
-            hits.first()
-        }
+        val match = pickYearMatch(searchMovies(title, 5, year = year, useTv = preferTv), year)
+            ?: pickYearMatch(searchMovies(title, 5, year = year, useTv = !preferTv), year)
+            ?: return null
         if (!fetchTrailer) return match
-        return match.copy(trailerKey = trailer(match.tmdbId, preferTv) ?: match.trailerKey)
+        return match.copy(trailerKey = trailer(match.tmdbId, match.fromTv) ?: match.trailerKey)
+    }
+
+    private fun pickYearMatch(hits: List<TmdbMovie>, year: Int?): TmdbMovie? {
+        if (hits.isEmpty()) return null
+        return if (year != null) hits.firstOrNull { it.year == year } ?: hits.first() else hits.first()
     }
 
     private fun trailer(tmdbId: Int, useTv: Boolean = searchTv): String? {
@@ -115,7 +117,7 @@ internal class TmdbOnDevice(
         }
     }
 
-    private fun parseMovieList(body: String, limit: Int): List<TmdbMovie> {
+    private fun parseMovieList(body: String, limit: Int, fromTv: Boolean): List<TmdbMovie> {
         return try {
             val resultsEl = JsonParser.parseString(body).asJsonObject.get("results")
             if (resultsEl == null || resultsEl.isJsonNull || !resultsEl.isJsonArray) return emptyList()
@@ -150,6 +152,7 @@ internal class TmdbOnDevice(
                         overview = overview,
                         posterUrl = posterPath?.let { "https://image.tmdb.org/t/p/w342$it" },
                         popularity = obj.get("popularity")?.takeIf { it.isJsonPrimitive }?.asDouble ?: 0.0,
+                        fromTv = fromTv,
                     )
                 } catch (_: Exception) {
                     null

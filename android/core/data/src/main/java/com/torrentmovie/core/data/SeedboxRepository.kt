@@ -59,6 +59,7 @@ class SeedboxRepository(
         displayName: String,
         site: String,
         releaseName: String? = null,
+        catalogIsTv: Boolean = false,
     ): SeedboxResult = addMutex.withLock {
         val settings = settingsRepository.load()
         val authKey = seedboxAuthKey(settings)
@@ -77,7 +78,7 @@ class SeedboxRepository(
         if (!settingsRepository.isSeedboxConfigured()) {
             return SeedboxResult.Failure("Configure seedbox URL and credentials in Settings")
         }
-        val downloadDirectory = settings.magnetDownloadDirectory(displayName, releaseName)
+        val downloadDirectory = settings.magnetDownloadDirectory(displayName, releaseName, catalogIsTv)
         if (downloadDirectory.isBlank()) {
             return SeedboxResult.Failure("Set download folder in Settings before sending")
         }

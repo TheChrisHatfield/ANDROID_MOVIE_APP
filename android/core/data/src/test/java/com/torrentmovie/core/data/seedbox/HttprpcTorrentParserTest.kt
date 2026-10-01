@@ -97,4 +97,30 @@ class HttprpcTorrentParserTest {
     fun parseListResponseReturnsEmptyWhenTorrentObjectMissing() {
         assertTrue(HttprpcTorrentParser.parseListResponse("""{"cid":"1"}""").isEmpty())
     }
+
+    @Test
+    fun parseListResponseAcceptsNumericProgressFields() {
+        val json = """
+            {
+              "t": {
+                "ABCDEF0123456789ABCDEF0123456789ABCDEF01": [
+                  "1", "0", "1", "1",
+                  "Show",
+                  1000,
+                  0, 0,
+                  250,
+                  0, 0, 0, 100,
+                  0,
+                  "", 0, 0, 0, 0,
+                  750
+                ]
+              }
+            }
+        """.trimIndent()
+        val status = HttprpcTorrentParser.parseListResponse(json).first()
+        assertEquals(250L, status.bytesDone)
+        assertEquals(1000L, status.sizeBytes)
+        assertEquals(750L, status.leftBytes)
+        assertEquals(100L, status.downRate)
+    }
 }

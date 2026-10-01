@@ -30,6 +30,7 @@ class TmdbOnDeviceTest {
     fun lookupIncludesYearQueryParams() {
         val server = MockWebServer()
         server.enqueue(MockResponse().setBody("""{"results":[]}"""))
+        server.enqueue(MockResponse().setBody("""{"results":[]}"""))
         server.start()
         try {
             val tmdb = TmdbOnDevice(
@@ -77,6 +78,7 @@ class TmdbOnDeviceTest {
     fun lookupPreferTvUsesTvSearchEvenWhenCatalogIsMovies() {
         val server = MockWebServer()
         server.enqueue(MockResponse().setBody("""{"results":[]}"""))
+        server.enqueue(MockResponse().setBody("""{"results":[]}"""))
         server.start()
         try {
             val tmdb = TmdbOnDevice(
@@ -89,6 +91,32 @@ class TmdbOnDeviceTest {
             val path = server.takeRequest().path.orEmpty()
             assertTrue(path.contains("/search/tv"))
             assertTrue(path.contains("first_air_date_year=2005"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun lookupFallsBackToTvWhenMovieSearchIsEmpty() {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"results":[]}"""))
+        server.enqueue(
+            MockResponse().setBody(
+                """{"results":[{"id":136315,"name":"The Bear","first_air_date":"2022-06-23"}]}""",
+            ),
+        )
+        server.start()
+        try {
+            val tmdb = TmdbOnDevice(
+                http = IndexerHttp(OkHttpClient()),
+                apiKey = "k",
+                apiBase = server.url("/").toString().trimEnd('/'),
+            )
+            val hit = tmdb.lookup("The Bear", 2022, preferTv = false)
+            assertEquals("The Bear", hit?.title)
+            assertTrue(hit?.fromTv == true)
+            assertTrue(server.takeRequest().path.orEmpty().contains("/search/movie"))
+            assertTrue(server.takeRequest().path.orEmpty().contains("/search/tv"))
         } finally {
             server.shutdown()
         }

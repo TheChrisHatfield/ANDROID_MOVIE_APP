@@ -111,12 +111,14 @@ data class MovieGroupDto(
     val overview: String? = null,
     val poster_url: String? = null,
     val trailer_youtube_key: String? = null,
+    val is_tv: Boolean = false,
     val release_count: Int,
     val releases: List<TorrentResultDto>,
 ) {
     val groupKey: String get() = group_key
     val posterUrl: String? get() = poster_url
     val trailerYoutubeKey: String? get() = trailer_youtube_key
+    val isTv: Boolean get() = is_tv
     val releaseCount: Int get() = release_count
 }
 

@@ -47,4 +47,12 @@ class MovieMetadataStoreTest {
         assertNull(stored?.posterUrl)
         assertNull(stored?.trailerYoutubeKey)
     }
+
+    @Test
+    fun mergeKeepsTvCatalogFlag() {
+        val store = MovieMetadataStore()
+        store.put("a", MovieMetadata(title = "The Bear", isTv = true))
+        store.put("a", MovieMetadata(title = "The Bear", posterUrl = "p.jpg"))
+        assertEquals(true, store.get("a")?.isTv)
+    }
 }
