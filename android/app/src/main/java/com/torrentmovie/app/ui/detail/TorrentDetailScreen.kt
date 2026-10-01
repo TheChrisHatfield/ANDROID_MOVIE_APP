@@ -34,6 +34,7 @@ import com.torrentmovie.app.ui.util.shouldClearMagnetLoading
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.MagnetHashUtil
 import com.torrentmovie.core.data.SearchException
+import com.torrentmovie.core.data.magnetDownloadDirectory
 import com.torrentmovie.core.data.seedbox.SeedboxResult
 import com.torrentmovie.core.network.TorrentResultDto
 import kotlinx.coroutines.CancellationException
@@ -69,7 +70,7 @@ fun TorrentDetailScreen(
     val seedboxConfigured = settings.rutorrentBaseUrl.isNotBlank() &&
         settings.username.isNotBlank() &&
         settings.password.isNotBlank()
-    val downloadDirConfigured = settings.downloadDirectory.trim().isNotBlank()
+    val downloadDirConfigured = settings.magnetDownloadDirectory(name).isNotBlank()
     val uploaded by container.uploadedRepository.observeAll().collectAsState(initial = emptyList())
     val metadataRevision by container.movieMetadataStore.revision.collectAsState()
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }

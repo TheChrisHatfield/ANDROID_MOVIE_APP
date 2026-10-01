@@ -1,6 +1,7 @@
 package com.torrentmovie.core.data.ondevice
 
 import com.torrentmovie.core.data.MovieSearchSuggestion
+import com.torrentmovie.core.data.SearchContentFilter
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.data.SearchResult
 import com.torrentmovie.core.network.MagnetResponseDto
@@ -25,12 +26,12 @@ internal class OnDeviceSearchEngine(
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
-        movieProfile: Boolean,
+        contentFilter: SearchContentFilter,
         enrich: Boolean,
         tmdbKey: String,
     ): SearchResult {
         val (raw, failed) = indexers.searchAll(query, pages.coerceIn(1, 10))
-        return finish(raw, failed, limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey)
+        return finish(raw, failed, limit, minSeeds, maxSeeds, maxSize, contentFilter, enrich, tmdbKey)
     }
 
     fun browse1337x(
@@ -40,11 +41,11 @@ internal class OnDeviceSearchEngine(
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
-        movieProfile: Boolean,
+        contentFilter: SearchContentFilter,
         enrich: Boolean,
         tmdbKey: String,
     ): SearchResult {
-        if (feed == "top-100-television" && movieProfile) {
+        if (feed == "top-100-television" && contentFilter == SearchContentFilter.MOVIES) {
             return SearchResult(emptyList(), emptyList(), emptyList())
         }
         val (raw, errored) = indexers.browse1337x(feed, pages.coerceIn(1, 10))
@@ -52,7 +53,7 @@ internal class OnDeviceSearchEngine(
         if (raw.isEmpty() && errored) {
             throw SearchException("No sources available", 503)
         }
-        return finish(raw, failed, limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey, interleave = false)
+        return finish(raw, failed, limit, minSeeds, maxSeeds, maxSize, contentFilter, enrich, tmdbKey, interleave = false)
     }
 
     fun browseGenre(
@@ -62,7 +63,7 @@ internal class OnDeviceSearchEngine(
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
-        movieProfile: Boolean,
+        contentFilter: SearchContentFilter,
         enrich: Boolean,
         tmdbKey: String,
     ): SearchResult {
@@ -87,7 +88,7 @@ internal class OnDeviceSearchEngine(
                 extra.shutdownNow()
             }
         }
-        return finish(raw, emptyList(), limit, minSeeds, maxSeeds, maxSize, movieProfile, enrich, tmdbKey, tmdb = tmdb)
+        return finish(raw, emptyList(), limit, minSeeds, maxSeeds, maxSize, contentFilter, enrich, tmdbKey, tmdb = tmdb)
     }
 
     fun resolveMagnet(
@@ -133,14 +134,14 @@ internal class OnDeviceSearchEngine(
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
-        movieProfile: Boolean,
+        contentFilter: SearchContentFilter,
         enrich: Boolean,
         tmdbKey: String,
         interleave: Boolean = true,
         tmdb: TmdbOnDevice? = null,
     ): SearchResult {
         val filtered = try {
-            SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, movieProfile)
+            SizeFilters.apply(raw, minSeeds, maxSeeds, maxSize, contentFilter)
         } catch (_: IllegalArgumentException) {
             throw SearchException("Invalid max_size", 400)
         }

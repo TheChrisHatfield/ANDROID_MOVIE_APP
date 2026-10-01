@@ -76,7 +76,8 @@ class SeedboxRepository(
         if (!settingsRepository.isSeedboxConfigured()) {
             return SeedboxResult.Failure("Configure seedbox URL and credentials in Settings")
         }
-        if (settings.downloadDirectory.trim().isBlank()) {
+        val downloadDirectory = settings.magnetDownloadDirectory(displayName)
+        if (downloadDirectory.isBlank()) {
             return SeedboxResult.Failure("Set download folder in Settings before sending")
         }
         if (key in sentWithoutPersist) {
@@ -85,17 +86,17 @@ class SeedboxRepository(
                 magnet = magnet,
                 displayName = displayName,
                 site = site,
-                downloadDirectory = settings.downloadDirectory,
+                downloadDirectory = downloadDirectory,
             )
         }
-        val result = client().addMagnet(magnet, settings.downloadDirectory)
+        val result = client().addMagnet(magnet, downloadDirectory)
         if (result is SeedboxResult.Success) {
             val persisted = persistUploadedMagnet(
                 key = key,
                 magnet = magnet,
                 displayName = displayName,
                 site = site,
-                downloadDirectory = settings.downloadDirectory,
+                downloadDirectory = downloadDirectory,
             )
             if (persisted is SeedboxResult.Failure) {
                 rememberSentWithoutPersist(key)

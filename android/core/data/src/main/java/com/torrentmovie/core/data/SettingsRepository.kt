@@ -19,18 +19,28 @@ data class AppSettings(
     val password: String = "",
     val authScheme: String = "basic",
     val downloadDirectory: String = DEFAULT_DOWNLOAD_DIR,
-    val movieSitesOnly: Boolean = true,
+    val tvDownloadDirectory: String = DEFAULT_TV_DOWNLOAD_DIR,
+    val contentFilter: SearchContentFilter = SearchContentFilter.MOVIES,
     val disclaimerAccepted: Boolean = false,
     val searchPages: Int = DEFAULT_SEARCH_PAGES,
     val tmdbApiKey: String = "",
     val fetchMovieMetadata: Boolean = true,
 ) {
+    val movieSitesOnly: Boolean get() = contentFilter == SearchContentFilter.MOVIES
+
     companion object {
         const val EMULATOR_SEARCH_API = "http://10.0.2.2:8765"
         const val DEFAULT_SEARCH_API = EMULATOR_SEARCH_API
         const val DEFAULT_DOWNLOAD_DIR = "/home5/chris82/downloads/MOVIES/"
+        const val DEFAULT_TV_DOWNLOAD_DIR = "/home5/chris82/downloads/TVSHOWS/"
         const val DEFAULT_SEARCH_PAGES = 2
     }
+}
+
+fun AppSettings.magnetDownloadDirectory(displayName: String): String {
+    val useTv = contentFilter == SearchContentFilter.TV ||
+        com.torrentmovie.core.data.ondevice.SizeFilters.isLikelyTvShow(displayName)
+    return (if (useTv) tvDownloadDirectory else downloadDirectory).trim()
 }
 
 class SettingsRepository(
@@ -72,7 +82,12 @@ class SettingsRepository(
             authScheme = normalizeLoadedAuthScheme(prefs.getString(KEY_AUTH_SCHEME, "basic") ?: "basic"),
             downloadDirectory = (prefs.getString(KEY_DOWNLOAD_DIR, AppSettings.DEFAULT_DOWNLOAD_DIR)
                 ?: AppSettings.DEFAULT_DOWNLOAD_DIR).trim(),
-            movieSitesOnly = prefs.getBoolean(KEY_MOVIE_SITES, true),
+            tvDownloadDirectory = (prefs.getString(KEY_TV_DOWNLOAD_DIR, AppSettings.DEFAULT_TV_DOWNLOAD_DIR)
+                ?: AppSettings.DEFAULT_TV_DOWNLOAD_DIR).trim(),
+            contentFilter = SearchContentFilter.fromStored(
+                prefs.getString(KEY_CONTENT_FILTER, null),
+                prefs.getBoolean(KEY_MOVIE_SITES, true),
+            ),
             disclaimerAccepted = prefs.getBoolean(KEY_DISCLAIMER, false),
             searchPages = prefs.getInt(KEY_SEARCH_PAGES, AppSettings.DEFAULT_SEARCH_PAGES)
                 .coerceIn(1, MAX_SEARCH_PAGES),
@@ -196,6 +211,7 @@ class SettingsRepository(
         if (validateAppSettings(settings) != null) return false
         val searchApiUrl = normalizeSearchApiUrl(settings.searchApiBaseUrl)
         val downloadDir = settings.downloadDirectory.trim()
+        val tvDownloadDir = settings.tvDownloadDirectory.trim()
         val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
         val authScheme = normalizeAuthScheme(settings.authScheme)
         val previousSearch = prefs.getString(KEY_SEARCH_API, null)
@@ -226,7 +242,9 @@ class SettingsRepository(
             .putString(KEY_PASSWORD, settings.password.trim())
             .putString(KEY_AUTH_SCHEME, authScheme)
             .putString(KEY_DOWNLOAD_DIR, downloadDir)
-            .putBoolean(KEY_MOVIE_SITES, settings.movieSitesOnly)
+            .putString(KEY_TV_DOWNLOAD_DIR, tvDownloadDir)
+            .putBoolean(KEY_MOVIE_SITES, settings.contentFilter == SearchContentFilter.MOVIES)
+            .putString(KEY_CONTENT_FILTER, settings.contentFilter.storedValue)
             .putBoolean(KEY_DISCLAIMER, settings.disclaimerAccepted)
             .putInt(KEY_SEARCH_PAGES, settings.searchPages.coerceIn(1, MAX_SEARCH_PAGES))
             .putBoolean(KEY_FETCH_METADATA, settings.fetchMovieMetadata)
@@ -257,7 +275,9 @@ class SettingsRepository(
         const val KEY_PASSWORD = "password"
         const val KEY_AUTH_SCHEME = "auth_scheme"
         const val KEY_DOWNLOAD_DIR = "download_directory"
+        const val KEY_TV_DOWNLOAD_DIR = "tv_download_directory"
         const val KEY_MOVIE_SITES = "movie_sites_only"
+        private const val KEY_CONTENT_FILTER = "search_content_filter"
         const val KEY_DISCLAIMER = "disclaimer_accepted"
         private const val KEY_SEARCH_PAGES = "search_pages"
         private const val KEY_TMDB_API_KEY = "tmdb_api_key"
@@ -274,6 +294,10 @@ internal fun validateAppSettings(settings: AppSettings): String? {
     val downloadDir = settings.downloadDirectory.trim()
     if (downloadDir.isNotBlank() && !downloadDir.startsWith("/")) {
         return "Download folder must be an absolute path (start with /)"
+    }
+    val tvDownloadDir = settings.tvDownloadDirectory.trim()
+    if (tvDownloadDir.isNotBlank() && !tvDownloadDir.startsWith("/")) {
+        return "TV download folder must be an absolute path (start with /)"
     }
     val rutorrentUrl = normalizeSeedboxUrl(settings.rutorrentBaseUrl)
     if (settings.rutorrentBaseUrl.isNotBlank() && !isValidHttpUrl(rutorrentUrl)) {

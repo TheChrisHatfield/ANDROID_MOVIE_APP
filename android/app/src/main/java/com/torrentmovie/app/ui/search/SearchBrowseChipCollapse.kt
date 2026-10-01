@@ -1,5 +1,7 @@
 package com.torrentmovie.app.ui.search
 
+import com.torrentmovie.core.data.SearchContentFilter
+
 /** Collapse genre/list chips while scrolling so results keep more screen space. */
 internal fun shouldCollapseBrowseChipsOnScroll(
     firstVisibleItemIndex: Int,
@@ -13,7 +15,7 @@ internal fun collapsedBrowseBarLabel(
     genrePanelExpanded: Boolean,
     activeGenre: String?,
     activeBrowseFeed: String?,
-    movieSitesOnly: Boolean,
+    contentFilter: SearchContentFilter,
 ): String {
     val genre = X1337MovieGenre.fromId(activeGenre)
     if (genre != null) {
@@ -26,7 +28,7 @@ internal fun collapsedBrowseBarLabel(
     if (genrePanelExpanded) {
         return "Pick a genre"
     }
-    val feeds = X1337BrowseFeed.entriesFor(movieSitesOnly)
+    val feeds = X1337BrowseFeed.entriesFor(contentFilter)
     if (feeds.size == 1) {
         return "List: ${feeds.first().buttonLabel}"
     }

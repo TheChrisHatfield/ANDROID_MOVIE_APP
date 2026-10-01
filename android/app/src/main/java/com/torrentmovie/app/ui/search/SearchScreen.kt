@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import com.torrentmovie.core.data.AppContainer
+import com.torrentmovie.core.data.SearchContentFilter
 import com.torrentmovie.core.network.TorrentResultDto
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -77,8 +78,8 @@ fun SearchScreen(
     val vm: SearchViewModel = sharedViewModel ?: viewModel { SearchViewModel(container) }
     val state by vm.state.collectAsState()
     val settingsRevision by container.settingsRepository.revision.collectAsState()
-    val movieSitesOnly = remember(settingsRevision) {
-        container.settingsRepository.load().movieSitesOnly
+    val contentFilter = remember(settingsRevision) {
+        container.settingsRepository.load().contentFilter
     }
     val searchApiBaseUrl = remember(settingsRevision) {
         container.settingsRepository.load().searchApiBaseUrl
@@ -284,7 +285,7 @@ fun SearchScreen(
                             genrePanelExpanded = state.genrePanelExpanded,
                             activeGenre = state.activeGenre,
                             activeBrowseFeed = state.activeBrowseFeed,
-                            movieSitesOnly = movieSitesOnly,
+                            contentFilter = contentFilter,
                         ).takeIf { state.activeGenre != null || state.activeBrowseFeed != null || state.genrePanelExpanded }
                             ?: state.query.trim().ifBlank { "Search" },
                         style = MaterialTheme.typography.bodyMedium,
@@ -353,7 +354,7 @@ fun SearchScreen(
                         genrePanelExpanded = state.genrePanelExpanded,
                         activeGenre = state.activeGenre,
                         activeBrowseFeed = state.activeBrowseFeed,
-                        movieSitesOnly = movieSitesOnly,
+                        contentFilter = contentFilter,
                         loading = state.loading,
                         browseChipsCollapsed = false,
                         onExpandBrowseChips = { browseChipsCollapsed = false },
@@ -380,7 +381,7 @@ fun SearchScreen(
                     genrePanelExpanded = state.genrePanelExpanded,
                     activeGenre = state.activeGenre,
                     activeBrowseFeed = state.activeBrowseFeed,
-                    movieSitesOnly = movieSitesOnly,
+                    contentFilter = contentFilter,
                     loading = state.loading,
                     browseChipsCollapsed = browseChipsCollapsed,
                     onExpandBrowseChips = { browseChipsCollapsed = false },
@@ -604,7 +605,7 @@ private fun BrowseGenreChipRow(
     genrePanelExpanded: Boolean,
     activeGenre: String?,
     activeBrowseFeed: String?,
-    movieSitesOnly: Boolean,
+    contentFilter: SearchContentFilter,
     loading: Boolean,
     browseChipsCollapsed: Boolean,
     onExpandBrowseChips: () -> Unit,
@@ -628,7 +629,7 @@ private fun BrowseGenreChipRow(
                     genrePanelExpanded = genrePanelExpanded,
                     activeGenre = activeGenre,
                     activeBrowseFeed = activeBrowseFeed,
-                    movieSitesOnly = movieSitesOnly,
+                    contentFilter = contentFilter,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
@@ -671,7 +672,7 @@ private fun BrowseGenreChipRow(
                 )
             }
         } else {
-            X1337BrowseFeed.entriesFor(movieSitesOnly).forEach { feed ->
+            X1337BrowseFeed.entriesFor(contentFilter).forEach { feed ->
                 FilterChip(
                     selected = activeBrowseFeed == feed.id,
                     onClick = { onLoadBrowse(feed) },

@@ -28,9 +28,19 @@ class SearchBrowseChipCollapseTest {
                 genrePanelExpanded = true,
                 activeGenre = "horror",
                 activeBrowseFeed = null,
-                movieSitesOnly = true,
+                contentFilter = com.torrentmovie.core.data.SearchContentFilter.MOVIES,
             ),
         )
+    }
+
+    @Test
+    fun tvFilterShowsTopTvChipAndHidesTopMovies() {
+        val tv = X1337BrowseFeed.entriesFor(com.torrentmovie.core.data.SearchContentFilter.TV)
+        assertTrue(tv.contains(X1337BrowseFeed.TOP_100_TV))
+        assertFalse(tv.contains(X1337BrowseFeed.TOP_100_MOVIES))
+        val movies = X1337BrowseFeed.entriesFor(com.torrentmovie.core.data.SearchContentFilter.MOVIES)
+        assertFalse(movies.contains(X1337BrowseFeed.TOP_100_TV))
+        assertTrue(movies.contains(X1337BrowseFeed.TOP_100_MOVIES))
     }
 
     @Test

@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import com.torrentmovie.app.ui.theme.missyFilledButtonColors
+import com.torrentmovie.app.ui.theme.missyFilterChipBorder
+import com.torrentmovie.app.ui.theme.missyFilterChipColors
 import com.torrentmovie.app.ui.theme.missyOutlinedTextFieldColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.torrentmovie.app.ui.adaptive.ResponsiveContent
 import com.torrentmovie.core.data.AppContainer
 import com.torrentmovie.core.data.AppSettings
+import com.torrentmovie.core.data.SearchContentFilter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,8 +68,27 @@ fun SettingsScreen(container: AppContainer) {
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        RowSwitch("Movie sites only", settings.movieSitesOnly) {
-            settings = settings.copy(movieSitesOnly = it)
+        Text("Show", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(
+                SearchContentFilter.MOVIES to "Movies",
+                SearchContentFilter.TV to "TV shows",
+                SearchContentFilter.ALL to "All",
+            ).forEach { (value, label) ->
+                val selected = settings.contentFilter == value
+                FilterChip(
+                    selected = selected,
+                    onClick = { settings = settings.copy(contentFilter = value) },
+                    label = { Text(label) },
+                    colors = missyFilterChipColors(),
+                    border = missyFilterChipBorder(selected = selected, enabled = true),
+                )
+            }
         }
         OutlinedTextField(
             value = settings.searchPages.toString(),
@@ -151,7 +174,14 @@ fun SettingsScreen(container: AppContainer) {
         OutlinedTextField(
             value = settings.downloadDirectory,
             onValueChange = { settings = settings.copy(downloadDirectory = it) },
-            label = { Text("Magnet download folder") },
+            label = { Text("Magnet download folder (movies)") },
+            colors = missyOutlinedTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = settings.tvDownloadDirectory,
+            onValueChange = { settings = settings.copy(tvDownloadDirectory = it) },
+            label = { Text("Magnet download folder (TV shows)") },
             colors = missyOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )

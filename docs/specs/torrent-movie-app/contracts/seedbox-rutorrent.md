@@ -32,18 +32,19 @@ The app MUST normalize trailing slashes and derive the add-torrent endpoint as:
 
 ### Download directory (required)
 
-Every movie magnet MUST be sent with `dir_edit` so rTorrent saves to the user's movies folder on the seedbox.
+Every movie magnet MUST be sent with `dir_edit` so rTorrent saves to the user's movies folder on the seedbox. TV-show magnets MUST use the TV shows folder.
 
 | Setting | Default |
 |---------|---------|
-| **download_directory** | `/home5/chris82/downloads/MOVIES/` |
+| **download_directory** (movies) | `/home5/chris82/downloads/MOVIES/` |
+| **tv_download_directory** | `/home5/chris82/downloads/TVSHOWS/` |
 
-### Settings UI: Magnet download folder
+### Settings UI: Magnet download folders
 
-| UI label | `Magnet download folder` |
+| UI label | `Magnet download folder (movies)` / `Magnet download folder (TV shows)` |
 |----------|--------------------------|
 | Field type | Single-line text input (absolute path) |
-| Default | `/home5/chris82/downloads/MOVIES/` |
+| Defaults | `/home5/chris82/downloads/MOVIES/` and `/home5/chris82/downloads/TVSHOWS/` |
 | Validation | Non-empty; must start with `/`; trailing slash optional (app normalizes) |
 | Persistence | EncryptedSharedPreferences alongside other seedbox settings |
 | Behavior | User can change anytime; next "Send to seedbox" uses the saved path |

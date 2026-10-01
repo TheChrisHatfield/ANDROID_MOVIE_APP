@@ -22,7 +22,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             minSeeds = minSeeds,
             maxSeeds = maxSeeds,
             maxSize = maxSize,
-            movieProfile = settings.movieSitesOnly,
+            contentFilter = settings.contentFilter,
             enrich = settings.fetchMovieMetadata,
             tmdbKey = settings.tmdbApiKey,
         )
@@ -48,7 +48,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             minSeeds = minSeeds,
             maxSeeds = maxSeeds,
             maxSize = maxSize,
-            movieProfile = settings.movieSitesOnly,
+            contentFilter = settings.contentFilter,
             enrich = settings.fetchMovieMetadata,
             tmdbKey = settings.tmdbApiKey,
         )
@@ -73,7 +73,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
             minSeeds = minSeeds,
             maxSeeds = maxSeeds,
             maxSize = maxSize,
-            movieProfile = settings.movieSitesOnly,
+            contentFilter = settings.contentFilter,
             enrich = settings.fetchMovieMetadata,
             tmdbKey = settings.tmdbApiKey,
         )

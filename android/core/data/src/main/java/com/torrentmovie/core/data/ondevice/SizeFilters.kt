@@ -1,11 +1,12 @@
 package com.torrentmovie.core.data.ondevice
 
+import com.torrentmovie.core.data.SearchContentFilter
 import java.util.Locale
 
 internal object SizeFilters {
     private val thousands = Regex("(?<=\\d),(?=\\d{3})")
     private val tvShow = Regex(
-        """\b(?:s\d{1,2}e\d{1,2}|season\s+\d+|complete\s+series|tv\s+series|episodes?\s+\d+|mini\s*series)\b""",
+        """\b(?:s\d{1,2}e\d{1,2}|s\d{1,2}(?!\d)|season\s+\d+|complete\s+series|complete\s+season|tv\s+series|episodes?\s+\d+|mini\s*series|\d{1,2}x\d{2}|hdtv)\b""",
         RegexOption.IGNORE_CASE,
     )
     private val software = Regex(
@@ -69,10 +70,15 @@ internal object SizeFilters {
         return normalized.toIntOrNull()
     }
 
+    fun isLikelyTvShow(name: String): Boolean {
+        val label = name.trim()
+        return label.isNotEmpty() && tvShow.containsMatchIn(label)
+    }
+
     fun isLikelyMovie(name: String): Boolean {
         val label = name.trim()
         if (label.isEmpty()) return false
-        if (tvShow.containsMatchIn(label)) return false
+        if (isLikelyTvShow(label)) return false
         if (software.containsMatchIn(label)) return false
         return true
     }
@@ -82,9 +88,13 @@ internal object SizeFilters {
         minSeeds: Int?,
         maxSeeds: Int?,
         maxSize: String?,
-        movieProfile: Boolean,
+        contentFilter: SearchContentFilter,
     ): List<IndexerRow> {
-        var filtered = if (movieProfile) rows.filter { isLikelyMovie(it.name) } else rows
+        var filtered = when (contentFilter) {
+            SearchContentFilter.MOVIES -> rows.filter { isLikelyMovie(it.name) }
+            SearchContentFilter.TV -> rows.filter { isLikelyTvShow(it.name) }
+            SearchContentFilter.ALL -> rows
+        }
         if (minSeeds != null && minSeeds > 0) {
             filtered = filtered.filter { seedCount(it.seeds)?.let { n -> n >= minSeeds } == true }
         }

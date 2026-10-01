@@ -124,7 +124,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 ### Implementation for User Story 4 (Settings)
 
 - [x] T026 [P] [US4] `SettingsRepository` with EncryptedSharedPreferences in `android/core/data/SettingsRepository.kt`
-- [x] T027 [US4] `SettingsScreen` — search API URL, ruTorrent base URL, username, password, auth scheme (basic/digest), **Magnet download folder** text field (default `/home5/chris82/downloads/MOVIES/`, user-editable), movie-sites toggle
+- [x] T027 [US4] `SettingsScreen` — search API URL, ruTorrent base URL, username, password, auth scheme (basic/digest), **Magnet download folder (movies)** and **(TV shows)** (defaults `/home5/chris82/downloads/MOVIES/` and `/home5/chris82/downloads/TVSHOWS/`), content filter
 - [x] T028 [US4] `SettingsViewModel` + validation (URL format, absolute path for download folder, required fields); changes apply immediately without restart
 - [x] T029 [US4] Inject settings into `SearchRepository` and `SeedboxRepository` via Hilt/manual DI
 - [x] T030 [US4] First-run setup flow or settings prompt when seedbox not configured
@@ -162,6 +162,8 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 - [x] T049 [P] [US5] `HelpScreen` — legal disclaimer + setup tips (Yatse Help analog)
 - [x] T050 [P] [US5] Pull-to-refresh on `SearchScreen` and `UploadedScreen`
 - [x] T051 [US5] Filter bottom sheet on Search (min seeds, max size) — Yatse filter analog
+- [x] T051a [US4] Settings content filter Movies / TV shows / All (FR-007a)
+- [x] T051b [US4] Separate TV magnet download folder (FR-005c)
 
 **Checkpoint**: App navigation and visual hierarchy feel consistent with ui-yatse-reference.md
 

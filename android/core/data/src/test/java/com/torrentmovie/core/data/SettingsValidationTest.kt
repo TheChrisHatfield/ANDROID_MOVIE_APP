@@ -54,4 +54,20 @@ class SettingsValidationTest {
             validateAppSettings(validSettings().copy(searchPages = 11)),
         )
     }
+
+    @Test
+    fun contentFilterMigratesFromMovieSitesToggle() {
+        assertEquals(
+            SearchContentFilter.TV,
+            SearchContentFilter.fromStored("tv", movieSitesOnlyLegacy = true),
+        )
+        assertEquals(
+            SearchContentFilter.ALL,
+            SearchContentFilter.fromStored(null, movieSitesOnlyLegacy = false),
+        )
+        assertEquals(
+            SearchContentFilter.MOVIES,
+            SearchContentFilter.fromStored(null, movieSitesOnlyLegacy = true),
+        )
+    }
 }

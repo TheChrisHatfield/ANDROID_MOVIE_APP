@@ -110,7 +110,7 @@ class SizeFilterTest {
     @Test
     fun applyRejectsInvalidMaxSize() {
         try {
-            SizeFilters.apply(emptyList(), null, null, "10G", false)
+            SizeFilters.apply(emptyList(), null, null, "10G", com.torrentmovie.core.data.SearchContentFilter.ALL)
             org.junit.Assert.fail("expected IllegalArgumentException")
         } catch (e: IllegalArgumentException) {
             assertEquals("Invalid max_size", e.message)
@@ -129,7 +129,22 @@ class SizeFilterTest {
         val rows = listOf(
             IndexerRow(name = "Inception", site = "1337x", size = "1.8 GB12", seeds = "12"),
         )
-        val kept = SizeFilters.apply(rows, null, null, "4 GB", false)
+        val kept = SizeFilters.apply(rows, null, null, "4 GB", com.torrentmovie.core.data.SearchContentFilter.ALL)
         assertEquals(1, kept.size)
+    }
+
+    @Test
+    fun tvFilterKeepsEpisodesAndDropsMovies() {
+        val rows = listOf(
+            IndexerRow(name = "Inception 2010 1080p", site = "YTS"),
+            IndexerRow(name = "The Office S05E03 720p HDTV", site = "1337x"),
+            IndexerRow(name = "Breaking Bad Season 1 Complete", site = "1337x"),
+        )
+        val tv = SizeFilters.apply(rows, null, null, null, com.torrentmovie.core.data.SearchContentFilter.TV)
+        assertEquals(2, tv.size)
+        assertTrue(tv.all { SizeFilters.isLikelyTvShow(it.name) })
+        val movies = SizeFilters.apply(rows, null, null, null, com.torrentmovie.core.data.SearchContentFilter.MOVIES)
+        assertEquals(1, movies.size)
+        assertEquals("Inception 2010 1080p", movies[0].name)
     }
 }

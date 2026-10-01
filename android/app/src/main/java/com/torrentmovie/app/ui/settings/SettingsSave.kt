@@ -41,7 +41,16 @@ internal fun mergeSettingsKeepingEdits(
             lastLoaded.downloadDirectory,
             incoming.downloadDirectory,
         ),
-        movieSitesOnly = pick(draft.movieSitesOnly, lastLoaded.movieSitesOnly, incoming.movieSitesOnly),
+        tvDownloadDirectory = pick(
+            draft.tvDownloadDirectory,
+            lastLoaded.tvDownloadDirectory,
+            incoming.tvDownloadDirectory,
+        ),
+        contentFilter = if (draft.contentFilter == lastLoaded.contentFilter) {
+            incoming.contentFilter
+        } else {
+            draft.contentFilter
+        },
         searchPages = pick(draft.searchPages, lastLoaded.searchPages, incoming.searchPages),
         tmdbApiKey = pick(draft.tmdbApiKey, lastLoaded.tmdbApiKey, incoming.tmdbApiKey),
         fetchMovieMetadata = pick(

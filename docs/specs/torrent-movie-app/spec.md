@@ -87,8 +87,10 @@ As a user, I enter my seedbox URL, credentials, magnet download folder, and pref
 
 1. **Given** the settings screen, **When** the user saves ruTorrent base URL (e.g. `https://user.slot.seedhost.eu/rutorrent/`), username, and password, **Then** credentials are stored encrypted and never logged.
 2. **Given** saved settings, **When** the app restarts, **Then** seedbox configuration is restored without re-entry.
-3. **Given** the **Magnet download folder** field (default `/home5/chris82/downloads/MOVIES/`), **When** the user enters a different absolute path and saves, **Then** all subsequent "Send to seedbox" actions use the new path in `dir_edit` until changed again.
+3. **Given** the **Magnet download folder (movies)** field (default `/home5/chris82/downloads/MOVIES/`), **When** the user enters a different absolute path and saves, **Then** subsequent movie "Send to seedbox" actions use the new path in `dir_edit` until changed again.
+4. **Given** the **Magnet download folder (TV shows)** field (default `/home5/chris82/downloads/TVSHOWS/`), **When** the user sends a season/episode release, **Then** ruTorrent `dir_edit` is the TV folder, not the movies folder.
 4. **Given** a "movie sites only" toggle (default on), **When** searching, **Then** only the movie profile indexers are queried.
+5. **Given** Settings content filter **TV shows**, **When** searching, **Then** results that look like movies (no season/episode tokens) are hidden and 1337x Top TV remains available. **Movies** remains the default; **All** keeps mixed titles.
 
 ---
 
@@ -210,10 +212,12 @@ As a user on **any** supported Android device (traditional phone or Samsung Gala
 - **FR-003**: Android app MUST allow movie title search and display results in a scrollable list (name, site, size, seeds).
 - **FR-004**: Android app MUST fetch magnet links on demand for selected results.
 - **FR-005**: Android app MUST send magnet URIs to seedbox via **ruTorrent** `POST {base_url}php/addtorrent.php` with form fields `url={magnet}` and `dir_edit={download_directory}` plus HTTP Basic/Digest auth (see [`contracts/seedbox-rutorrent.md`](./contracts/seedbox-rutorrent.md)).
-- **FR-005a**: Settings MUST expose a **Magnet download folder** field; default `/home5/chris82/downloads/MOVIES/`, user-editable at any time; value persisted and sent as `dir_edit` on every magnet add.
+- **FR-005a**: Settings MUST expose a **Magnet download folder (movies)** field; default `/home5/chris82/downloads/MOVIES/`, user-editable at any time; value persisted and sent as `dir_edit` for movie magnets.
+- **FR-005c**: Settings MUST expose a separate **Magnet download folder (TV shows)** field; default `/home5/chris82/downloads/TVSHOWS/`. Send MUST use the TV path when the result looks like a TV show (season/episode tokens) or the content filter is **TV shows**; otherwise MUST use the movies path. Changing either folder MUST take effect on the next send (FR-005b).
 - **FR-005b**: Changing the download folder in Settings MUST take effect immediately for the next send — no app restart required.
 - **FR-006**: System MUST store seedbox credentials using Android EncryptedSharedPreferences / Keystore.
 - **FR-007**: On-device search MUST default to a **movie site profile**: YTS, 1337x, The Pirate Bay, TorrentGalaxy, MagnetDL, LimeTorrents (configurable). EZTV is TV-focused and excluded from the default movie profile. Multi-indexer text search MUST merge results with **round-robin interleaving by site** (seed order within each site) so a single indexer cannot fill the entire `limit` window.
+- **FR-007a**: Settings MUST offer a content filter **Movies** (default), **TV shows**, or **All**. Movies MUST drop titles that look like episodes/seasons. TV shows MUST keep titles matching season/episode patterns (`SxxExx`, `Season N`, `NxNN`, HDTV, complete season/series) and MUST show 1337x Top TV browse. All MUST not apply title-kind filtering. Changing the filter MUST refresh the current search/browse list.
 - **FR-008**: System MUST run indexer health checks (torrtux `test_connection`) at API startup or on `/v1/sites/health`.
 - **FR-009**: Search API MUST support `min_seeds`, `max_size`, `limit`, and `sites` query parameters (ported from torrtux filters).
 - **FR-009a**: Android MUST run search **on-device** (no PC Search API required). Settings MUST NOT require a Search API base URL for search, browse, genre, suggest, or magnet resolution.

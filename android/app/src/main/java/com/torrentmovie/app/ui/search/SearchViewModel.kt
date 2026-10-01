@@ -59,7 +59,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         return listOf(
             settings.tmdbApiKey,
             settings.searchPages.toString(),
-            settings.movieSitesOnly.toString(),
+            settings.contentFilter.name,
             settings.fetchMovieMetadata.toString(),
             _state.value.minSeeds?.toString().orEmpty(),
             _state.value.maxSeeds?.toString().orEmpty(),
@@ -74,8 +74,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             container.settingsRepository.revision.collect {
                 val settings = container.settingsRepository.load()
                 val activeFeed = X1337BrowseFeed.fromId(_state.value.activeBrowseFeed)
-                if (settings.movieSitesOnly && activeFeed != null && !activeFeed.visibleFor(true)) {
-                    loadBrowse1337x(X1337BrowseFeed.TRENDING)
+                if (activeFeed != null && !activeFeed.visibleFor(settings.contentFilter)) {
+                    val fallback = X1337BrowseFeed.entriesFor(settings.contentFilter).firstOrNull()
+                    if (fallback != null) {
+                        loadBrowse1337x(fallback)
+                    }
                 }
                 val key = searchSettingsKey()
                 val modeActive = _state.value.hasSearched ||
@@ -140,10 +143,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         )
         refreshSearchSuggestions(q)
         if (revertingToLastSearch) {
-            val movieSitesOnly = container.settingsRepository.load().movieSitesOnly
+            val contentFilter = container.settingsRepository.load().contentFilter
             val labelFeed = X1337BrowseFeed.entriesList
                 .find { it.label.equals(trimmed, ignoreCase = true) }
-                ?.takeIf { it.visibleFor(movieSitesOnly) }
+                ?.takeIf { it.visibleFor(contentFilter) }
             if (labelFeed != null) {
                 loadBrowse1337x(labelFeed)
             } else {
@@ -557,11 +560,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             )
             return
         }
-        val movieSitesOnly = container.settingsRepository.load().movieSitesOnly
+        val contentFilter = container.settingsRepository.load().contentFilter
         val labelFeed = if (!_state.value.genrePanelExpanded) {
             X1337BrowseFeed.entriesList
                 .find { it.label.equals(q, ignoreCase = true) }
-                ?.takeIf { it.visibleFor(movieSitesOnly) }
+                ?.takeIf { it.visibleFor(contentFilter) }
         } else {
             null
         }
