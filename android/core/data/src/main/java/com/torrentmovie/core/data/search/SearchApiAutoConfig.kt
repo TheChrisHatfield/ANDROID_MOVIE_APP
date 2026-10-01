@@ -79,19 +79,23 @@ object SearchApiAutoConfig {
 
     fun shouldNotifyRebound(recoveredFromUnreachable: Boolean): Boolean = recoveredFromUnreachable
 
-    /** Do not hang 15s on a private LAN URL that cannot be this phone's Wi-Fi. */
+    /** Do not hang on a private LAN URL that cannot be this phone's Wi-Fi. */
     fun shouldAttemptSearch(
         url: String,
         wifiIpv4: String?,
         isEmulator: Boolean,
+        wifiAvailable: Boolean = !wifiIpv4.isNullOrBlank(),
     ): Boolean {
         val normalized = normalizeSearchApiUrl(url)
         if (normalized.isBlank()) return false
         if (isEmulatorLoopback(normalized)) return isEmulator
         val host = ipv4Host(normalized)
         if (host == null) return true
-        if (wifiIpv4.isNullOrBlank()) return false
-        return isOnWifiSubnet(normalized, wifiIpv4)
+        if (!wifiIpv4.isNullOrBlank()) {
+            return isOnWifiSubnet(normalized, wifiIpv4)
+        }
+        // Wi-Fi is up but IPv4 was not readable (OEM /32, IPv6-only link) — still try.
+        return wifiAvailable
     }
 
     /**

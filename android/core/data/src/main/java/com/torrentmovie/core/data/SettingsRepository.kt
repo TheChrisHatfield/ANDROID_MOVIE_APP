@@ -179,6 +179,7 @@ class SettingsRepository(
             url = url,
             wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
             isEmulator = DeviceProfile.isEmulator(),
+            wifiAvailable = LanNetworkAddress.wifiAvailable(context),
         )
     }
 

@@ -18,6 +18,17 @@ object LanNetworkAddress {
         }
     }
 
+    fun wifiAvailable(context: Context): Boolean {
+        return try {
+            val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+                as? ConnectivityManager ?: return false
+            linkPropertiesForWifi(cm) != null ||
+                cm.allNetworks.any { net -> hasWifiTransport(cm, net) }
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
     private fun linkPropertiesForWifi(cm: ConnectivityManager): LinkProperties? {
         val active = cm.activeNetwork
         if (active != null && hasWifiTransport(cm, active)) {

@@ -191,6 +191,14 @@ class SearchApiAutoConfigTest {
                 isEmulator = false,
             ),
         )
+        assertTrue(
+            SearchApiAutoConfig.shouldAttemptSearch(
+                url = "http://192.168.4.27:8765",
+                wifiIpv4 = null,
+                isEmulator = false,
+                wifiAvailable = true,
+            ),
+        )
     }
 
     @Test
