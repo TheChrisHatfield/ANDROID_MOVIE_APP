@@ -75,6 +75,11 @@ class MovieIndexerParseTest {
     }
 
     @Test
+    fun tpbIgnoresErrorObjectPayload() {
+        assertTrue(MovieIndexers.parseTpbJson("""{"error":"rate limited"}""").isEmpty())
+    }
+
+    @Test
     fun jsonPrimitiveReadsNumericTorrentBayIds() {
         val obj = com.google.gson.JsonParser.parseString("""{"id":42,"seeders":9}""").asJsonObject
         assertEquals("42", MovieIndexers.jsonPrimitiveString(obj, "id"))

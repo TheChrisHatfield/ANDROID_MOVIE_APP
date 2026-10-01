@@ -111,7 +111,7 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 collected += pageRows
                 if (pageRows.isEmpty()) break
             }
-            if (accepted) {
+            if (accepted && collected.isNotEmpty()) {
                 ytsWorking = base
                 return collected
             }
@@ -141,30 +141,7 @@ internal class MovieIndexers(private val http: IndexerHttp) {
     private fun tpbSearch(query: String): List<IndexerRow> {
         val url = "https://apibay.org/q.php?q=${enc(query)}&cat=0"
         val body = http.getText(url) ?: return emptyList()
-        return try {
-            val arr = JsonParser.parseString(body).asJsonArray
-            arr.mapNotNull { el ->
-                val obj = el.asJsonObject
-                val id = jsonPrimitiveString(obj, "id")
-                if (id == null || id == "0") return@mapNotNull null
-                val name = jsonPrimitiveString(obj, "name") ?: return@mapNotNull null
-                if (name == "No results returned") return@mapNotNull null
-                val hash = jsonPrimitiveString(obj, "info_hash").orEmpty()
-                if (hash.isBlank() || hash == "0000000000000000000000000000000000000000") return@mapNotNull null
-                val sizeRaw = jsonPrimitiveString(obj, "size")?.toLongOrNull() ?: 0L
-                IndexerRow(
-                    name = name,
-                    site = "The Pirate Bay",
-                    size = MagnetUtils.bytesToSizeLabel(sizeRaw),
-                    seeds = jsonPrimitiveString(obj, "seeders") ?: "-",
-                    leeches = jsonPrimitiveString(obj, "leechers") ?: "-",
-                    magnet = MagnetUtils.fromHash(hash, name),
-                    detailUrl = "https://tpb.party/description.php?id=$id",
-                )
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
+        return parseTpbJson(body)
     }
 
     private fun limeSearch(query: String, pages: Int): List<IndexerRow> {
@@ -259,9 +236,39 @@ internal class MovieIndexers(private val http: IndexerHttp) {
         fun ytsPayloadAccepted(body: String): Boolean {
             return try {
                 val root = JsonParser.parseString(body).asJsonObject
-                root.has("data") || root.get("status")?.asString.equals("ok", ignoreCase = true)
+                root.has("data") || jsonPrimitiveString(root, "status").equals("ok", ignoreCase = true)
             } catch (_: Exception) {
                 false
+            }
+        }
+
+        fun parseTpbJson(body: String): List<IndexerRow> {
+            return try {
+                val parsed = JsonParser.parseString(body)
+                if (!parsed.isJsonArray) return emptyList()
+                parsed.asJsonArray.mapNotNull { el ->
+                    val obj = el.asJsonObject
+                    val id = jsonPrimitiveString(obj, "id")
+                    if (id == null || id == "0") return@mapNotNull null
+                    val name = jsonPrimitiveString(obj, "name") ?: return@mapNotNull null
+                    if (name == "No results returned") return@mapNotNull null
+                    val hash = jsonPrimitiveString(obj, "info_hash").orEmpty()
+                    if (hash.isBlank() || hash == "0000000000000000000000000000000000000000") {
+                        return@mapNotNull null
+                    }
+                    val sizeRaw = jsonPrimitiveString(obj, "size")?.toLongOrNull() ?: 0L
+                    IndexerRow(
+                        name = name,
+                        site = "The Pirate Bay",
+                        size = MagnetUtils.bytesToSizeLabel(sizeRaw),
+                        seeds = jsonPrimitiveString(obj, "seeders") ?: "-",
+                        leeches = jsonPrimitiveString(obj, "leechers") ?: "-",
+                        magnet = MagnetUtils.fromHash(hash, name),
+                        detailUrl = "https://tpb.party/description.php?id=$id",
+                    )
+                }
+            } catch (_: Exception) {
+                emptyList()
             }
         }
 
