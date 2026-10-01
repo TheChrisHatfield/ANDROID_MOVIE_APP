@@ -17,7 +17,7 @@ class SearchErrorPresentationTest {
     @Test
     fun empty503MapsNoWorkingIndexersToNoSources() {
         assertEquals(
-            "No sources available. Check the search API and try again.",
+            "No sources available. Check your connection and try again.",
             searchEmptyStateMessage(503, "No working indexers"),
         )
     }

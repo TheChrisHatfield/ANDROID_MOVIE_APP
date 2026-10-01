@@ -11,7 +11,7 @@ internal fun searchEmptyStateMessage(errorCode: Int?, error: String?): String {
                 detail.isEmpty() ||
                     detail.equals("No working indexers", ignoreCase = true) ||
                     detail.equals("No sources available", ignoreCase = true) ->
-                    "No sources available. Check the search API and try again."
+                    "No sources available. Check your connection and try again."
                 else -> detail
             }
         }

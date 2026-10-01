@@ -16,7 +16,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 
 ## Approach
 
-**Strategy: wrap torrtux-c, don't rewrite it.** Phase 1 extracts torrtux into a importable Python package and FastAPI service. Phase 2 builds a thin Android client. Phase 3 adds settings and filters.
+**Strategy: on-device search in the APK.** Phase 1 extracted torrtux into a Python package (reference / optional operator service). Phase 2 Android client. Phase 3+ **search, browse, genre, magnet, TMDB run on the phone** (`android/core/data/.../ondevice`), not a PC Search API.
 
 ### Phase 1 — Search backend (torrtux refactor)
 
@@ -75,7 +75,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Runtime for scrapers | Python service | Direct torrtux reuse; BeautifulSoup not idiomatic on Android |
+| Runtime for scrapers | Kotlin on-device (Jsoup + OkHttp) | Deployable APK; no PC host |
 | Android UI | Jetpack Compose Material3 | Yatse-like drawer + cards; fast to build |
 | UX model | Yatse IA mapping | Proven media-app navigation; see ui-yatse-reference.md |
 | Seedbox MVP | ruTorrent `addtorrent.php` | User's Seedhost slot; same endpoint browser extensions use |

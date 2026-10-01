@@ -74,19 +74,10 @@ fun TorrentDetailScreen(
     val metadataRevision by container.movieMetadataStore.revision.collectAsState()
     var resolveRequest by remember(resultId) { mutableIntStateOf(0) }
     var magnetFetchGeneration by remember { mutableIntStateOf(0) }
-    var lastSearchApiUrl by remember(resultId) { mutableStateOf(settings.searchApiBaseUrl) }
     var metadata by remember(resultId) { mutableStateOf(container.movieMetadataStore.get(resultId)) }
 
     LaunchedEffect(resultId, settingsRevision, metadataRevision) {
         metadata = container.movieMetadataStore.get(resultId)
-    }
-
-    LaunchedEffect(settingsRevision) {
-        val apiUrl = container.settingsRepository.load().searchApiBaseUrl
-        if (apiUrl != lastSearchApiUrl) {
-            lastSearchApiUrl = apiUrl
-            resolveRequest++
-        }
     }
 
     LaunchedEffect(initialMagnet) {
@@ -135,12 +126,6 @@ fun TorrentDetailScreen(
             magnet = null
             magnetError = null
             resultExpired = false
-        }
-        val apiUrl = container.settingsRepository.load().searchApiBaseUrl
-        if (apiUrl.isBlank() || !container.settingsRepository.isSearchApiUsableOnThisNetwork()) {
-            magnetLoading = false
-            magnetError = container.settingsRepository.searchApiBlockedMessage()
-            return@LaunchedEffect
         }
         val generation = ++magnetFetchGeneration
         magnetLoading = true

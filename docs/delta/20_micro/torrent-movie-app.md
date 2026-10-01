@@ -20,8 +20,8 @@ Torrent Movie App — Android search + seedbox magnet handoff (torrtux-c repurpo
 
 | In scope | Out of scope |
 |----------|--------------|
-| Refactor torrtux-c into Python search microservice | Rewriting all site parsers from scratch |
-| REST search API with movie-default site profile | Full torrtux CLI parity |
+| Refactor torrtux-c into Python search microservice (reference) | Full torrtux CLI parity |
+| **On-device Android search** (all movie-profile indexers + TMDB) | Cloud-hosted search |
 | Android app: search, results, detail, seedbox send | On-device torrent client |
 | Local uploaded-magnets list (editable, dedup by info-hash) | Cloud sync of upload history |
 | ruTorrent `addtorrent.php` seedbox adapter (MVP, Seedhost) | qBittorrent / Transmission in v1 |

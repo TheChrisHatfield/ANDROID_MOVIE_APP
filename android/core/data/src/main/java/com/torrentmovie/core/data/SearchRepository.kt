@@ -1,199 +1,61 @@
 package com.torrentmovie.core.data
 
-import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
+import com.torrentmovie.core.data.ondevice.OnDeviceSearchEngine
 import com.torrentmovie.core.network.MagnetResponseDto
-import com.torrentmovie.core.network.SearchApi
-import okhttp3.OkHttpClient
-import retrofit2.HttpException
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class SearchRepository(private val settingsRepository: SettingsRepository) {
-    private val gson = Gson()
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        // Genre browse may wait on an in-flight refresh (45s) then fan out indexers.
-        .readTimeout(120, TimeUnit.SECONDS)
-        .callTimeout(120, TimeUnit.SECONDS)
-        .build()
-    private val suggestHttpClient = httpClient.newBuilder()
-        .connectTimeout(SUGGEST_CONNECT_TIMEOUT_SEC, TimeUnit.SECONDS)
-        .readTimeout(SUGGEST_READ_TIMEOUT_SEC, TimeUnit.SECONDS)
-        .callTimeout(SUGGEST_CALL_TIMEOUT_SEC, TimeUnit.SECONDS)
-        .build()
-    private var cachedBaseUrl: String? = null
-    private var cachedApi: SearchApi? = null
-    private var cachedRevision = -1
-    private var cachedSuggestBaseUrl: String? = null
-    private var cachedSuggestApi: SearchApi? = null
-    private var cachedSuggestRevision = -1
-
-    @Synchronized
-    private fun api(): SearchApi {
-        val settings = settingsRepository.load()
-        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) {
-            throw SearchException(settingsRepository.searchApiBlockedMessage())
-        }
-        val revision = settingsRepository.revision.value
-        val base = settings.searchApiBaseUrl.trimEnd('/') + "/"
-        if (cachedApi != null && cachedBaseUrl == base && cachedRevision == revision) {
-            return cachedApi!!
-        }
-        cachedRevision = revision
-        cachedBaseUrl = base
-        cachedApi = Retrofit.Builder()
-            .baseUrl(base)
-            .client(httpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(SearchApi::class.java)
-        return cachedApi!!
-    }
-
-    @Synchronized
-    private fun suggestApi(): SearchApi {
-        val settings = settingsRepository.load()
-        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) {
-            throw SearchException(settingsRepository.searchApiBlockedMessage())
-        }
-        val revision = settingsRepository.revision.value
-        val base = settings.searchApiBaseUrl.trimEnd('/') + "/"
-        if (cachedSuggestApi != null && cachedSuggestBaseUrl == base && cachedSuggestRevision == revision) {
-            return cachedSuggestApi!!
-        }
-        cachedSuggestRevision = revision
-        cachedSuggestBaseUrl = base
-        cachedSuggestApi = Retrofit.Builder()
-            .baseUrl(base)
-            .client(suggestHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(SearchApi::class.java)
-        return cachedSuggestApi!!
-    }
+    private val engine = OnDeviceSearchEngine()
 
     suspend fun search(
         query: String,
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
         maxSize: String? = null,
-    ): SearchResult {
+    ): SearchResult = withContext(Dispatchers.IO) {
         val settings = settingsRepository.load()
-        return try {
-            val response = api().search(
-                query = query,
-                limit = minOf(settings.searchPages * 50, 200),
-                pages = settings.searchPages,
-                minSeeds = minSeeds,
-                maxSeeds = maxSeeds,
-                maxSize = maxSize,
-                movieProfile = settings.movieSitesOnly,
-                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata,
-            )
-            SearchResult(
-                results = response.results,
-                failedSites = response.failedSites,
-                groups = response.groups,
-                tmdbKeyRejected = response.tmdbKeyRejected,
-                tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
-            )
-        } catch (e: HttpException) {
-            throw mapHttpError(e)
-        } catch (e: IllegalArgumentException) {
-            throw SearchException("Invalid search API URL — check Settings", cause = e)
-        } catch (e: IOException) {
-            throw mapNetworkError(e)
-        }
+        engine.search(
+            query = query,
+            pages = settings.searchPages,
+            limit = minOf(settings.searchPages * 50, 200),
+            minSeeds = minSeeds,
+            maxSeeds = maxSeeds,
+            maxSize = maxSize,
+            movieProfile = settings.movieSitesOnly,
+            enrich = settings.fetchMovieMetadata,
+            tmdbKey = settings.tmdbApiKey,
+        )
     }
 
-    suspend fun suggest(query: String, limit: Int = 8): List<MovieSearchSuggestion> {
-        val settings = settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) return emptyList()
-        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return emptyList()
-        return try {
-            val response = suggestApi().suggest(
-                query = query,
-                limit = limit,
-                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-            )
-            if (!response.tmdbConfigured) return emptyList()
-            response.suggestions.map { row ->
-                MovieSearchSuggestion(
-                    tmdbId = row.tmdbId,
-                    title = row.title,
-                    year = row.year,
-                    posterUrl = row.posterUrl,
-                )
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: HttpException) {
-            emptyList()
-        } catch (e: IllegalArgumentException) {
-            emptyList()
-        } catch (e: IOException) {
-            emptyList()
+    suspend fun suggest(query: String, limit: Int = 8): List<MovieSearchSuggestion> =
+        withContext(Dispatchers.IO) {
+            val settings = settingsRepository.load()
+            engine.suggest(query, settings.tmdbApiKey, limit)
         }
-    }
 
     suspend fun browse1337x(
         feed: String,
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
         maxSize: String? = null,
-    ): SearchResult {
+    ): SearchResult = withContext(Dispatchers.IO) {
         val settings = settingsRepository.load()
-        return try {
-            val response = api().browse1337x(
-                feed = feed,
-                limit = minOf(settings.searchPages * 50, 200),
-                pages = settings.searchPages,
-                minSeeds = minSeeds,
-                maxSeeds = maxSeeds,
-                maxSize = maxSize,
-                movieProfile = settings.movieSitesOnly,
-                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata,
-            )
-            SearchResult(
-                results = response.results,
-                failedSites = response.failedSites,
-                groups = response.groups,
-                tmdbKeyRejected = response.tmdbKeyRejected,
-                tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
-            )
-        } catch (e: HttpException) {
-            throw mapHttpError(e)
-        } catch (e: IllegalArgumentException) {
-            throw SearchException("Invalid search API URL — check Settings", cause = e)
-        } catch (e: IOException) {
-            throw mapNetworkError(e)
-        }
+        engine.browse1337x(
+            feed = feed,
+            pages = settings.searchPages,
+            limit = minOf(settings.searchPages * 50, 200),
+            minSeeds = minSeeds,
+            maxSeeds = maxSeeds,
+            maxSize = maxSize,
+            movieProfile = settings.movieSitesOnly,
+            enrich = settings.fetchMovieMetadata,
+            tmdbKey = settings.tmdbApiKey,
+        )
     }
 
-    suspend fun warmGenrePools(genreIds: List<String>? = null) {
-        val settings = settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) return
-        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return
-        try {
-            val genres = genreIds?.joinToString(",")
-            api().warmGenrePools(
-                genres = genres,
-                movieProfile = settings.movieSitesOnly,
-            )
-        } catch (e: Exception) {
-            e.rethrowIfCancelled()
-            // Background prefetch — ignore failures
-        }
+    suspend fun warmGenrePools(@Suppress("UNUSED_PARAMETER") genreIds: List<String>? = null) {
+        // On-device genre search fills on demand; no PC pool to warm.
     }
 
     suspend fun browseGenre(
@@ -201,200 +63,40 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
         minSeeds: Int? = null,
         maxSeeds: Int? = null,
         maxSize: String? = null,
-        forceRefresh: Boolean = false,
-    ): SearchResult {
+        @Suppress("UNUSED_PARAMETER") forceRefresh: Boolean = false,
+    ): SearchResult = withContext(Dispatchers.IO) {
         val settings = settingsRepository.load()
-        suspend fun requestOnce(): SearchResult {
-            val response = api().browseGenre(
-                genre = genre,
-                limit = minOf(settings.searchPages * 50, 200),
-                pages = settings.searchPages,
-                minSeeds = minSeeds,
-                maxSeeds = maxSeeds,
-                maxSize = maxSize,
-                movieProfile = settings.movieSitesOnly,
-                tmdbApiKey = settings.tmdbApiKey.takeIf { it.isNotBlank() },
-                enrich = settings.fetchMovieMetadata,
-                forceRefresh = forceRefresh,
-            )
-            return SearchResult(
-                results = response.results,
-                failedSites = response.failedSites,
-                groups = response.groups,
-                tmdbKeyRejected = response.tmdbKeyRejected,
-                tmdbEnrichmentCapped = response.tmdbEnrichmentCapped,
-            )
-        }
-        return try {
-            requestOnce()
-        } catch (e: HttpException) {
-            val mapped = mapHttpError(e)
-            if (!isTransientGenreRefresh(mapped.httpCode, mapped.message)) throw mapped
-            delay(800)
-            try {
-                requestOnce()
-            } catch (retry: HttpException) {
-                throw mapHttpError(retry)
-            } catch (retry: IllegalArgumentException) {
-                throw SearchException("Invalid search API URL — check Settings", cause = retry)
-            } catch (retry: IOException) {
-                throw mapNetworkError(retry)
-            }
-        } catch (e: IllegalArgumentException) {
-            throw SearchException("Invalid search API URL — check Settings", cause = e)
-        } catch (e: IOException) {
-            throw mapNetworkError(e)
-        }
+        engine.browseGenre(
+            genre = genre,
+            pages = settings.searchPages,
+            limit = minOf(settings.searchPages * 50, 200),
+            minSeeds = minSeeds,
+            maxSeeds = maxSeeds,
+            maxSize = maxSize,
+            movieProfile = settings.movieSitesOnly,
+            enrich = settings.fetchMovieMetadata,
+            tmdbKey = settings.tmdbApiKey,
+        )
     }
 
     suspend fun recordGenreBranchFeedback(
-        genreId: String,
-        groupKey: String,
-        success: Boolean,
+        @Suppress("UNUSED_PARAMETER") genreId: String,
+        @Suppress("UNUSED_PARAMETER") groupKey: String,
+        @Suppress("UNUSED_PARAMETER") success: Boolean,
     ) {
-        val base = settingsRepository.load().searchApiBaseUrl.trim().removeSuffix("/")
-        if (base.isBlank()) return
-        if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return
-        try {
-            api().postGenreBranchFeedback(
-                url = "$base/v1/browse/genre/${genreId.trim().lowercase()}/feedback",
-                groupKey = groupKey,
-                success = success,
-            )
-        } catch (e: Exception) {
-            e.rethrowIfCancelled()
-            // Ranking feedback is best-effort
-        }
+        // Ranking lives on-device per session; no remote feedback endpoint.
     }
 
     suspend fun isTmdbConfigured(): Boolean {
-        return try {
-            if (!settingsRepository.isSearchApiUsableOnThisNetwork()) return false
-            api().health().tmdbConfigured
-        } catch (e: Exception) {
-            e.rethrowIfCancelled()
-            false
-        }
+        return engine.isTmdbConfigured(settingsRepository.load().tmdbApiKey)
     }
 
     suspend fun resolveMagnet(
         resultId: String,
-        detailUrl: String? = null,
-        site: String? = null,
-        name: String? = null,
-    ): MagnetResponseDto {
-        return try {
-            api().getMagnet(resultId)
-        } catch (e: HttpException) {
-            val resolvedSite = site?.trim().orEmpty()
-            if (e.code() == 404 && !detailUrl.isNullOrBlank()) {
-                try {
-                    return api().resolveMagnetByDetail(
-                        site = resolvedSite.takeIf { it.isNotEmpty() },
-                        detailUrl = detailUrl,
-                        resultId = resultId,
-                        name = name,
-                    )
-                } catch (fallback: HttpException) {
-                    throw mapHttpError(fallback)
-                } catch (fallback: IOException) {
-                    throw mapNetworkError(fallback)
-                }
-            }
-            throw mapHttpError(e)
-        } catch (e: IllegalArgumentException) {
-            throw SearchException("Invalid search API URL — check Settings", cause = e)
-        } catch (e: IOException) {
-            throw mapNetworkError(e)
-        }
-    }
-
-    private fun mapNetworkError(e: IOException): SearchException {
-        if (isCanceledNetwork(e)) {
-            throw CancellationException(e.message).apply { initCause(e) }
-        }
-        val message = when (e) {
-            is SocketTimeoutException ->
-                if (settingsRepository.shouldAdaptSearchApiToNetwork()) {
-                    SearchApiMessages.blocked(autoConfigurationPending = true)
-                } else {
-                    "Search API timed out. Check the URL in Settings."
-                }
-            is UnknownHostException ->
-                if (settingsRepository.shouldAdaptSearchApiToNetwork()) {
-                    SearchApiMessages.blocked(autoConfigurationPending = true)
-                } else {
-                    "Cannot reach search API. Check the URL in Settings."
-                }
-            else -> "Cannot connect to search API. Is it running on the configured host and port?"
-        }
-        return SearchException(message, cause = e)
-    }
-
-    private fun mapHttpError(e: HttpException): SearchException = mapSearchHttpError(e, gson)
-}
-
-internal fun Exception.rethrowIfCancelled() {
-    if (this is CancellationException) throw this
-}
-
-internal fun isCanceledNetwork(e: IOException): Boolean {
-    val message = e.message.orEmpty()
-    return message.contains("Canceled", ignoreCase = true) ||
-        message.contains("cancelled", ignoreCase = true)
-}
-
-internal fun isTransientGenreRefresh(httpCode: Int?, message: String?): Boolean {
-    return httpCode == 503 &&
-        message.orEmpty().contains("still refreshing", ignoreCase = true)
-}
-
-internal fun mapSearchHttpError(e: HttpException, gson: Gson): SearchException {
-    val detail = parseSearchErrorDetail(e, gson)
-    return when (e.code()) {
-        503 -> SearchException(detail ?: "No sources available", 503, e)
-        404 -> SearchException(
-            when {
-                detail.equals("Not Found", ignoreCase = true) ->
-                    "Search API endpoint missing — restart search service (uvicorn on :8765)"
-                else -> detail ?: "Not found"
-            },
-            404,
-            e,
-        )
-        else -> SearchException(detail ?: "Request failed (${e.code()})", e.code(), e)
+        @Suppress("UNUSED_PARAMETER") detailUrl: String? = null,
+        @Suppress("UNUSED_PARAMETER") site: String? = null,
+        @Suppress("UNUSED_PARAMETER") name: String? = null,
+    ): MagnetResponseDto = withContext(Dispatchers.IO) {
+        engine.resolveMagnet(resultId)
     }
 }
-
-internal fun parseSearchErrorDetail(e: HttpException, gson: Gson): String? {
-    val body = e.response()?.errorBody()?.string() ?: return null
-    return try {
-        val json = gson.fromJson(body, JsonObject::class.java)
-        formatErrorDetail(json.get("detail"))
-    } catch (_: Exception) {
-        null
-    }
-}
-
-internal fun formatErrorDetail(detail: JsonElement?): String? {
-    if (detail == null || detail.isJsonNull) return null
-    return when {
-        detail.isJsonPrimitive -> detail.asString
-        detail.isJsonArray -> {
-            val messages = detail.asJsonArray.mapNotNull { item ->
-                when {
-                    item.isJsonObject -> item.asJsonObject.get("msg")?.asString
-                    item.isJsonPrimitive -> item.asString
-                    else -> null
-                }
-            }
-            messages.takeIf { it.isNotEmpty() }?.joinToString("; ")
-        }
-        else -> null
-    }
-}
-
-/** Autocomplete must fail fast so a down Search API cannot freeze the search field. */
-internal const val SUGGEST_CONNECT_TIMEOUT_SEC = 5L
-internal const val SUGGEST_READ_TIMEOUT_SEC = 8L
-internal const val SUGGEST_CALL_TIMEOUT_SEC = 10L

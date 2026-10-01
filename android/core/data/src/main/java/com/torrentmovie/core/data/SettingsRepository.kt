@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.torrentmovie.core.data.search.LanNetworkAddress
 import com.torrentmovie.core.data.search.SearchApiAutoConfig
 import com.torrentmovie.core.data.seedbox.normalizeSearchApiUrl
 import com.torrentmovie.core.data.seedbox.normalizeSeedboxUrl
@@ -171,17 +170,7 @@ class SettingsRepository(
         )
     }
 
-    fun isSearchApiUsableOnThisNetwork(): Boolean {
-        val url = load().searchApiBaseUrl
-        if (url.isBlank()) return false
-        if (hasManualSearchApiOverride()) return true
-        return SearchApiAutoConfig.shouldAttemptSearch(
-            url = url,
-            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
-            isEmulator = DeviceProfile.isEmulator(),
-            wifiAvailable = LanNetworkAddress.wifiAvailable(context),
-        )
-    }
+    fun isSearchApiUsableOnThisNetwork(): Boolean = true
 
     fun searchApiBlockedMessage(): String =
         SearchApiMessages.blocked(
@@ -199,14 +188,7 @@ class SettingsRepository(
 
     fun bundledSearchApiUrlForBootstrap(): String = normalizeSearchApiUrl(bundledSearchApiUrl)
 
-    private fun defaultSearchApiUrl(): String {
-        return SearchApiAutoConfig.unpersistedDefaultUrl(
-            bundledUrl = bundledSearchApiUrl,
-            wifiIpv4 = LanNetworkAddress.wifiIpv4(context),
-            isEmulator = DeviceProfile.isEmulator(),
-            emulatorUrl = AppSettings.EMULATOR_SEARCH_API,
-        )
-    }
+    private fun defaultSearchApiUrl(): String = ""
 
     fun saveError(settings: AppSettings): String? = validateAppSettings(settings)
 

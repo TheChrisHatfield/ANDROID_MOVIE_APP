@@ -6,31 +6,18 @@ import org.junit.Test
 
 class SearchApiPresentationTest {
     @Test
-    fun setupBannerUntilAutoConfigPersisted() {
-        assertTrue(
+    fun setupBannerHiddenWhenSearchIsOnDevice() {
+        assertFalse(
             shouldShowSearchApiSetupBanner(
-                searchApiBaseUrl = "http://10.0.2.2:8765",
+                searchApiBaseUrl = "",
                 autoConfigurationPending = true,
             ),
         )
         assertFalse(
             shouldShowSearchApiSetupBanner(
-                searchApiBaseUrl = "http://192.168.1.5:8765",
-                autoConfigurationPending = false,
-                searchApiUsableOnThisNetwork = true,
-            ),
-        )
-        assertTrue(
-            shouldShowSearchApiSetupBanner(
                 searchApiBaseUrl = "http://192.168.4.27:8765",
                 autoConfigurationPending = false,
                 searchApiUsableOnThisNetwork = false,
-            ),
-        )
-        assertTrue(
-            shouldShowSearchApiSetupBanner(
-                searchApiBaseUrl = "",
-                autoConfigurationPending = false,
             ),
         )
     }

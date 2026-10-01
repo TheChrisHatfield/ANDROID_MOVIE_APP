@@ -7,9 +7,16 @@ import org.junit.Test
 
 class SearchApiAutoConfigTest {
     @Test
-    fun firstInstallNeedsAutoConfiguration() {
-        assertTrue(
+    fun onDeviceSearchDoesNotNeedLanAutoConfiguration() {
+        assertFalse(
             SearchApiAutoConfig.needsInitialAutoConfiguration(
+                hasManualOverride = false,
+                storedSearchApiUrl = null,
+                isEmulator = false,
+            ),
+        )
+        assertFalse(
+            SearchApiAutoConfig.shouldAdaptToNetworkChanges(
                 hasManualOverride = false,
                 storedSearchApiUrl = null,
                 isEmulator = false,
@@ -18,7 +25,7 @@ class SearchApiAutoConfigTest {
     }
 
     @Test
-    fun userSavedLanUrlStopsInitialAndNetworkAdapt() {
+    fun leftoverLanUrlDoesNotForceDiscovery() {
         assertFalse(
             SearchApiAutoConfig.needsInitialAutoConfiguration(
                 hasManualOverride = true,
@@ -36,65 +43,18 @@ class SearchApiAutoConfigTest {
     }
 
     @Test
-    fun leftoverEmulatorUrlOnPhoneNeedsAutoInstall() {
-        assertTrue(
-            SearchApiAutoConfig.needsInitialAutoConfiguration(
-                hasManualOverride = true,
-                storedSearchApiUrl = "http://10.0.2.2:8765",
-                isEmulator = false,
-            ),
-        )
-        assertTrue(
-            SearchApiAutoConfig.shouldAdaptToNetworkChanges(
-                hasManualOverride = true,
-                storedSearchApiUrl = "http://10.0.2.2:8765",
-                isEmulator = false,
-            ),
-        )
-    }
-
-    @Test
-    fun emulatorKeepsLoopbackAsConfigured() {
+    fun leftoverEmulatorUrlDoesNotForceLanHunt() {
         assertFalse(
             SearchApiAutoConfig.needsInitialAutoConfiguration(
                 hasManualOverride = true,
                 storedSearchApiUrl = "http://10.0.2.2:8765",
-                isEmulator = true,
+                isEmulator = false,
             ),
         )
         assertFalse(
             SearchApiAutoConfig.shouldAdaptToNetworkChanges(
                 hasManualOverride = true,
                 storedSearchApiUrl = "http://10.0.2.2:8765",
-                isEmulator = true,
-            ),
-        )
-    }
-
-    @Test
-    fun blankStoredUrlNeedsAutoInstall() {
-        assertTrue(
-            SearchApiAutoConfig.needsInitialAutoConfiguration(
-                hasManualOverride = true,
-                storedSearchApiUrl = "   ",
-                isEmulator = false,
-            ),
-        )
-    }
-
-    @Test
-    fun autoInstalledLanUrlKeepsAdaptingWhenWifiOrCellularChanges() {
-        assertFalse(
-            SearchApiAutoConfig.needsInitialAutoConfiguration(
-                hasManualOverride = false,
-                storedSearchApiUrl = "http://192.168.4.27:8765",
-                isEmulator = false,
-            ),
-        )
-        assertTrue(
-            SearchApiAutoConfig.shouldAdaptToNetworkChanges(
-                hasManualOverride = false,
-                storedSearchApiUrl = "http://192.168.4.27:8765",
                 isEmulator = false,
             ),
         )
@@ -125,18 +85,6 @@ class SearchApiAutoConfigTest {
     }
 
     @Test
-    fun firstSaveOfBundledUrlStaysAuto() {
-        assertFalse(
-            SearchApiAutoConfig.manualFlagAfterSettingsSave(
-                previousStoredUrl = null,
-                newUrl = "http://192.168.4.27:8765",
-                wasManual = false,
-                bundledUrl = "http://192.168.4.27:8765",
-            ),
-        )
-    }
-
-    @Test
     fun shouldKeepCurrentUrlOnlyOnSameWifiSubnet() {
         assertTrue(
             SearchApiAutoConfig.shouldKeepCurrentUrl(
@@ -152,20 +100,6 @@ class SearchApiAutoConfigTest {
                 currentHealthy = true,
             ),
         )
-        assertFalse(
-            SearchApiAutoConfig.shouldKeepCurrentUrl(
-                currentUrl = "http://192.168.4.27:8765",
-                wifiIpv4 = null,
-                currentHealthy = true,
-            ),
-        )
-        assertTrue(
-            SearchApiAutoConfig.shouldKeepCurrentUrl(
-                currentUrl = "http://search.example.com:8765",
-                wifiIpv4 = "192.168.4.10",
-                currentHealthy = true,
-            ),
-        )
     }
 
     @Test
@@ -177,26 +111,11 @@ class SearchApiAutoConfigTest {
                 isEmulator = false,
             ),
         )
-        assertFalse(
-            SearchApiAutoConfig.shouldAttemptSearch(
-                url = "http://192.168.4.27:8765",
-                wifiIpv4 = "192.168.8.10",
-                isEmulator = false,
-            ),
-        )
         assertTrue(
             SearchApiAutoConfig.shouldAttemptSearch(
                 url = "http://192.168.4.27:8765",
                 wifiIpv4 = "192.168.4.10",
                 isEmulator = false,
-            ),
-        )
-        assertTrue(
-            SearchApiAutoConfig.shouldAttemptSearch(
-                url = "http://192.168.4.27:8765",
-                wifiIpv4 = null,
-                isEmulator = false,
-                wifiAvailable = true,
             ),
         )
     }
@@ -208,24 +127,6 @@ class SearchApiAutoConfigTest {
             SearchApiAutoConfig.unpersistedDefaultUrl(
                 bundledUrl = "http://192.168.4.27:8765",
                 wifiIpv4 = "192.168.8.10",
-                isEmulator = false,
-                emulatorUrl = "http://10.0.2.2:8765",
-            ),
-        )
-        assertEquals(
-            "http://192.168.4.27:8765",
-            SearchApiAutoConfig.unpersistedDefaultUrl(
-                bundledUrl = "http://192.168.4.27:8765",
-                wifiIpv4 = "192.168.4.10",
-                isEmulator = false,
-                emulatorUrl = "http://10.0.2.2:8765",
-            ),
-        )
-        assertEquals(
-            "http://search.example.com:8765",
-            SearchApiAutoConfig.unpersistedDefaultUrl(
-                bundledUrl = "http://search.example.com:8765",
-                wifiIpv4 = null,
                 isEmulator = false,
                 emulatorUrl = "http://10.0.2.2:8765",
             ),

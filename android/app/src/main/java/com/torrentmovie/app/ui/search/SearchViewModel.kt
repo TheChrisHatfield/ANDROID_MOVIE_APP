@@ -40,8 +40,6 @@ data class SearchUiState(
 )
 
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
-    private fun searchApiBlockedMessage(): String =
-        container.settingsRepository.searchApiBlockedMessage()
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
@@ -102,8 +100,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     shouldRefreshAfterBootstrapPersist(modeActive, _state.value.error)
                 observedSettingsKey = key
                 if (
-                    settings.searchApiBaseUrl.isNotBlank() &&
-                    (bootstrapJustPersisted || settingsChanged)
+                    bootstrapJustPersisted || settingsChanged
                 ) {
                     refreshSearchSuggestions(_state.value.query)
                 }
@@ -225,10 +222,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 snapshot.lastExecutedQuery,
             )
         ) {
-            _state.value = snapshot.copy(suggestions = emptyList(), suggestionsLoading = false)
-            return
-        }
-        if (container.settingsRepository.load().searchApiBaseUrl.isBlank()) {
             _state.value = snapshot.copy(suggestions = emptyList(), suggestionsLoading = false)
             return
         }
@@ -390,26 +383,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     fun loadBrowse1337x(feed: X1337BrowseFeed) {
         searchJob?.cancel()
         suggestJob?.cancel()
-        val settings = container.settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) {
-            _state.value = _state.value.copy(
-                query = feed.label,
-                loading = false,
-                error = searchApiBlockedMessage(),
-                errorCode = null,
-                results = emptyList(),
-                groups = emptyList(),
-                info = null,
-                hasSearched = true,
-                showTmdbSetupHint = false,
-                activeBrowseFeed = feed.id,
-                genrePanelExpanded = false,
-                activeGenre = null,
-                suggestions = emptyList(),
-                suggestionsLoading = false,
-            )
-            return
-        }
         val generation = ++searchGeneration
         val label = feed.label
         val keepStale = keepStaleBrowseResults(_state.value.activeBrowseFeed, feed.id)
@@ -487,26 +460,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     fun loadGenreBrowse(genre: X1337MovieGenre, forceRefresh: Boolean = false) {
         searchJob?.cancel()
         suggestJob?.cancel()
-        val settings = container.settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) {
-            _state.value = _state.value.copy(
-                query = genre.label,
-                loading = false,
-                error = searchApiBlockedMessage(),
-                errorCode = null,
-                results = emptyList(),
-                groups = emptyList(),
-                info = null,
-                hasSearched = true,
-                showTmdbSetupHint = false,
-                activeBrowseFeed = null,
-                genrePanelExpanded = true,
-                activeGenre = genre.id,
-                suggestions = emptyList(),
-                suggestionsLoading = false,
-            )
-            return
-        }
         val generation = ++searchGeneration
         val label = genre.label
         val keepStale = keepStaleBrowseResults(_state.value.activeGenre, genre.id)
@@ -618,23 +571,6 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 activeBrowseFeed = null,
                 genrePanelExpanded = false,
                 activeGenre = null,
-                suggestions = emptyList(),
-                suggestionsLoading = false,
-            )
-            return
-        }
-        val settings = container.settingsRepository.load()
-        if (settings.searchApiBaseUrl.isBlank()) {
-            _state.value = _state.value.copy(
-                loading = false,
-                error = searchApiBlockedMessage(),
-                errorCode = null,
-                results = emptyList(),
-                groups = emptyList(),
-                info = null,
-                hasSearched = true,
-                showTmdbSetupHint = false,
-                activeBrowseFeed = _state.value.activeBrowseFeed,
                 suggestions = emptyList(),
                 suggestionsLoading = false,
             )

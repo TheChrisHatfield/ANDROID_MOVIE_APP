@@ -30,6 +30,7 @@ Load [`docs/planning-rosetta-stone.md`](../../planning-rosetta-stone.md) (`plann
 - [x] T001 Create `services/search/` Python package with `pyproject.toml` (requests, beautifulsoup4, lxml, fastapi, uvicorn, pydantic, pytest)
 - [x] T002 [P] Add `vendor/torrtux-c` reference doc pointing to `F:\DRIVE_DOWNLOADS\torrtux-c` (or git submodule) in `services/search/README.md`
 - [x] T003 [P] Create `android/` Gradle project skeleton (Kotlin, Compose Material3, minSdk 26, Retrofit, EncryptedSharedPreferences)
+- [x] T-ondevice On-device movie-profile search (FR-040) in `android/core/data/.../ondevice`; SearchRepository does not call a PC API
 - [x] T003a [P] `MainScaffold` — Yatse-style navigation drawer (Search, Uploaded, Settings, Help) per `contracts/ui-yatse-reference.md`
 - [x] T004 [P] Copy `docs/specs/torrent-movie-app/contracts/openapi.yaml` into `android/core/network` as codegen input reference
 

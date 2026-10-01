@@ -23,6 +23,7 @@ dependencies {
     kapt(libs.room.compiler)
     implementation(libs.security.crypto)
     implementation(libs.okhttp)
+    implementation(libs.jsoup)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     testImplementation(libs.junit)

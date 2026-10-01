@@ -36,25 +36,16 @@ object SearchApiAutoConfig {
 
     fun needsInitialAutoConfiguration(
         @Suppress("UNUSED_PARAMETER") hasManualOverride: Boolean,
-        storedSearchApiUrl: String?,
-        isEmulator: Boolean,
-    ): Boolean {
-        val stored = normalizeSearchApiUrl(storedSearchApiUrl.orEmpty())
-        if (stored.isBlank()) return true
-        return isEmulatorLoopback(stored) && !isEmulator
-    }
+        @Suppress("UNUSED_PARAMETER") storedSearchApiUrl: String?,
+        @Suppress("UNUSED_PARAMETER") isEmulator: Boolean,
+    ): Boolean = false
 
-    /** Keep listening after auto-install; never replace an explicit Settings URL. */
+    /** Search runs on-device; LAN Search API discovery is not used. */
     fun shouldAdaptToNetworkChanges(
-        hasManualOverride: Boolean,
-        storedSearchApiUrl: String?,
-        isEmulator: Boolean,
-    ): Boolean {
-        if (needsInitialAutoConfiguration(hasManualOverride, storedSearchApiUrl, isEmulator)) {
-            return true
-        }
-        return !hasManualOverride
-    }
+        @Suppress("UNUSED_PARAMETER") hasManualOverride: Boolean,
+        @Suppress("UNUSED_PARAMETER") storedSearchApiUrl: String?,
+        @Suppress("UNUSED_PARAMETER") isEmulator: Boolean,
+    ): Boolean = false
 
     /**
      * Saving seedbox/TMDB in Settings must not freeze an auto-filled Search API URL.
