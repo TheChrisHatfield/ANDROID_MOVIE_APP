@@ -12,8 +12,8 @@ object MagnetHashUtil {
         val start = lower.indexOf(BTIH_PREFIX)
         if (start < 0) return null
         var hash = magnet.substring(start + BTIH_PREFIX.length)
-        val amp = hash.indexOf('&')
-        if (amp >= 0) hash = hash.substring(0, amp)
+        val cut = hash.indexOfFirst { ch -> ch == '&' || ch == '#' || ch == '/' || ch == '?' }
+        if (cut >= 0) hash = hash.substring(0, cut)
         hash = hash.trim().uppercase(Locale.US)
         if (hash.length == 32) hash = base32ToHex(hash) ?: return null
         return if (hash.length == 40) hash else null

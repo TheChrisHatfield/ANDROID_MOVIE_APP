@@ -67,7 +67,7 @@ internal object SizeFilters {
     fun seedCount(seeds: String?): Int? {
         if (seeds.isNullOrBlank() || seeds == "-") return null
         val normalized = seeds.replace(",", "").trim()
-        val kilo = Regex("""^(\d+(?:\.\d+)?)\s*[kK]\b""").find(normalized)
+        val kilo = Regex("""^(\d+(?:\.\d+)?)\s*[kK]""").find(normalized)
         if (kilo != null) {
             return (kilo.groupValues[1].toDouble() * 1000).toInt()
         }

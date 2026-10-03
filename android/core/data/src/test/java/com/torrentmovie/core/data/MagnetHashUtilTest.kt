@@ -26,4 +26,11 @@ class MagnetHashUtilTest {
         assertEquals(40, key.length)
         assertNotNull(key)
     }
+
+    @Test
+    fun extractsHashWhenFragmentOrSlashFollowsBtih() {
+        val hash = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
+        assertEquals(hash, MagnetHashUtil.extractInfoHash("magnet:?xt=urn:btih:$hash#"))
+        assertEquals(hash, MagnetHashUtil.extractInfoHash("magnet:?xt=urn:btih:$hash/"))
+    }
 }

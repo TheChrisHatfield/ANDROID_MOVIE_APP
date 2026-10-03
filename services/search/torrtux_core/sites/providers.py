@@ -194,6 +194,7 @@ class X1337(TorrentSite):
     # Some mirrors return an empty table for top-100-movies; category browse still lists movies.
     BROWSE_FALLBACKS: dict[str, str] = {
         "top-100-movies": "cat/Movies",
+        "top-100-television": "cat/TV",
     }
     MOVIE_GENRES = MOVIE_GENRES
 

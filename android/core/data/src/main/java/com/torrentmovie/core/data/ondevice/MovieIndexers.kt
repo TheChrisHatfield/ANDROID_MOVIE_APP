@@ -268,7 +268,10 @@ internal class MovieIndexers(private val http: IndexerHttp) {
             "top-100-movies" to "top-100-movies",
             "top-100-television" to "top-100-television",
         )
-        val BROWSE_FALLBACKS = mapOf("top-100-movies" to "cat/Movies")
+        val BROWSE_FALLBACKS = mapOf(
+            "top-100-movies" to "cat/Movies",
+            "top-100-television" to "cat/TV",
+        )
 
         fun ytsPayloadAccepted(body: String): Boolean {
             return try {
@@ -328,16 +331,20 @@ internal class MovieIndexers(private val http: IndexerHttp) {
                 val link = nameTd.select("a[href]").firstOrNull { it.attr("href").contains("/torrent/") }
                     ?: nameTd.select("a[href]").lastOrNull()
                     ?: return@mapNotNull null
-                val sizeRaw = row.selectFirst("td.size")?.text()?.trim().orEmpty()
+                val sizeRaw = (row.selectFirst("td.size") ?: row.selectFirst("td.coll-4"))
+                    ?.text()?.trim().orEmpty()
                 val size = SizeFilters.extractSizeLabel(sizeRaw)
                     ?: if (sizeRaw.contains("B")) sizeRaw.substringBefore("B") + "B" else sizeRaw.ifBlank { "-" }
                 IndexerRow(
                     name = link.text().trim(),
                     site = "1337x",
                     size = size,
-                    seeds = row.selectFirst("td.seeds")?.text()?.trim() ?: "-",
-                    leeches = row.selectFirst("td.leeches")?.text()?.trim() ?: "-",
-                    date = row.selectFirst("td.coll-date")?.text()?.trim() ?: "-",
+                    seeds = (row.selectFirst("td.seeds") ?: row.selectFirst("td.coll-2"))
+                        ?.text()?.trim() ?: "-",
+                    leeches = (row.selectFirst("td.leeches") ?: row.selectFirst("td.coll-3"))
+                        ?.text()?.trim() ?: "-",
+                    date = (row.selectFirst("td.coll-date") ?: row.selectFirst("td.coll-5"))
+                        ?.text()?.trim() ?: "-",
                     detailUrl = abs(base, link.attr("href")),
                 )
             }

@@ -57,6 +57,32 @@ class MovieIndexerParseTest {
     }
 
     @Test
+    fun parses1337xCollNumberedColumns() {
+        val html = """
+            <table class="table-list">
+            <tr><th></th></tr>
+            <tr>
+              <td class="coll-1 name"><a href="/torrent/2/Show/">Show S01E01</a></td>
+              <td class="coll-2">48</td>
+              <td class="coll-3">4</td>
+              <td class="coll-4">700 MB</td>
+              <td class="coll-5">Jan 2</td>
+            </tr>
+            </table>
+        """.trimIndent()
+        val rows = MovieIndexers.parse1337x(html, "https://1337xx.to")
+        assertEquals(1, rows.size)
+        assertEquals("Show S01E01", rows[0].name)
+        assertEquals("48", rows[0].seeds)
+        assertEquals("700 MB", rows[0].size)
+    }
+
+    @Test
+    fun televisionBrowseHasCategoryFallback() {
+        assertEquals("cat/TV", MovieIndexers.BROWSE_FALLBACKS["top-100-television"])
+    }
+
+    @Test
     fun parsesYtsJsonTorrents() {
         val json = """
             {"data":{"movies":[{
@@ -212,5 +238,6 @@ class SizeFilterTest {
     fun seedCountReadsKiloAndTrailingLabel() {
         org.junit.Assert.assertEquals(1200, SizeFilters.seedCount("1.2K"))
         org.junit.Assert.assertEquals(12, SizeFilters.seedCount("12 seeds"))
+        org.junit.Assert.assertEquals(1200, SizeFilters.seedCount("1.2Kseeds"))
     }
 }
