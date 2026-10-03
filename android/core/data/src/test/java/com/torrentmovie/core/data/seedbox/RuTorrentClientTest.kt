@@ -193,4 +193,25 @@ class RuTorrentClientTest {
         assertEquals(1, map.size)
         assertEquals(50, map.values.first().progressPercent())
     }
+
+    @Test
+    fun addMagnetFailedDirectoryMentionsMovieAndTvFolders() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("FailedDirectory"))
+        server.start()
+        val client = RuTorrentClient(
+            baseUrl = server.url("/rutorrent/").toString(),
+            username = "u",
+            password = "p",
+        )
+        val result = client.addMagnet(
+            "magnet:?xt=urn:btih:ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            "/missing/",
+        )
+        server.shutdown()
+        assertTrue(result is SeedboxResult.Failure)
+        assertTrue(
+            (result as SeedboxResult.Failure).message.contains("TV shows", ignoreCase = true),
+        )
+    }
 }

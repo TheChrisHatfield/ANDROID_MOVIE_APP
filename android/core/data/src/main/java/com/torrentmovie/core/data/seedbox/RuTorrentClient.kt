@@ -149,7 +149,9 @@ class RuTorrentClient(
                 return SeedboxResult.Failure(msg, response.code)
             }
             text.contains("FailedDirectory", ignoreCase = true) ->
-                return SeedboxResult.Failure("Invalid download directory")
+                return SeedboxResult.Failure(
+                    "Invalid download directory — check Magnet download folder (movies) and (TV shows) in Settings",
+                )
             text.contains("Failed", ignoreCase = true) &&
                 !text.contains("Success", ignoreCase = true) ->
                 return SeedboxResult.Failure("ruTorrent rejected magnet")
@@ -222,7 +224,7 @@ class RuTorrentClient(
             path,
             username,
             password,
-        ) ?: throw IllegalStateException("Digest authentication failed")
+        ) ?: throw IllegalStateException("Authentication failed — check username, password, and auth scheme")
         val authed = request.newBuilder()
             .header("Authorization", digest)
             .build()

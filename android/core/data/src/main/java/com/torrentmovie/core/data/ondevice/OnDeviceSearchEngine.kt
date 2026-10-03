@@ -4,6 +4,7 @@ import com.torrentmovie.core.data.MovieSearchSuggestion
 import com.torrentmovie.core.data.SearchContentFilter
 import com.torrentmovie.core.data.SearchException
 import com.torrentmovie.core.data.SearchResult
+import com.torrentmovie.core.data.mergeSearchSuggestions
 import com.torrentmovie.core.network.MagnetResponseDto
 
 internal class OnDeviceSearchEngine(
@@ -12,9 +13,28 @@ internal class OnDeviceSearchEngine(
 ) {
     private val indexers = MovieIndexers(http)
 
-    fun suggest(query: String, tmdbKey: String, limit: Int, searchTv: Boolean = false): List<MovieSearchSuggestion> {
-        if (!TmdbOnDevice(http, tmdbKey, searchTv = searchTv).configured) return emptyList()
-        return TmdbOnDevice(http, tmdbKey, searchTv = searchTv).suggest(query, limit)
+    fun suggest(
+        query: String,
+        tmdbKey: String,
+        limit: Int,
+        contentFilter: SearchContentFilter,
+    ): List<MovieSearchSuggestion> {
+        if (tmdbKey.isBlank() || query.trim().length < 2) return emptyList()
+        val movie = if (contentFilter.usesMovieCatalog) {
+            TmdbOnDevice(http, tmdbKey, searchTv = false).suggest(query, limit)
+        } else {
+            emptyList()
+        }
+        val tv = if (contentFilter.usesTvCatalog) {
+            TmdbOnDevice(http, tmdbKey, searchTv = true).suggest(query, limit)
+        } else {
+            emptyList()
+        }
+        return when (contentFilter) {
+            SearchContentFilter.MOVIES -> movie.take(limit)
+            SearchContentFilter.TV -> tv.take(limit)
+            SearchContentFilter.ALL -> mergeSearchSuggestions(movie, tv, limit)
+        }
     }
 
     fun isTmdbConfigured(tmdbKey: String): Boolean = tmdbKey.isNotBlank()

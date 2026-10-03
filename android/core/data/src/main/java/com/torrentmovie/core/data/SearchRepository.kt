@@ -35,7 +35,7 @@ class SearchRepository(private val settingsRepository: SettingsRepository) {
                 query,
                 settings.tmdbApiKey,
                 limit,
-                searchTv = settings.contentFilter == SearchContentFilter.TV,
+                contentFilter = settings.contentFilter,
             )
         }
 
